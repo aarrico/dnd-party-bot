@@ -79,7 +79,23 @@ module.exports = {
     ],
     //deleted: Boolean,
     callBack: (client, interaction) => {
-        getDate(interaction);
-        
+        const date = getDate(interaction);
+        if(date)
+        {
+            const message = `Hey there, I have your session scheduled for: ${date.getMonth()+1}/${date.getDate()}/${date.getFullYear()}`;
+
+            //send to general
+            const channel = client.channels.cache.get(process.env.SESSION_CHANNEL_ID);
+            channel.send(message);
+
+            //send to DMs
+            const user = client.users.cache.get(interaction.user.id);
+            user.send(message);
+            interaction.reply('One Moment while I create your session. You will recieve a message via Direct Message when complete!');
+        }
+        else
+        {
+            interaction.reply('The date you entered is invalid. This could be due to the following reasons:\n- You entered a date that doesnt exist.\n- You entered a day that has already passed.');
+        }
     }
 };

@@ -9,24 +9,11 @@ module.exports = (interaction) => {
     {
         if(!isValidMonth(month) ||
         (!isValidDay(month, day) && 
-        !isLeapYearDay(month, year, day)))
-        {
-            interaction.reply('The date you entered is invalid.');
-            return undefined;
-        }
+        !isLeapYearDay(month, year, day))) return undefined;
 
         const sessionDate = new Date(year, month-1, day);
 
-        if(isDateAfterCurrentDate(sessionDate))
-        {
-            interaction.reply(`${sessionDate.getMonth()+1}/${sessionDate.getDate()}/${sessionDate.getFullYear()}`);
-            return sessionDate;
-        }
-        else
-        {
-            interaction.reply('The date entered needs to be after the current date.');
-            return undefined;
-        }
+        return isDateAfterCurrentDate(sessionDate) ? sessionDate: undefined;
     }
     return undefined;
 };
