@@ -1,39 +1,53 @@
-module.exports = (date) => {
+const monthMaxDayCounts = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+module.exports = (interaction) => {
     const month = interaction.options.get('month').value;
     const day = interaction.options.get('day').value;
     const year = interaction.options.get('year').value;
+
     if(month && day && year)
     {
-        const monthMaxDayCounts = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-
-        if(month <= 12 && monthMaxDayCounts[month-1] < day)
+        if(!isValidMonth(month) ||
+        (!isValidDay(month, day) && 
+        !isLeapYearDay(month, year, day)))
         {
-            if(month === 2 && (year % 4 === 0))
-            {
-                if(day > 29)
-                {
-                    interaction.reply('The date you entered is invalid.');
-                    return;
-                }
-            }
-            else
-            {
-                interaction.reply('The date you entered is invalid.');
-                return;
-            }
-        }
-            
-
-        const sessionDate = new Date(year, month, day);
-
-        if(new Date(sessionDate).valueOf() < new Date().valueOf())
-        {
-            interaction.reply('The date you entered must be after todays date.');
-            return;
+            interaction.reply('The date you entered is invalid.');
+            return undefined;
         }
 
-        interaction.reply(`${sessionDate.getMonth()}/${sessionDate.getDate()}/${sessionDate.getFullYear()}`);
-        return sessionDate;
+        const sessionDate = new Date(year, month-1, day);
+
+        if(isDateAfterCurrentDate(sessionDate))
+        {
+            interaction.reply(`${sessionDate.getMonth()+1}/${sessionDate.getDate()}/${sessionDate.getFullYear()}`);
+            return sessionDate;
+        }
+        else
+        {
+            interaction.reply('The date entered needs to be after the current date.');
+            return undefined;
+        }
     }
     return undefined;
 };
+
+function isValidMonth(month)
+{
+    return (month < 13);
+}
+
+function isValidDay(month, day)
+{
+    return (day > 0 && day <= monthMaxDayCounts[month-1]);
+}
+
+function isLeapYearDay(month, year, day)
+{
+    return (month === 2 && (year % 4 === 0) && !(day > 29));
+}
+
+function isDateAfterCurrentDate(date)
+{
+    return new Date(date).valueOf() > new Date().valueOf();
+}
+

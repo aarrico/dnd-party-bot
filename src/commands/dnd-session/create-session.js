@@ -1,5 +1,6 @@
 require('dotenv').config();
 const {ApplicationCommandOptionType} = require('discord.js');
+const getDate = require('../../utils/dateChecker');
 
 module.exports = {
     name: 'create-session',
@@ -78,43 +79,7 @@ module.exports = {
     ],
     //deleted: Boolean,
     callBack: (client, interaction) => {
+        getDate(interaction);
         
-        let month = interaction.options.get('month').value;
-        let day = interaction.options.get('day').value;
-        let year = interaction.options.get('year').value;
-        if(month && day && year)
-        {
-            const monthMaxDayCounts = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-
-            if(month <= 12 && monthMaxDayCounts[month-1] < day)
-            {
-                if(month === 2 && (year % 4 === 0))
-                {
-                    if(day > 29)
-                    {
-                        interaction.reply('The date you entered is invalid.');
-                        return;
-                    }
-                }
-                else
-                {
-                    interaction.reply('The date you entered is invalid.');
-                    return;
-                }
-            }
-            
-
-            const date = new Date(year, month, day);
-
-            if(new Date(date).valueOf() < new Date().valueOf())
-            {
-                interaction.reply('The date you entered must be after todays date.');
-                return;
-            }
-
-            interaction.reply(`${date.getMonth()}/${date.getDate()}/${date.getFullYear()}`);
-            return;
-        }
-        interaction.reply('The date you entered is invalid.');
     }
 };
