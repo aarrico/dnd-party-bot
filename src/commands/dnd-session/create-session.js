@@ -1,6 +1,7 @@
 require('dotenv').config();
 const {ApplicationCommandOptionType} = require('discord.js');
 const getDate = require('../../utils/dateChecker');
+const createMessageBody = require('../../utils/create-session-message');
 
 module.exports = {
     name: 'create-session',
@@ -86,7 +87,8 @@ module.exports = {
 
             //send to general
             const channel = client.channels.cache.get(process.env.SESSION_CHANNEL_ID);
-            channel.send(message);
+            // channel.send(message);
+            createMessageBody(client, process.env.SESSION_CHANNEL_ID);
 
             //send to DMs
             const user = client.users.cache.get(interaction.user.id);
