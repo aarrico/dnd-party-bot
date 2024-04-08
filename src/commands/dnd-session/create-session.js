@@ -3,6 +3,7 @@ const {ApplicationCommandOptionType} = require('discord.js');
 const getDate = require('../../utils/dateChecker');
 const createMessageBody = require('../../utils/create-session-message');
 
+
 module.exports = {
     name: 'create-session',
     description: 'creates a session in the session stack.',

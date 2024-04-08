@@ -1,5 +1,8 @@
 require('dotenv').config();
-const {Client, ActionRowBuilder, ButtonBuilder, ButtonStyle} = require('discord.js');
+const path = require('path');
+const imageToSend = './src/utils/TW_ui_menu_backplate.png';
+
+const {ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder} = require('discord.js');
 
 const roles_row1 = [
     {
@@ -58,16 +61,18 @@ const roles_row2 = [
 module.exports = async (client, channel_id) => {
     try {
         const channel = await client.channels.cache.get(channel_id);
-        // console.log(client.channels.cache);
-        // if(!channel) return;
-        // return;
+
+        let absolutePath = path.resolve(imageToSend).replace(/\//g, "/");
+        const attachment = new AttachmentBuilder(absolutePath, { name: 'TW_ui_menu_backplate.png' });
         const row1 = createActionRowOfButtons(roles_row1);
         const row2 = createActionRowOfButtons(roles_row2);
 
-        await channel.send({
-            content: 'Hello everyone, we have a new session for people to join!',
-            components: [row1, row2]
-        })
+        await channel.send(
+        {
+            content: "Hello everyone, we have a new session for people to join!",
+            files: [attachment], 
+            components: [row1, row2]});
+
     } catch (error) {
         console.log(error);
     }
