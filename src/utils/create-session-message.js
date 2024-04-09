@@ -7,26 +7,26 @@ const {ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder} = requir
 const roles_row1 = [
     {
         id: 'role-one',
-        label: 'Paladin',
+        label: 'Tank',
         emoji: {
-            name: 'angyphonesearch',
-            emoji_id: '1224037722839060490'
+            name: 'TankEmoji',
+            emoji_id: '1227069036806799440'
         }
     },
     {
         id: 'role-two',
-        label: 'Barbarian',
+        label: 'Support',
         emoji: {
-            name: 'Exodia',
-            emoji_id: '1224037625665687687'
+            name: 'SupportEmoji',
+            emoji_id: '1227069035070488618'
         }
     },
     {
         id: 'role-three',
-        label: 'Wizard',
+        label: 'Range DPS',
         emoji: {
-            name: 'kermitbayo',
-            emoji_id: '1224037567767380039'
+            name: 'RangeDPS',
+            emoji_id: '1227069033094844416'
         }
     }
 ]
@@ -34,26 +34,26 @@ const roles_row1 = [
 const roles_row2 = [
     {
         id: 'role-four',
-        label: 'Cleric',
+        label: 'Melee DPS',
         emoji: {
-            name: 'angyphonesearch',
-            emoji_id: '1224037722839060490'
+            name: 'MeleeDPSEmoji',
+            emoji_id: '1227069030590845113'
         }
     },
     {
         id: 'role-five',
-        label: 'Ranger',
+        label: 'Face',
         emoji: {
-            name: 'Exodia',
-            emoji_id: '1224037625665687687'
+            name: 'FaceEmoji',
+            emoji_id: '1227069028930027570'
         }
     },
     {
         id: 'role-six',
-        label: 'Warlock',
+        label: 'Control',
         emoji: {
-            name: 'kermitbayo',
-            emoji_id: '1224037567767380039'
+            name: 'ControlEmoji',
+            emoji_id: '1227069027172749354'
         }
     }
 ]
