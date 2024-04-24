@@ -1,0 +1,40 @@
+version: "3.9"
+services:
+  api:
+    container_name: api
+    restart: always
+    build: .
+    ports:
+      - ${PORT}:${PORT}
+    expose:
+      - ${PORT}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/usr/src/app
+      - postgres-data:/app/postgres-data
+
+  db:
+    container_name: postgres
+    restart: always
+    image: postgres
+    ports:
+      - ${DB_PORT}:${DB_PORT}
+    expose:
+      - ${DB_PORT}
+    healthcheck:
+      test: ["CMD-SHELL", "sh -c 'pg_isready -U ${DB_USER} -d ${DB_NAME}'"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+
+volumes:
+  postgres-data:
+    name: postgres-data
