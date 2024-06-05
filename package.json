@@ -2,14 +2,16 @@
   "name": "dnd-party-bot",
   "version": "1.0.0",
   "description": "",
-  "main": "src/index.js",
+  "main": "dist/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "tsc": "tsc",
     "build": "npx prisma generate && tsc",
-    "start": "node ./dist/app.js",
-    "dev": "nodemon -L -e ts --exec \"npm run build && npm start\"",
-    "debug": "nodemon dist/app.js"
+    "start": "npm run build && node ./dist/index.js",
+    "dev": "npm run build && node ./dist/index.js",
+
+    "debug": "nodemon dist/app.js",
+    "nodemon": "nodemon dev-server.js"
   },
   "keywords": [],
   "author": "",
@@ -17,12 +19,14 @@
   "dependencies": {
     "@napi-rs/canvas": "^0.1.51",
     "@prisma/client": "^5.13.0",
-    "discord.js": "^14.14.1",
-    "dotenv": "^16.4.5"
+    "discord.js": "^14.15.2",
+    "dotenv": "^16.4.5",
+    "glob": "^7.2.0"
   },
   "devDependencies": {
     "@tsconfig/node20": "^20.1.4",
-    "@types/node": "^20.12.11",
+    "@types/glob": "^8.1.0",
+    "@types/node": "^20.12.12",
     "prisma": "^5.13.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.5"

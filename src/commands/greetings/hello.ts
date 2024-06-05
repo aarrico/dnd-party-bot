@@ -1,11 +1,10 @@
-module.exports = {
+import { Command } from "../../structures/Command";
+
+export default new Command({
   name: "hey",
   description: "Responds with hello!",
-  // devOnly: Boolean,
-  // testOnly: Boolean,
-  // options: [],
-  //deleted: Boolean,
-  callBack: (client: any, interaction: any) => {
-    interaction.reply(`Hello ${interaction.user.username}`);
+  cooldown: 0,
+  callBack: ({ interaction }) => {
+    interaction.followUp(`Hello ${interaction.user.username}`);
   },
-};
+});

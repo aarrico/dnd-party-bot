@@ -1,8 +1,5 @@
-const { PrismaClient } = require("@prisma/client");
+import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
-
-// const createdSessions = [];
-// const createdUsers = [];
 
 //can store this as enum in DB if needed.***
 const roles = {
