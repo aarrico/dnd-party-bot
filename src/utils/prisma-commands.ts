@@ -18,6 +18,7 @@ export async function createNewSession(data: {
 }) {
   await createNewSessionInDB(data.sessionData);
   await createNewUserInDB(data.userData);
+  await createNewSessionUserInDB(data.interaction, data.messageID);
 }
 
 export async function createNewSessionInDB(data: {
@@ -32,7 +33,16 @@ export async function createNewUserInDB(data: {
   username: string;
   userChannelId: string;
 }) {
-  await prisma.user.create({ data });
+  //   await prisma.user.create({ data });
+  //   //change to upsert
+  const userUUID = await prisma.user.findFirst({
+    where: { userChannelId: data.userChannelId },
+  });
+  await prisma.user.upsert({
+    where: { id: userUUID?.id },
+    update: { username: data.username },
+    create: { username: data.username, userChannelId: data.userChannelId },
+  });
 }
 
 export async function createNewSessionUserInDB(
@@ -55,4 +65,18 @@ export async function createNewSessionUserInDB(
       role: roles.DM,
     },
   });
+}
+
+//delete one session
+// prisma.session.delete();
+//delete multiple sessions based on criteria
+// prisma.session.deleteMany();
+//Arguments to update or create a Session.
+// prisma.session.upsert();
+
+export async function deleteFullSession() {
+  //get session UUID
+  //get all users UUIDs associated with Session UUID
+  //delete session by UUID
+  //delete all
 }
