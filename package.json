@@ -2,14 +2,13 @@
   "name": "dnd-party-bot",
   "version": "1.0.0",
   "description": "",
-  "main": "dist/index.js",
+  "main": "dist/src/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "tsc": "tsc",
     "build": "npx prisma generate && tsc",
-    "start": "npm run build && node ./dist/index.js",
-    "dev": "npm run build && node ./dist/index.js",
-
+    "start": "npm run build && node ./dist/src/index.js",
+    "dev": "npm run build && node ./dist/src/index.js",
     "debug": "nodemon dist/app.js",
     "nodemon": "nodemon dev-server.js"
   },
@@ -32,6 +31,6 @@
     "typescript": "^5.4.5"
   },
   "prisma": {
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "tsx prisma/seed.ts"
   }
 }

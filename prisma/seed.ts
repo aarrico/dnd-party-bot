@@ -2,7 +2,7 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 //can store this as enum in DB if needed.***
-const roles = {
+export const roles = {
   TANK: "tank",
   SUPPORT: "support",
   RANGEDPS: "range dps",
@@ -144,12 +144,12 @@ async function createSessionUser(sessionID: any, userID: any, role: any) {
 }
 
 async function main() {
+  if ((await prisma.session.findMany()).length > 0) return;
   const sessionData = await createSessions();
   const userData = await createUsers();
-  const sessionUserData = await createSessionUsers(sessionData, userData);
-  console.log(sessionUserData);
-  // createSessionUsers();
+  await createSessionUsers(sessionData, userData);
 }
+
 main()
   .then(async () => {
     await prisma.$disconnect();

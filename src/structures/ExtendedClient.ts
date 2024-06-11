@@ -29,9 +29,6 @@ export class ExtendedClient extends Client {
   async start() {
     await this.registerModules();
     this.login(process.env.TOKEN);
-    // this.events.forEach((event) => {
-    //   this.on(event.name, event.execute());
-    // });
   }
 
   async importFile(filePath: string) {

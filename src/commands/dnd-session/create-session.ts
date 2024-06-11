@@ -4,9 +4,8 @@ import "dotenv/config";
 import DateChecker from "../../utils/dateChecker";
 import createSessionMessage from "../../utils/create-session-message";
 import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
-
+import { roles } from "../../../prisma/seed";
+import { createNewSession } from "../../utils/prisma-commands";
 export default new Command({
   name: "create-session",
   description: "creates a session in the session stack.",
@@ -91,23 +90,30 @@ export default new Command({
 
       //send to general
       if (process.env.SESSION_CHANNEL_ID) {
+        //get session messages channel
         const channel = client.channels.cache.get(
           process.env.SESSION_CHANNEL_ID
         );
+        //create actual UI for session
         createSessionMessage(client, process.env.SESSION_CHANNEL_ID).then(
           async (message) => {
             messageID = message as string;
             try {
-              await prisma.session.create({
-                data: {
+              const newSessionData = {
+                sessionData: {
                   sessionMessageId: messageID,
                   sessionName: "Session 0",
                   sessionDate: date,
                 },
-              });
-              const allsessions = await prisma.session.findMany();
-              console.log(allsessions);
-              // console.log(allsessions);
+                userData: {
+                  username: interaction.user.displayName,
+                  userChannelId: interaction.user.id,
+                },
+                interaction,
+                messageID,
+              };
+
+              await createNewSession(newSessionData);
             } catch (error) {
               console.log(`there was an error: ${error}`);
             }

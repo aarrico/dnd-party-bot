@@ -1,15 +1,4 @@
 import "dotenv/config";
-
-import {
-  Client,
-  IntentsBitField,
-  AttachmentBuilder,
-  ChannelType,
-} from "discord.js";
-import eventHandler from "./handlers/eventHandler";
-import path from "path";
-const imageToSend = "./src/utils/Exodia.jpg";
-import sendChannelDisappearingMessage from "./utils/send-channel-disappearing-message";
 import { ExtendedClient } from "./structures/ExtendedClient";
 
 export const client = new ExtendedClient();
