@@ -4,6 +4,8 @@ import {
   ClientEvents,
   Collection,
   IntentsBitField,
+  REST,
+  Routes,
 } from "discord.js";
 import { RegisterCommandOptions } from "../typings/client";
 import { Event } from "./Event";
@@ -27,21 +29,12 @@ export class ExtendedClient extends Client {
   }
 
   async start() {
-    await this.registerModules();
     this.login(process.env.TOKEN);
+    await this.registerModules();
   }
 
   async importFile(filePath: string) {
     return (await import(filePath))?.default.default;
-  }
-
-  async registerCommands(options: RegisterCommandOptions) {
-    if (options.guildid) {
-      this.guilds.cache.get(options.guildid)?.commands.set(options.commands);
-      console.log(`Resgistering commands to Guild: ${options.guildid}.`);
-    } else {
-      this.application?.commands?.set(options?.commands);
-    }
   }
 
   //registers commands and events
@@ -49,19 +42,6 @@ export class ExtendedClient extends Client {
     const commandFolders: string[] = await getAllFolders(
       path.join(__dirname, "..", "commands")
     );
-
-    // console.log(path.join(__dirname, "..", "commands"));
-
-    // commandFolders.forEach(async (folderPath) => {
-    //   const commandFiles: string[] = await getAllFiles(folderPath);
-
-    //   commandFiles.forEach(async (filePath) => {
-    //     const command: CommandType = await this.importFile(`${filePath}`);
-    //     if (!command.name) return;
-    //     this.commands.set(command.name, command);
-    //     slashCommands.push(command);
-    //   });
-    // });
 
     await this.getCommands(commandFolders);
 
@@ -76,7 +56,6 @@ export class ExtendedClient extends Client {
     const slashCommands: ApplicationCommandDataResolvable[] = [];
 
     let commandFilesArray: string[] = [];
-
     commandFolders?.forEach((folderPath) => {
       const commandFiles: string[] = getAllFiles(folderPath);
       commandFilesArray = [...commandFilesArray, ...commandFiles];
@@ -90,7 +69,10 @@ export class ExtendedClient extends Client {
       slashCommands.push(command);
     });
 
-    this.registerCommands({ commands: slashCommands });
+    this.registerCommands({
+      commands: slashCommands,
+      guildid: process.env.GUILD_ID,
+    });
   }
 
   async getCommandsFromFiles(commandFiles: string[]) {
@@ -106,6 +88,32 @@ export class ExtendedClient extends Client {
 
   getCommandFromFile(filePath: string) {
     return this.importFile(filePath) as Promise<CommandType>;
+  }
+
+  async registerCommands(options: RegisterCommandOptions) {
+    if (options?.guildid) {
+      // const guild = await this.guilds?.fetch(options.guildid);
+      // const commands = guild.commands.set(options.commands);
+
+      // Construct and prepare an instance of the REST module
+      const rest = new REST().setToken(process.env.TOKEN as string);
+      try {
+        await rest.put(
+          Routes.applicationGuildCommands(
+            process.env.CLIENT_ID as string,
+            process.env.GUILD_ID as string
+          ),
+          { body: options?.commands }
+        );
+      } catch (error) {
+        console.error(error);
+      }
+
+      // await guild?.commands?.set(options?.commands);
+      // this.guilds.cache.get(options.guildid)?.commands?.set(options.commands);
+    } else {
+      this.application?.commands?.set(options?.commands);
+    }
   }
 
   async getEvents(eventFolders: string[]) {

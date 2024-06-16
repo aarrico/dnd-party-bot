@@ -3,8 +3,6 @@ import { Command } from "../../structures/Command";
 import "dotenv/config";
 import DateChecker from "../../utils/dateChecker";
 import createSessionMessage from "../../utils/create-session-message";
-import { PrismaClient } from "@prisma/client";
-import { roles } from "../../../prisma/seed";
 import { createNewSession } from "../../utils/prisma-commands";
 export default new Command({
   name: "create-session",

@@ -8,6 +8,12 @@ import { Event } from "../../structures/Event";
 import { ExtendedInteraction } from "../../typings/Command";
 import path from "path";
 import sendChannelDisappearingMessage from "../../utils/send-channel-disappearing-message";
+import sendMessageReplyDisappearingMessage from "../../utils/send-message-reply-disappearing-message";
+import {
+  createNewSessionUserInDB,
+  createNewUserInDB,
+  getUsersByMessageID,
+} from "../../utils/prisma-commands";
 const imageToSend = "./src/utils/Exodia.jpg";
 
 export default new Event("interactionCreate", async (interaction) => {
@@ -40,22 +46,37 @@ export default new Event("interactionCreate", async (interaction) => {
     }
 
     interaction.message.components.forEach((component) => {
-      component.components.forEach((subComp: any) => {
+      component.components.forEach(async (subComp: any) => {
         if (subComp.customId === interaction.customId) {
           let sessionPMData = {
             userId: interaction.user.id,
             username: interaction.user.username,
             role: subComp.label,
           };
-          sendChannelDisappearingMessage(
-            channel,
+          sendMessageReplyDisappearingMessage(
+            interaction,
             {
               content: `Welcome to the Party ${sessionPMData.username}. You have been added as a ${sessionPMData.role}!`,
               ephemeral: true,
             },
             10
           );
-          interaction.deferUpdate();
+
+          let userData = {
+            username: interaction.user.displayName,
+            userChannelId: interaction.user.id,
+          };
+          await createNewUserInDB(userData);
+          await createNewSessionUserInDB(
+            interaction,
+            interaction.message.id,
+            subComp.label
+          );
+
+          const usersFromThisSession = await getUsersByMessageID(
+            interaction.message.id
+          );
+          // console.log(usersFromThisSession);
         }
       });
     });

@@ -144,7 +144,7 @@ async function createSessionUser(sessionID: any, userID: any, role: any) {
 }
 
 async function main() {
-  if ((await prisma.session.findMany()).length > 0) return;
+  if ((await prisma.session.findMany())?.length > 0) return;
   const sessionData = await createSessions();
   const userData = await createUsers();
   await createSessionUsers(sessionData, userData);
