@@ -4,15 +4,20 @@ export default function DateChecker(interaction: any) {
   const month = interaction.options.get("month").value;
   const day = interaction.options.get("day").value;
   const year = interaction.options.get("year").value;
+  const time = interaction.options.get("time").value as string;
 
-  if (month && day && year) {
+  const timeArray = (time as string).split(":");
+  const hour = parseInt(timeArray[0]);
+  const mins = parseInt(timeArray[1]);
+
+  if (month && day && year && hour && mins) {
     if (
       !isValidMonth(month) ||
       (!isValidDay(month, day) && !isLeapYearDay(month, year, day))
     )
       return undefined;
 
-    const sessionDate = new Date(year, month - 1, day);
+    const sessionDate = new Date(year, month - 1, day, hour, mins);
 
     return isDateAfterCurrentDate(sessionDate) ? sessionDate : undefined;
   }

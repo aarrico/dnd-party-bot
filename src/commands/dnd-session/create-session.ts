@@ -9,6 +9,12 @@ export default new Command({
   description: "creates a session in the session stack.",
   options: [
     {
+      name: "session-name",
+      description: "Name of session",
+      type: ApplicationCommandOptionType.String,
+      required: true,
+    },
+    {
       name: "month",
       description: "month of session",
       type: ApplicationCommandOptionType.Number,
@@ -76,10 +82,20 @@ export default new Command({
       type: ApplicationCommandOptionType.Number,
       required: true,
     },
+    {
+      name: "time",
+      description: "time that session will take place Format:HH:MM",
+      type: ApplicationCommandOptionType.String,
+      required: true,
+    },
   ],
   cooldown: 0,
   callBack: ({ client, interaction }) => {
     let messageID: string = "";
+    const sessionName = interaction?.options?.get("session-name")
+      ?.value as string;
+    if (!sessionName) interaction.reply("Your session name is invalid.");
+
     const date = DateChecker(interaction);
     if (date) {
       const message = `Hey there, I have your session scheduled for: ${
@@ -100,7 +116,7 @@ export default new Command({
               const newSessionData = {
                 sessionData: {
                   sessionMessageId: messageID,
-                  sessionName: "Session 0",
+                  sessionName: sessionName,
                   sessionDate: date,
                 },
                 userData: {
