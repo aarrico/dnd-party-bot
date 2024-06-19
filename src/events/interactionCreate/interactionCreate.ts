@@ -53,32 +53,51 @@ export default new Event("interactionCreate", async (interaction) => {
             username: interaction.user.username,
             role: subComp.label,
           };
-          sendMessageReplyDisappearingMessage(
-            interaction,
-            {
-              content: `Welcome to the Party ${sessionPMData.username}. You have been added as a ${sessionPMData.role}!`,
-              ephemeral: true,
-            },
-            10
-          );
 
           let userData = {
             username: interaction.user.displayName,
             userChannelId: interaction.user.id,
           };
           await createNewUserInDB(userData);
-          await createNewSessionUserInDB(
+          const actionTaken = await createNewSessionUserInDB(
             interaction,
             interaction.message.id,
             subComp.label
           );
 
-          const usersFromThisSession = await getUsersByMessageID(
-            interaction.message.id
+          const messageContent = GetMessageContent(actionTaken, sessionPMData);
+
+          sendMessageReplyDisappearingMessage(
+            interaction,
+            {
+              content: messageContent,
+              ephemeral: true,
+            },
+            10
           );
-          // console.log(usersFromThisSession);
         }
       });
     });
   }
 });
+function GetMessageContent(
+  actionTaken: string | undefined,
+  sessionPMData: { userId: string; username: string; role: any }
+) {
+  switch (actionTaken) {
+    case "created":
+      return `Welcome to the Party ${sessionPMData.username}. You have been added as a ${sessionPMData.role}!`;
+    case "deleted":
+      return `Farewell, ${sessionPMData.username}? You have been removed from the session! To rejoin, click a role button!`;
+    case "updated":
+      return `Deciding to change the game, ${sessionPMData.username}? You have been changed to a ${sessionPMData.role}!`;
+    case "role taken":
+      return `Sorry, this role has been taken. You will have to choose another.`;
+    case "party full":
+      return `Unfortunately, this party is full and no new users can be added at present!`;
+    case "Cant Change DM":
+      return `You cannot change roles as you are the Dungeon Master!`;
+    default:
+      return "No Action was taken. Something went wrong";
+  }
+}

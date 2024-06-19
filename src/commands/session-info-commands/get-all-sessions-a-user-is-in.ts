@@ -20,14 +20,35 @@ export default new Command({
       const sessions = await GetAllSessionsAUserIsIn(
         interaction?.options?.get("user")?.value as string
       );
-      let list: string = "";
-      sessions.forEach((session) => {
-        list = list.concat(`${session.session.sessionName}\n`);
-      });
 
-      interaction.reply(list);
+      let list = await GetListOfSessions(sessions);
+
+      interaction.reply(
+        list === "" ? "This user is not a part of any sessions." : list
+      );
     } catch (error) {
       console.log(error);
     }
   },
 });
+
+function GetListOfSessions(
+  sessions: {
+    role: string;
+    session: {
+      id: string;
+      sessionMessageId: string;
+      sessionName: string;
+      sessionDate: Date;
+    };
+  }[]
+) {
+  let messageSTR = "";
+  sessions.forEach((session: any) => {
+    messageSTR = messageSTR.concat(
+      `${session?.session?.sessionName} : ${session?.role}\n`
+    );
+  });
+
+  return messageSTR;
+}
