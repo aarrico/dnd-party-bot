@@ -14,6 +14,9 @@ import {
   createNewUserInDB,
   getUsersByMessageID,
 } from "../../utils/prisma-commands";
+import Jimp from "jimp";
+import "dotenv/config";
+const baseSessionImage = "./src/utils/TW_ui_menu_backplate.png";
 const imageToSend = "./src/utils/Exodia.jpg";
 
 export default new Event("interactionCreate", async (interaction) => {
@@ -34,10 +37,59 @@ export default new Event("interactionCreate", async (interaction) => {
     if (channel?.type === ChannelType.GuildText) {
       const message = channel?.messages?.cache?.get(interaction.message.id);
 
-      let absolutePath = path.resolve(imageToSend).replace(/\//g, "/");
+      const userImg = interaction.user.displayAvatarURL({
+        extension: "png",
+        forceStatic: true,
+      });
+
+      const absolutePath = path.resolve(imageToSend).replace(/\//g, "/");
       const attachment = new AttachmentBuilder(absolutePath, {
         name: "Exodia.jpg",
       });
+
+      let images = [baseSessionImage, userImg];
+      let jimps = [];
+
+      //turns the images into readable variables for jimp, then pushes them into a new array
+      for (var i = 0; i < images.length; i++) {
+        jimps.push(Jimp.read(images[i]));
+      }
+
+      //get users
+      const usersInThisSession = await getUsersByMessageID(
+        interaction.message.id
+      );
+
+      const guildMembers = await (
+        await client.guilds?.fetch(`${process.env.GUILD_ID}`)
+      ).members.fetch();
+
+      guildMembers.forEach((member) => {
+        member.displayAvatarURL();
+      });
+      //get all users avatars
+
+      //store avatar photo to jimps, make sure
+      //then do jimps stuff
+
+      //creates a promise to handle the jimps
+      await Promise.all(jimps).then(async (data) => {
+        // --- THIS IS WHERE YOU MODIFY THE IMAGES --- \\
+        data[0].composite(data[1].resize(300, 300), 1210, 400); //DM spot
+        data[0].composite(data[1].resize(300, 300), 365, 1700); //spot 1 for PMs
+        data[0].composite(data[1].resize(300, 300), 795, 1700); //spot 2 for PMs
+        data[0].composite(data[1].resize(300, 300), 1225, 1700); //spot 3 for PMs
+        data[0].composite(data[1].resize(300, 300), 1655, 1700); //spot 4 for PMs
+        data[0].composite(data[1].resize(300, 300), 2085, 1700); //spot 5 for PMs
+
+        //this saves our modified image
+        data[0].write(`./src/resources/images/current-session.png`);
+      });
+
+      // const absolutePath = path.resolve(imageToSend).replace(/\//g, "/");
+      // const attachment = new AttachmentBuilder(absolutePath, {
+      //   name: `./src/resources/images/current-session.png`,
+      // });
 
       message?.edit({
         content: "Hello everyone, we have a new session for people to join!",
