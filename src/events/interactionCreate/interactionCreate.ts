@@ -1,5 +1,7 @@
 import {
   AttachmentBuilder,
+  ButtonInteraction,
+  CacheType,
   ChannelType,
   CommandInteractionOptionResolver,
 } from "discord.js";
@@ -16,6 +18,7 @@ import {
 } from "../../utils/prisma-commands";
 import Jimp from "jimp";
 import "dotenv/config";
+import { roles } from "../../../prisma/seed";
 const baseSessionImage = "./src/utils/TW_ui_menu_backplate.png";
 const imageToSend = "./src/utils/Exodia.jpg";
 
@@ -36,102 +39,129 @@ export default new Event("interactionCreate", async (interaction) => {
     );
     if (channel?.type === ChannelType.GuildText) {
       const message = channel?.messages?.cache?.get(interaction.message.id);
+      addUserToDB(interaction);
+      setTimeout(() => {
+        CreateCompositeImage(message);
+      }, 250);
+    }
+  }
+});
 
-      const userImg = interaction.user.displayAvatarURL({
-        extension: "png",
-        forceStatic: true,
-      });
+function addUserToDB(interaction: ButtonInteraction<CacheType>) {
+  interaction.message.components.forEach((component) => {
+    component.components.forEach(async (subComp: any) => {
+      if (subComp.customId === interaction.customId) {
+        let sessionPMData = {
+          userId: interaction.user.id,
+          username: interaction.user.username,
+          role: subComp.label,
+        };
 
-      const absolutePath = path.resolve(imageToSend).replace(/\//g, "/");
-      const attachment = new AttachmentBuilder(absolutePath, {
-        name: "Exodia.jpg",
-      });
+        let userData = {
+          username: interaction.user.displayName,
+          userChannelId: interaction.user.id,
+        };
+        await createNewUserInDB(userData);
+        const actionTaken = await createNewSessionUserInDB(
+          interaction,
+          interaction.message.id,
+          subComp.label
+        );
 
-      let images = [baseSessionImage, userImg];
-      let jimps = [];
+        const messageContent = GetMessageContent(actionTaken, sessionPMData);
 
-      //turns the images into readable variables for jimp, then pushes them into a new array
-      for (var i = 0; i < images.length; i++) {
-        jimps.push(Jimp.read(images[i]));
+        sendMessageReplyDisappearingMessage(
+          interaction,
+          {
+            content: messageContent,
+            ephemeral: true,
+          },
+          10
+        );
       }
+    });
+  });
+}
 
-      //get users
-      const usersInThisSession = await getUsersByMessageID(
-        interaction.message.id
-      );
+async function CreateCompositeImage(message: any) {
+  const userImageData = await GetUserImageData(message.id);
 
-      const guildMembers = await (
-        await client.guilds?.fetch(`${process.env.GUILD_ID}`)
-      ).members.fetch();
+  //creates a promise to handle the jimps
+  await Promise.all(userImageData)
+    .then(async (userData) => {
+      let baseImage = await Jimp.read(baseSessionImage);
+      const xValues = [365, 795, 1225, 1655, 2085];
+      let spotValue = 0;
+      for (var i = 0; i < userData.length; i++) {
+        // console.log(userData);
+        const image = await Jimp.read(userData[i].userAvatarURL);
+        if (userData[i].role === roles.DM) {
+          // console.log("yorgy!");
+          baseImage.composite(image.resize(300, 300), 1210, 400); //DM spot
+        } else {
+          // console.log(spotValue, " ", xValues[spotValue]);
+          baseImage.composite(image.resize(300, 300), xValues[spotValue], 1700);
+          spotValue++;
+        }
+      }
+      //this saves our modified image
+      await baseImage.write(`./src/resources/images/current-session.png`);
+    })
+    .finally(() => {
+      const absolutePath = path
+        .resolve("./src/resources/images/current-session.png")
+        .replace(/\//g, "/");
 
-      guildMembers.forEach((member) => {
-        member.displayAvatarURL();
+      console.log("Yorgy");
+      const attachment = new AttachmentBuilder(absolutePath, {
+        name: `./src/resources/images/current-session.png`,
       });
-      //get all users avatars
 
-      //store avatar photo to jimps, make sure
-      //then do jimps stuff
-
-      //creates a promise to handle the jimps
-      await Promise.all(jimps).then(async (data) => {
-        // --- THIS IS WHERE YOU MODIFY THE IMAGES --- \\
-        data[0].composite(data[1].resize(300, 300), 1210, 400); //DM spot
-        data[0].composite(data[1].resize(300, 300), 365, 1700); //spot 1 for PMs
-        data[0].composite(data[1].resize(300, 300), 795, 1700); //spot 2 for PMs
-        data[0].composite(data[1].resize(300, 300), 1225, 1700); //spot 3 for PMs
-        data[0].composite(data[1].resize(300, 300), 1655, 1700); //spot 4 for PMs
-        data[0].composite(data[1].resize(300, 300), 2085, 1700); //spot 5 for PMs
-
-        //this saves our modified image
-        data[0].write(`./src/resources/images/current-session.png`);
-      });
-
-      // const absolutePath = path.resolve(imageToSend).replace(/\//g, "/");
-      // const attachment = new AttachmentBuilder(absolutePath, {
-      //   name: `./src/resources/images/current-session.png`,
-      // });
-
+      console.log("Shmorgy");
       message?.edit({
         content: "Hello everyone, we have a new session for people to join!",
         files: [attachment],
       });
-    }
-
-    interaction.message.components.forEach((component) => {
-      component.components.forEach(async (subComp: any) => {
-        if (subComp.customId === interaction.customId) {
-          let sessionPMData = {
-            userId: interaction.user.id,
-            username: interaction.user.username,
-            role: subComp.label,
-          };
-
-          let userData = {
-            username: interaction.user.displayName,
-            userChannelId: interaction.user.id,
-          };
-          await createNewUserInDB(userData);
-          const actionTaken = await createNewSessionUserInDB(
-            interaction,
-            interaction.message.id,
-            subComp.label
-          );
-
-          const messageContent = GetMessageContent(actionTaken, sessionPMData);
-
-          sendMessageReplyDisappearingMessage(
-            interaction,
-            {
-              content: messageContent,
-              ephemeral: true,
-            },
-            10
-          );
-        }
-      });
     });
-  }
-});
+}
+
+async function GetUserImageData(messageId: string) {
+  const usersInThisSession = await getUsersByMessageID(messageId);
+
+  const guildMembers = await (
+    await client.guilds?.fetch(`${process.env.GUILD_ID}`)
+  ).members.fetch();
+
+  let sessionMemberData: {
+    userAvatarURL: string;
+    username: string;
+    role: string;
+  }[] = [];
+
+  guildMembers.forEach((member) => {
+    const matchingUser: any = usersInThisSession.find(
+      (user) => user.user.userChannelId === member.id
+    );
+    const memberImageURL: any = member.displayAvatarURL({
+      extension: "png",
+      forceStatic: true,
+    });
+
+    if (matchingUser && memberImageURL) {
+      sessionMemberData = [
+        ...sessionMemberData,
+        {
+          userAvatarURL: memberImageURL,
+          username: matchingUser?.user?.username as string,
+          role: matchingUser?.role as string,
+        },
+      ];
+    }
+  });
+
+  return sessionMemberData;
+}
+
 function GetMessageContent(
   actionTaken: string | undefined,
   sessionPMData: { userId: string; username: string; role: any }

@@ -125,7 +125,7 @@ export async function getUsersByMessageID(messageID: string) {
   });
 
   return await prisma.sessionUser.findMany({
-    select: { user: true },
+    select: { user: true, role: true },
     where: { sessionId: sessionID?.id },
   });
 }
