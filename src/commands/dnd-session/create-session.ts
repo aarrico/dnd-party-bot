@@ -3,7 +3,12 @@ import { Command } from "../../structures/Command";
 import "dotenv/config";
 import DateChecker from "../../utils/dateChecker";
 import createSessionMessage from "../../utils/create-session-message";
-import { createNewSession } from "../../utils/prisma-commands";
+import {
+  DeleteSessionMessageID,
+  UpdateSessionMessageID,
+  createNewSession,
+} from "../../utils/prisma-commands";
+import { CreateCompositeImage } from "../../utils/create-composite-session-Image";
 export default new Command({
   name: "create-session",
   description: "creates a session in the session stack.",
@@ -90,10 +95,10 @@ export default new Command({
     },
   ],
   cooldown: 0,
-  callBack: ({ client, interaction }) => {
-    let messageID: string = "";
-    const sessionName = interaction?.options?.get("session-name")
-      ?.value as string;
+  callBack: async ({ client, interaction }) => {
+    const sessionName =
+      //maybe pass this into the argument to post the right name
+      interaction?.options?.get("session-name")?.value as string;
     if (!sessionName) interaction.reply("Your session name is invalid.");
 
     const date = DateChecker(interaction);
@@ -108,35 +113,36 @@ export default new Command({
         const channel = client.channels.cache.get(
           process.env.SESSION_CHANNEL_ID
         );
-        //create actual UI for session
-        createSessionMessage(client, process.env.SESSION_CHANNEL_ID).then(
-          async (message) => {
-            messageID = message as string;
-            try {
-              const newSessionData = {
-                sessionData: {
-                  sessionMessageId: messageID,
-                  sessionName: sessionName,
-                  sessionDate: date,
-                },
-                userData: {
-                  username: interaction.user.displayName,
-                  userChannelId: interaction.user.id,
-                },
-                interaction,
-                messageID,
-              };
 
-              await createNewSession(newSessionData);
-            } catch (error) {
-              console.log(`there was an error: ${error}`);
-            }
-          }
-        );
+        const newSessionData = {
+          sessionData: {
+            sessionMessageId: "messageID",
+            sessionName: sessionName,
+            sessionDate: date,
+          },
+          userData: {
+            username: interaction.user.displayName,
+            userChannelId: interaction.user.id,
+          },
+          interaction,
+          messageID: "messageID",
+        };
+        await DeleteSessionMessageID("messageID");
+        await createNewSession(newSessionData);
+
+        //create actual UI for session
+        await CreateCompositeImage(client, "messageID", interaction);
+
+        setTimeout(async () => {
+          const messageID = await createSessionMessage(
+            client,
+            process.env.SESSION_CHANNEL_ID
+          );
+          await UpdateSessionMessageID("messageID", messageID);
+        }, 250);
+
         if (channel?.type === ChannelType.GuildText) channel?.send(message);
       }
-
-      // console.log(interaction);
 
       //send to DMs
       const user = client.users.cache.get(interaction.user.id);

@@ -9,18 +9,13 @@ import { client } from "../..";
 import { Event } from "../../structures/Event";
 import { ExtendedInteraction } from "../../typings/Command";
 import path from "path";
-import sendChannelDisappearingMessage from "../../utils/send-channel-disappearing-message";
 import sendMessageReplyDisappearingMessage from "../../utils/send-message-reply-disappearing-message";
 import {
   createNewSessionUserInDB,
   createNewUserInDB,
-  getUsersByMessageID,
 } from "../../utils/prisma-commands";
-import Jimp from "jimp";
 import "dotenv/config";
-import { roles } from "../../../prisma/seed";
-const baseSessionImage = "./src/utils/TW_ui_menu_backplate.png";
-const imageToSend = "./src/utils/Exodia.jpg";
+import { CreateCompositeImage } from "../../utils/create-composite-session-Image";
 
 export default new Event("interactionCreate", async (interaction) => {
   if (interaction.isCommand()) {
@@ -40,8 +35,21 @@ export default new Event("interactionCreate", async (interaction) => {
     if (channel?.type === ChannelType.GuildText) {
       const message = channel?.messages?.cache?.get(interaction.message.id);
       addUserToDB(interaction);
-      setTimeout(() => {
-        CreateCompositeImage(message);
+      setTimeout(async () => {
+        await CreateCompositeImage(client, message?.id as string, interaction);
+
+        const absolutePath = path
+          .resolve("./src/resources/images/current-session.png")
+          .replace(/\//g, "/");
+
+        const attachment = new AttachmentBuilder(absolutePath, {
+          name: `./src/resources/images/current-session.png`,
+        });
+
+        message?.edit({
+          content: "Hello everyone, we have a new session for people to join!",
+          files: [attachment],
+        });
       }, 250);
     }
   }
@@ -81,85 +89,6 @@ function addUserToDB(interaction: ButtonInteraction<CacheType>) {
       }
     });
   });
-}
-
-async function CreateCompositeImage(message: any) {
-  const userImageData = await GetUserImageData(message.id);
-
-  //creates a promise to handle the jimps
-  await Promise.all(userImageData)
-    .then(async (userData) => {
-      let baseImage = await Jimp.read(baseSessionImage);
-      const xValues = [365, 795, 1225, 1655, 2085];
-      let spotValue = 0;
-      for (var i = 0; i < userData.length; i++) {
-        // console.log(userData);
-        const image = await Jimp.read(userData[i].userAvatarURL);
-        if (userData[i].role === roles.DM) {
-          // console.log("yorgy!");
-          baseImage.composite(image.resize(300, 300), 1210, 400); //DM spot
-        } else {
-          // console.log(spotValue, " ", xValues[spotValue]);
-          baseImage.composite(image.resize(300, 300), xValues[spotValue], 1700);
-          spotValue++;
-        }
-      }
-      //this saves our modified image
-      await baseImage.write(`./src/resources/images/current-session.png`);
-    })
-    .finally(() => {
-      const absolutePath = path
-        .resolve("./src/resources/images/current-session.png")
-        .replace(/\//g, "/");
-
-      console.log("Yorgy");
-      const attachment = new AttachmentBuilder(absolutePath, {
-        name: `./src/resources/images/current-session.png`,
-      });
-
-      console.log("Shmorgy");
-      message?.edit({
-        content: "Hello everyone, we have a new session for people to join!",
-        files: [attachment],
-      });
-    });
-}
-
-async function GetUserImageData(messageId: string) {
-  const usersInThisSession = await getUsersByMessageID(messageId);
-
-  const guildMembers = await (
-    await client.guilds?.fetch(`${process.env.GUILD_ID}`)
-  ).members.fetch();
-
-  let sessionMemberData: {
-    userAvatarURL: string;
-    username: string;
-    role: string;
-  }[] = [];
-
-  guildMembers.forEach((member) => {
-    const matchingUser: any = usersInThisSession.find(
-      (user) => user.user.userChannelId === member.id
-    );
-    const memberImageURL: any = member.displayAvatarURL({
-      extension: "png",
-      forceStatic: true,
-    });
-
-    if (matchingUser && memberImageURL) {
-      sessionMemberData = [
-        ...sessionMemberData,
-        {
-          userAvatarURL: memberImageURL,
-          username: matchingUser?.user?.username as string,
-          role: matchingUser?.role as string,
-        },
-      ];
-    }
-  });
-
-  return sessionMemberData;
 }
 
 function GetMessageContent(

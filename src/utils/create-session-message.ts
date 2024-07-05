@@ -1,14 +1,10 @@
 import "dotenv/config";
 import * as path from "path";
-const imageToSend = "./src/utils/TW_ui_menu_backplate.png";
 import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
   AttachmentBuilder,
-  ChannelType,
-  Channel,
-  Message,
 } from "discord.js";
 
 export class RoleClass {
@@ -81,22 +77,25 @@ export default async function createSessionMessage(
   try {
     const channel = await client.channels.cache.get(channel_id);
 
-    let absolutePath = path.resolve(imageToSend).replace(/\//g, "/");
-    const attachment = new AttachmentBuilder(absolutePath, {
-      name: "TW_ui_menu_backplate.png",
-    });
     const row1 = createActionRowOfButtons(roles_row1);
     const row2 = createActionRowOfButtons(roles_row2);
+    const absolutePath = path
+      .resolve("./src/resources/images/current-session.png")
+      .replace(/\//g, "/");
 
-    const sentMessage: Message = await channel.send({
+    const attachment = new AttachmentBuilder(absolutePath, {
+      name: `./src/resources/images/current-session.png`,
+    });
+
+    const sentMessage = await channel.send({
       content: "Hello everyone, we have a new session for people to join!",
       files: [attachment],
       components: [row1, row2],
     });
 
-    return sentMessage.id as string;
+    return sentMessage.id;
   } catch (error) {
-    console.log(error);
+    return `error caught: ${error}`;
   }
 }
 

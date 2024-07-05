@@ -33,8 +33,6 @@ export async function createNewUserInDB(data: {
   username: string;
   userChannelId: string;
 }) {
-  //   await prisma.user.create({ data });
-  //   //change to upsert
   const userUUID = await prisma.user.findMany({
     where: { userChannelId: data.userChannelId },
   });
@@ -67,12 +65,7 @@ export async function createNewSessionUserInDB(
 
   if (createdUserID?.id && createdSessionID?.id) {
     const allUserInSession = await GetUsersBySessionID(createdSessionID?.id);
-    const isUserRoleTaken = allUserInSession.some(
-      (user) => user?.role === role && user?.user?.id !== createdUserID?.id
-    );
-
-    if (isUserRoleTaken) return "role taken";
-    else if (allUserInSession.length >= 6) return "party full";
+    if (allUserInSession.length >= 6) return "party full";
 
     const existingUser = await prisma.sessionUser.findFirst({
       where: { userId: createdUserID.id, sessionId: createdSessionID.id },
@@ -141,6 +134,12 @@ export async function GetSessionByID(id: string) {
   return await prisma.session.findFirstOrThrow({ where: { id } });
 }
 
+export async function GetSessionByMessageID(messageID: string) {
+  return await prisma.session.findFirstOrThrow({
+    where: { sessionMessageId: messageID },
+  });
+}
+
 export async function DeleteSessionByID(id: string) {
   await prisma.sessionUser.deleteMany({ where: { sessionId: id } });
   return await prisma.session.delete({ where: { id } });
@@ -167,7 +166,6 @@ export async function GetSessionUserByUserID(userID: string) {
 }
 
 export async function GetUsersBySessionID(sessionID: string) {
-  // let users: string[] = [];
   return await prisma.sessionUser.findMany({
     select: { user: true, role: true },
     where: { sessionId: sessionID },
@@ -194,5 +192,32 @@ export async function DeleteAllUsersWithDisplayName(displayName: string) {
 
   return await prisma.user.deleteMany({
     where: { username: displayName },
+  });
+}
+
+export async function UpdateSessionMessageID(
+  oldMessageID: string,
+  newMessageID: string
+) {
+  await prisma.session.update({
+    where: {
+      sessionMessageId: oldMessageID,
+    },
+    data: {
+      sessionMessageId: newMessageID,
+    },
+  });
+}
+
+export async function DeleteSessionMessageID(messageID: string) {
+  await prisma.sessionUser.deleteMany({
+    where: {
+      session: { sessionMessageId: messageID },
+    },
+  });
+  await prisma.session.deleteMany({
+    where: {
+      sessionMessageId: messageID,
+    },
   });
 }
