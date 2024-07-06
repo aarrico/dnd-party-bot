@@ -27,7 +27,7 @@ export default function DateChecker(interaction: any) {
     )
       return undefined;
 
-    const sessionDate = new Date(year, month - 1, day, hour, mins);
+    const sessionDate = new Date(year, month, day, hour, mins);
 
     return isDateAfterCurrentDate(sessionDate) ? sessionDate : undefined;
   }
