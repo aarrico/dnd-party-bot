@@ -5,54 +5,66 @@ import {
   GetUserByID,
 } from "../../utils/prisma-commands";
 import { getTxtAttachmentBuilder } from "../../utils/attachmentBuilders";
-import { BotAttachmentFileNames, BotPaths } from "../../utils/botDialogStrings";
+import {
+  BotAttachmentFileNames,
+  BotCommandInfo,
+  BotCommandOptionInfo,
+  BotDialogs,
+  BotPaths,
+} from "../../utils/botDialogStrings";
 
 export default new Command({
-  name: "get-all-sessions-a-user-is-in",
-  description:
-    "Retrieves a list of all sessions that a user has signed up for from the db.",
+  name: BotCommandInfo.GetAllUserSessions_Name,
+  description: BotCommandInfo.GetAllUserSessions_Description,
   cooldown: 0,
   options: [
     {
-      name: "user-id",
-      description: "User UUID string that you are finding the sessions for.",
+      name: BotCommandOptionInfo.GetAllUserSessions_UserIDName,
+      description: BotCommandOptionInfo.GetAllUserSessions_UserIDDescription,
       type: ApplicationCommandOptionType.String,
       required: true,
     },
     {
-      name: "session-id",
-      description: "UUID of session in DB(unique identifier)",
+      name: BotCommandOptionInfo.GetAllUserSessions_SessionIDName,
+      description: BotCommandOptionInfo.GetAllUserSessions_SessionIDDescription,
       type: ApplicationCommandOptionType.Boolean,
     },
     {
-      name: "user-role-in-this-session",
-      description: "User role for session",
+      name: BotCommandOptionInfo.GetAllUserSessions_UserRoleName,
+      description: BotCommandOptionInfo.GetAllUserSessions_UserRoleDescription,
       type: ApplicationCommandOptionType.Boolean,
     },
     {
-      name: "session-date-time",
-      description: "Date/Time of session in DB",
+      name: BotCommandOptionInfo.GetAllUserSessions_SessionDateTimeName,
+      description:
+        BotCommandOptionInfo.GetAllUserSessions_SessionDateTimeDescription,
       type: ApplicationCommandOptionType.Boolean,
     },
     {
-      name: "session-message-id",
-      description: "discord message id for session",
+      name: BotCommandOptionInfo.GetAllUserSessions_SessionMessageIDName,
+      description:
+        BotCommandOptionInfo.GetAllUserSessions_SessionMessageIDDescription,
       type: ApplicationCommandOptionType.Boolean,
     },
   ],
   callBack: async ({ interaction }) => {
     try {
-      const userID = interaction?.options?.get("user-id")?.value as string;
+      const userID = interaction?.options?.get(
+        BotCommandOptionInfo.GetAllUserSessions_UserIDName
+      )?.value as string;
       const sessions = await GetAllSessionsAUserIsIn(userID);
       const addUserRoleInThisSession = interaction?.options?.get(
-        "user-role-in-this-session"
+        BotCommandOptionInfo.GetAllUserSessions_UserRoleName
       )?.value as boolean;
-      const addSessionDateTime = interaction?.options?.get("session-date-time")
-        ?.value as boolean;
-      const addSessionID = interaction?.options?.get("session-id")
-        ?.value as boolean;
-      const addMessageID = interaction?.options?.get("session-message-id")
-        ?.value as boolean;
+      const addSessionDateTime = interaction?.options?.get(
+        BotCommandOptionInfo.GetAllUserSessions_SessionDateTimeName
+      )?.value as boolean;
+      const addSessionID = interaction?.options?.get(
+        BotCommandOptionInfo.GetAllUserSessions_SessionIDName
+      )?.value as boolean;
+      const addMessageID = interaction?.options?.get(
+        BotCommandOptionInfo.GetAllUserSessions_SessionMessageIDName
+      )?.value as boolean;
 
       let list = `Session List that ${
         (await GetUserByID(userID)).username
@@ -81,8 +93,7 @@ export default new Command({
       );
 
       interaction.reply({
-        content:
-          "Here is the list of Sessions on file this user has signed up for:",
+        content: BotDialogs.GetAllUserSessions_HereIsTheList,
         files: [attachment],
         ephemeral: true,
       });

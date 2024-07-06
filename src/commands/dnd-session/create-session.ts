@@ -22,32 +22,32 @@ export default new Command({
   options: [
     {
       name: BotCommandOptionInfo.CreateSession_SessionName,
-      description: BotCommandOptionInfo.CreateSession_SessionNameDescription,
+      description: BotCommandOptionInfo.CreateSession_SessionDescription,
       type: ApplicationCommandOptionType.String,
       required: true,
     },
     {
       name: BotCommandOptionInfo.CreateSession_MonthName,
-      description: BotCommandOptionInfo.CreateSession_MonthNameDescription,
+      description: BotCommandOptionInfo.CreateSession_MonthDescription,
       type: ApplicationCommandOptionType.Number,
       choices: monthOptionChoicesArray,
       required: true,
     },
     {
       name: BotCommandOptionInfo.CreateSession_DayName,
-      description: BotCommandOptionInfo.CreateSession_DayNameDescription,
+      description: BotCommandOptionInfo.CreateSession_DayDescription,
       type: ApplicationCommandOptionType.Number,
       required: true,
     },
     {
       name: BotCommandOptionInfo.CreateSession_YearName,
-      description: BotCommandOptionInfo.CreateSession_YearNameDescription,
+      description: BotCommandOptionInfo.CreateSession_YearDescription,
       type: ApplicationCommandOptionType.Number,
       required: true,
     },
     {
       name: BotCommandOptionInfo.CreateSession_TimeName,
-      description: BotCommandOptionInfo.CreateSession_TimeNameDescription,
+      description: BotCommandOptionInfo.CreateSession_TimeDescription,
       type: ApplicationCommandOptionType.String,
       required: true,
     },

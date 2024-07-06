@@ -2,29 +2,38 @@ import { ApplicationCommandOptionType } from "discord.js";
 import { Command } from "../../structures/Command";
 import { GetAllUsers } from "../../utils/prisma-commands";
 import { getTxtAttachmentBuilder } from "../../utils/attachmentBuilders";
-import { BotAttachmentFileNames, BotPaths } from "../../utils/botDialogStrings";
+import {
+  BotAttachmentFileNames,
+  BotCommandInfo,
+  BotCommandOptionInfo,
+  BotDialogs,
+  BotPaths,
+} from "../../utils/botDialogStrings";
 
 export default new Command({
-  name: "get-all-users",
-  description: "Retrieves a list of all users added to db by bot.",
+  name: BotCommandInfo.GetAllUsers_Name,
+  description: BotCommandInfo.GetAllUsers_Description,
   cooldown: 0,
   options: [
     {
-      name: "user-id",
-      description: "UUID of user in DB(unique identifier)",
+      name: BotCommandOptionInfo.GetAllUsers_UserIDName,
+      description: BotCommandOptionInfo.GetAllUsers_UserIDDescription,
       type: ApplicationCommandOptionType.Boolean,
     },
     {
-      name: "user-dm-channel-id",
-      description: "User DM channel id",
+      name: BotCommandOptionInfo.GetAllUsers_UserChannelIDName,
+      description: BotCommandOptionInfo.GetAllUsers_UserChannelIDDescription,
       type: ApplicationCommandOptionType.Boolean,
     },
   ],
   callBack: async ({ interaction }) => {
     try {
-      const addUserID = interaction?.options?.get("user-id")?.value as boolean;
-      const addUserDMMessageID = interaction?.options?.get("user-dm-channel-id")
-        ?.value as boolean;
+      const addUserID = interaction?.options?.get(
+        BotCommandOptionInfo.GetAllUsers_UserIDName
+      )?.value as boolean;
+      const addUserDMMessageID = interaction?.options?.get(
+        BotCommandOptionInfo.GetAllUsers_UserChannelIDName
+      )?.value as boolean;
       const users = await GetAllUsers();
 
       let list: string = "User List:\nFormat:\n\nUser Name";
@@ -47,7 +56,7 @@ export default new Command({
       );
 
       interaction.reply({
-        content: "Here is the list of Users you currently have on file.",
+        content: BotDialogs.GetAllUsers_HereIsTheList,
         files: [attachment],
         ephemeral: true,
       });

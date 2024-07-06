@@ -5,33 +5,41 @@ import {
   GetUsersBySessionID,
 } from "../../utils/prisma-commands";
 import { getTxtAttachmentBuilder } from "../../utils/attachmentBuilders";
-import { BotAttachmentFileNames, BotPaths } from "../../utils/botDialogStrings";
+import {
+  BotAttachmentFileNames,
+  BotCommandInfo,
+  BotCommandOptionInfo,
+  BotDialogs,
+  BotPaths,
+} from "../../utils/botDialogStrings";
 
 export default new Command({
-  name: "get-all-users-in-a-session",
-  description:
-    "Retrieves a list of all users in a particular session via Session UUID string added to db by bot.",
+  name: BotCommandInfo.GetAllUsersInASession_Name,
+  description: BotCommandInfo.GetAllUsersInASession_Description,
   cooldown: 0,
   options: [
     {
-      name: "session-id",
-      description: "UUID of session in DB(unique identifier)",
+      name: BotCommandOptionInfo.GetAllUsersInASession_SessionIDName,
+      description:
+        BotCommandOptionInfo.GetAllUsersInASession_SessionIDDescription,
       type: ApplicationCommandOptionType.String,
       required: true,
     },
     {
-      name: "user-id",
-      description: "UUID of user in DB(unique identifier)",
+      name: BotCommandOptionInfo.GetAllUsersInASession_UserIDName,
+      description: BotCommandOptionInfo.GetAllUsersInASession_UserIDDescription,
       type: ApplicationCommandOptionType.Boolean,
     },
     {
-      name: "user-role-in-this-session",
-      description: "discord message id for session",
+      name: BotCommandOptionInfo.GetAllUsersInASession_UserRoleName,
+      description:
+        BotCommandOptionInfo.GetAllUsersInASession_UserRoleDescription,
       type: ApplicationCommandOptionType.Boolean,
     },
     {
-      name: "user-channel-id",
-      description: "User DM channel id",
+      name: BotCommandOptionInfo.GetAllUsersInASession_UserChannelIDName,
+      description:
+        BotCommandOptionInfo.GetAllUsersInASession_UserChannelIDDescription,
       type: ApplicationCommandOptionType.Boolean,
     },
   ],
@@ -41,16 +49,20 @@ export default new Command({
         interaction.reply("Only Admins can run this command!");
         return;
       }
-      const sessionID = interaction?.options?.get("session-id")
-        ?.value as string;
+      const sessionID = interaction?.options?.get(
+        BotCommandOptionInfo.GetAllUsersInASession_SessionIDName
+      )?.value as string;
       const sessionUsers = await GetUsersBySessionID(sessionID);
 
-      const addUserID = interaction?.options?.get("user-id")?.value as boolean;
-      const addUserRoleInThisSession = interaction?.options?.get(
-        "user-role-in-this-session"
+      const addUserID = interaction?.options?.get(
+        BotCommandOptionInfo.GetAllUsersInASession_UserIDName
       )?.value as boolean;
-      const addUserDMMessageID = interaction?.options?.get("user-channel-id")
-        ?.value as boolean;
+      const addUserRoleInThisSession = interaction?.options?.get(
+        BotCommandOptionInfo.GetAllUsersInASession_UserRoleName
+      )?.value as boolean;
+      const addUserDMMessageID = interaction?.options?.get(
+        BotCommandOptionInfo.GetAllUsersInASession_UserChannelIDName
+      )?.value as boolean;
 
       let list: string = `User List for ${
         (await GetSessionByID(sessionID)).sessionName
@@ -76,7 +88,7 @@ export default new Command({
       );
 
       interaction.reply({
-        content: "Here is the list of Users in this session.",
+        content: BotDialogs.GetAllUsersInASession_HereIsTheList,
         files: [attachment],
         ephemeral: true,
       });

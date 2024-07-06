@@ -2,37 +2,48 @@ import { Command } from "../../structures/Command";
 import { GetAllSessions } from "../../utils/prisma-commands";
 import { ApplicationCommandOptionType } from "discord.js";
 import { getTxtAttachmentBuilder } from "../../utils/attachmentBuilders";
-import { BotAttachmentFileNames, BotPaths } from "../../utils/botDialogStrings";
+import {
+  BotAttachmentFileNames,
+  BotCommandInfo,
+  BotCommandOptionInfo,
+  BotDialogs,
+  BotPaths,
+} from "../../utils/botDialogStrings";
 
 export default new Command({
-  name: "get-all-sessions",
-  description: "Retrieves a list of all sessions added to db by bot.",
+  name: BotCommandInfo.GetAllSessions_Name,
+  description: BotCommandInfo.GetAllSessions_Description,
   cooldown: 0,
   options: [
     {
-      name: "session-id",
-      description: "UUID of session in DB(unique identifier)",
+      name: BotCommandOptionInfo.GetAllSessions_SessionIDName,
+      description: BotCommandOptionInfo.GetAllSessions_SessionIDDescription,
       type: ApplicationCommandOptionType.Boolean,
     },
     {
-      name: "session-date-time",
-      description: "Date/Time of session in DB",
+      name: BotCommandOptionInfo.GetAllSessions_SessionDateTimeName,
+      description:
+        BotCommandOptionInfo.GetAllSessions_SessionDateTimeDescription,
       type: ApplicationCommandOptionType.Boolean,
     },
     {
-      name: "session-message-id",
-      description: "discord message id for session",
+      name: BotCommandOptionInfo.GetAllSessions_SessionMessageIDName,
+      description:
+        BotCommandOptionInfo.GetAllSessions_SessionMessageIDDescription,
       type: ApplicationCommandOptionType.Boolean,
     },
   ],
   callBack: async ({ interaction }) => {
     try {
-      const addSessionID = interaction?.options?.get("session-id")
-        ?.value as boolean;
-      const addSessionDateTime = interaction?.options?.get("session-date-time")
-        ?.value as boolean;
-      const addMessageID = interaction?.options?.get("session-message-id")
-        ?.value as boolean;
+      const addSessionID = interaction?.options?.get(
+        BotCommandOptionInfo.GetAllSessions_SessionIDName
+      )?.value as boolean;
+      const addSessionDateTime = interaction?.options?.get(
+        BotCommandOptionInfo.GetAllSessions_SessionDateTimeName
+      )?.value as boolean;
+      const addMessageID = interaction?.options?.get(
+        BotCommandOptionInfo.GetAllSessions_SessionMessageIDName
+      )?.value as boolean;
 
       const sessions = await GetAllSessions();
       let list: string = "Session List:\nFormat:\n\nSession Name";
@@ -57,7 +68,7 @@ export default new Command({
       );
 
       interaction.reply({
-        content: "Here is the list of Sessions you currently have on file.",
+        content: BotDialogs.GetAllSessions_HereIsTheList,
         files: [attachment],
         ephemeral: true,
       });
