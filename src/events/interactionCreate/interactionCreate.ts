@@ -39,11 +39,11 @@ export default new Event("interactionCreate", async (interaction) => {
         await CreateCompositeImage(client, message?.id as string, interaction);
 
         const absolutePath = path
-          .resolve("./src/resources/images/current-session.png")
+          .resolve("./src/resources/temp/current-session.png")
           .replace(/\//g, "/");
 
         const attachment = new AttachmentBuilder(absolutePath, {
-          name: `./src/resources/images/current-session.png`,
+          name: `./src/resources/temp/current-session.png`,
         });
 
         message?.edit({

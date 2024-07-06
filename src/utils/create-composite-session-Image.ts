@@ -53,7 +53,7 @@ export async function CreateCompositeImage(
       }
     }
     //this saves our modified image
-    await baseImage.write(`./src/resources/images/current-session.png`);
+    await baseImage.write(`./src/resources/temp/current-session.png`);
   });
 }
 

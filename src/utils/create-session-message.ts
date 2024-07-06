@@ -80,11 +80,11 @@ export default async function createSessionMessage(
     const row1 = createActionRowOfButtons(roles_row1);
     const row2 = createActionRowOfButtons(roles_row2);
     const absolutePath = path
-      .resolve("./src/resources/images/current-session.png")
+      .resolve("./src/resources/temp/current-session.png")
       .replace(/\//g, "/");
 
     const attachment = new AttachmentBuilder(absolutePath, {
-      name: `./src/resources/images/current-session.png`,
+      name: `./src/resources/temp/current-session.png`,
     });
 
     const sentMessage = await channel.send({
