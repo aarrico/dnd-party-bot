@@ -37,6 +37,10 @@ export default new Command({
   ],
   callBack: async ({ interaction }) => {
     try {
+      if (!interaction.member.permissions.has("Administrator")) {
+        interaction.reply("Only Admins can run this command!");
+        return;
+      }
       const sessionID = interaction?.options?.get("session-id")
         ?.value as string;
       const sessionUsers = await GetUsersBySessionID(sessionID);
@@ -85,6 +89,7 @@ export default new Command({
       interaction.reply({
         content: "Here is the list of Users in this session.",
         files: [attachment],
+        ephemeral: true,
       });
     } catch (error) {
       console.log(error);

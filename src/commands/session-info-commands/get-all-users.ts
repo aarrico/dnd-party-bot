@@ -56,6 +56,7 @@ export default new Command({
       interaction.reply({
         content: "Here is the list of Users you currently have on file.",
         files: [attachment],
+        ephemeral: true,
       });
     } catch (error) {
       console.log(error);

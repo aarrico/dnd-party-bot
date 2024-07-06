@@ -95,6 +95,7 @@ export default new Command({
         content:
           "Here is the list of Sessions on file this user has signed up for:",
         files: [attachment],
+        ephemeral: true,
       });
     } catch (error) {
       console.log(error);

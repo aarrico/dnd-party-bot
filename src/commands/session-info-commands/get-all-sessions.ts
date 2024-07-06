@@ -66,6 +66,7 @@ export default new Command({
       interaction.reply({
         content: "Here is the list of Sessions you currently have on file.",
         files: [attachment],
+        ephemeral: true,
       });
     } catch (error) {
       interaction.reply(`There was an error: ${error}`);
