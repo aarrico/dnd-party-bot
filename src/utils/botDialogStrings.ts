@@ -12,6 +12,22 @@ export enum BotDialogs {
   GetAllUsersInASession_HereIsTheList = "Here is the list of Users in this session.",
   //GetAllUsers
   GetAllUsers_HereIsTheList = "Here is the list of Users you currently have on file.",
+  //InteractionCreate responses
+  InteractionCreate_NonexistentCommand = "You have used a nonexistent command!",
+  InteractionCreate_HereIsANewSessionMessage = "Hello everyone, we have a new session for people to join!",
+  //RoleChosenMessageContent in InteractionCreate
+  RoleChosenMessageContent_WelcomeToTheParty1 = "Welcome to the Party ",
+  RoleChosenMessageContent_WelcomeToTheParty2 = ". You have been added as a ",
+  RoleChosenMessageContent_WelcomeToTheParty3 = "!",
+  RoleChosenMessageContent_Farewell1 = "Farewell, ",
+  RoleChosenMessageContent_Farewell2 = "? You have been removed from the session! To rejoin, click a role button!",
+  RoleChosenMessageContent_RoleSwap1 = "Deciding to change the game, ",
+  RoleChosenMessageContent_RoleSwap2 = "? You have been changed to a ",
+  RoleChosenMessageContent_RoleSwap3 = "!",
+  RoleChosenMessageContent_RoleTaken = "Sorry, this role has been taken. You will have to choose another.",
+  RoleChosenMessageContent_PartyFull = "Unfortunately, this party is full and no new users can be added at present!",
+  RoleChosenMessageContent_DMCantSwap = "You cannot change roles as you are the Dungeon Master!",
+  RoleChosenMessageContent_NoActionTaken = "No Action was taken. Something went wrong",
 }
 
 //potential resolve path here instead.

@@ -17,13 +17,19 @@ import {
 import "dotenv/config";
 import { CreateCompositeImage } from "../../utils/create-composite-session-Image";
 import { getPNGAttachmentBuilder } from "../../utils/attachmentBuilders";
-import { BotAttachmentFileNames, BotPaths } from "../../utils/botDialogStrings";
+import {
+  BotAttachmentFileNames,
+  BotDialogs,
+  BotPaths,
+} from "../../utils/botDialogStrings";
 
 export default new Event("interactionCreate", async (interaction) => {
   if (interaction.isCommand()) {
     const command = client.commands.get(interaction.commandName);
     if (!command) {
-      return await interaction.reply("You have used a nonexistent command!");
+      return await interaction.reply(
+        BotDialogs.InteractionCreate_NonexistentCommand
+      );
     }
     command.callBack({
       args: interaction.options as CommandInteractionOptionResolver,
@@ -46,7 +52,7 @@ export default new Event("interactionCreate", async (interaction) => {
         );
 
         message?.edit({
-          content: "Hello everyone, we have a new session for people to join!",
+          content: BotDialogs.InteractionCreate_HereIsANewSessionMessage,
           files: [attachment],
         });
       }, 250);
@@ -96,18 +102,23 @@ function GetMessageContent(
 ) {
   switch (actionTaken) {
     case "created":
-      return `Welcome to the Party ${sessionPMData.username}. You have been added as a ${sessionPMData.role}!`;
+      return `${BotDialogs.RoleChosenMessageContent_WelcomeToTheParty1}${sessionPMData.username}
+      ${BotDialogs.RoleChosenMessageContent_WelcomeToTheParty2}${sessionPMData.role}
+      ${BotDialogs.RoleChosenMessageContent_WelcomeToTheParty3}`;
     case "deleted":
-      return `Farewell, ${sessionPMData.username}? You have been removed from the session! To rejoin, click a role button!`;
+      return `${BotDialogs.RoleChosenMessageContent_Farewell1}${sessionPMData.username}
+      ${BotDialogs.RoleChosenMessageContent_Farewell2}`;
     case "updated":
-      return `Deciding to change the game, ${sessionPMData.username}? You have been changed to a ${sessionPMData.role}!`;
+      return `${BotDialogs.RoleChosenMessageContent_RoleSwap1}${sessionPMData.username}
+      ${BotDialogs.RoleChosenMessageContent_RoleSwap2}${sessionPMData.role}
+      ${BotDialogs.RoleChosenMessageContent_RoleSwap3}`;
     case "role taken":
-      return `Sorry, this role has been taken. You will have to choose another.`;
+      return BotDialogs.RoleChosenMessageContent_RoleTaken;
     case "party full":
-      return `Unfortunately, this party is full and no new users can be added at present!`;
+      return BotDialogs.RoleChosenMessageContent_PartyFull;
     case "Cant Change DM":
-      return `You cannot change roles as you are the Dungeon Master!`;
+      return BotDialogs.RoleChosenMessageContent_DMCantSwap;
     default:
-      return "No Action was taken. Something went wrong";
+      return BotDialogs.RoleChosenMessageContent_NoActionTaken;
   }
 }
