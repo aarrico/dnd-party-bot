@@ -9,88 +9,45 @@ import {
   createNewSession,
 } from "../../utils/prisma-commands";
 import { CreateCompositeImage } from "../../utils/create-composite-session-Image";
-import { BotDialogs } from "../../utils/botDialogStrings";
+import {
+  BotCommandInfo,
+  BotCommandOptionInfo,
+  BotDialogs,
+} from "../../utils/botDialogStrings";
+import { monthOptionChoicesArray } from "../../utils/genericInformation";
+
 export default new Command({
-  name: "create-session",
-  description: "creates a session in the session stack.",
+  name: BotCommandInfo.CreateSessionName,
+  description: BotCommandInfo.CreateSessionDescription,
   options: [
     {
-      name: "session-name",
-      description: "Name of session",
+      name: BotCommandOptionInfo.CreateSession_SessionName,
+      description: BotCommandOptionInfo.CreateSession_SessionNameDescription,
       type: ApplicationCommandOptionType.String,
       required: true,
     },
     {
-      name: "month",
-      description: "month of session",
+      name: BotCommandOptionInfo.CreateSession_MonthName,
+      description: BotCommandOptionInfo.CreateSession_MonthNameDescription,
       type: ApplicationCommandOptionType.Number,
-      choices: [
-        {
-          name: "January",
-          value: 1,
-        },
-        {
-          name: "February",
-          value: 2,
-        },
-        {
-          name: "March",
-          value: 3,
-        },
-        {
-          name: "April",
-          value: 4,
-        },
-        {
-          name: "May",
-          value: 5,
-        },
-        {
-          name: "June",
-          value: 6,
-        },
-        {
-          name: "July",
-          value: 7,
-        },
-        {
-          name: "August",
-          value: 8,
-        },
-        {
-          name: "September",
-          value: 9,
-        },
-        {
-          name: "October",
-          value: 10,
-        },
-        {
-          name: "November",
-          value: 11,
-        },
-        {
-          name: "December",
-          value: 12,
-        },
-      ],
+      choices: monthOptionChoicesArray,
       required: true,
     },
     {
-      name: "day",
-      description: "Day of session",
+      name: BotCommandOptionInfo.CreateSession_DayName,
+      description: BotCommandOptionInfo.CreateSession_DayNameDescription,
       type: ApplicationCommandOptionType.Number,
       required: true,
     },
     {
-      name: "year",
-      description: "Year of session",
+      name: BotCommandOptionInfo.CreateSession_YearName,
+      description: BotCommandOptionInfo.CreateSession_YearNameDescription,
       type: ApplicationCommandOptionType.Number,
       required: true,
     },
     {
-      name: "time",
-      description: "Time that session will take place Format:HH:MM",
+      name: BotCommandOptionInfo.CreateSession_TimeName,
+      description: BotCommandOptionInfo.CreateSession_TimeNameDescription,
       type: ApplicationCommandOptionType.String,
       required: true,
     },
@@ -99,7 +56,8 @@ export default new Command({
   callBack: async ({ client, interaction }) => {
     const sessionName =
       //maybe pass this into the argument to post the right name
-      interaction?.options?.get("session-name")?.value as string;
+      interaction?.options?.get(BotCommandOptionInfo.CreateSession_SessionName)
+        ?.value as string;
     if (!sessionName)
       interaction.reply(BotDialogs.CreateSessionInvalidSessionName);
 

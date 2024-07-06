@@ -1,10 +1,20 @@
+import { BotCommandOptionInfo } from "./botDialogStrings";
+
 const monthMaxDayCounts = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
 export default function DateChecker(interaction: any) {
-  const month = interaction.options.get("month").value;
-  const day = interaction.options.get("day").value;
-  const year = interaction.options.get("year").value;
-  const time = interaction.options.get("time").value as string;
+  const month = interaction.options.get(
+    BotCommandOptionInfo.CreateSession_MonthName
+  ).value;
+  const day = interaction.options.get(
+    BotCommandOptionInfo.CreateSession_DayName
+  ).value;
+  const year = interaction.options.get(
+    BotCommandOptionInfo.CreateSession_YearName
+  ).value;
+  const time = interaction.options.get(
+    BotCommandOptionInfo.CreateSession_TimeName
+  ).value as string;
 
   const timeArray = (time as string).split(":");
   const hour = parseInt(timeArray[0]);

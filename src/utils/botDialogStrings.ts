@@ -21,3 +21,22 @@ export enum BotAttachmentFileNames {
   AllUsersInSessionInformation = "AllUsersInSessionInformation.txt",
   CurrentSession = "current-session.png",
 }
+
+export enum BotCommandInfo {
+  CreateSessionName = "create-session",
+  CreateSessionDescription = "creates a session in the session stack.",
+}
+
+export enum BotCommandOptionInfo {
+  //CreateSession
+  CreateSession_SessionName = "session-name",
+  CreateSession_SessionNameDescription = "Name of session",
+  CreateSession_MonthName = "month",
+  CreateSession_MonthNameDescription = "Month of session",
+  CreateSession_DayName = "day",
+  CreateSession_DayNameDescription = "Day of session",
+  CreateSession_YearName = "year",
+  CreateSession_YearNameDescription = "Year of session",
+  CreateSession_TimeName = "time",
+  CreateSession_TimeNameDescription = "Time that session will take place Format:HH:MM",
+}
