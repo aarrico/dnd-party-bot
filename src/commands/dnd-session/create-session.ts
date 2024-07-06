@@ -1,12 +1,11 @@
 import { ApplicationCommandOptionType, ChannelType } from "discord.js";
 import { Command } from "../../structures/Command";
-import "dotenv/config";
 import DateChecker from "../../utils/dateChecker";
 import createSessionMessage from "../../utils/create-session-message";
 import {
   DeleteSessionMessageID,
   UpdateSessionMessageID,
-  createNewSession,
+  CreateNewSession,
 } from "../../utils/prisma-commands";
 import { CreateCompositeImage } from "../../utils/create-composite-session-Image";
 import {
@@ -87,7 +86,7 @@ export default new Command({
           messageID: messageIDstr,
         };
         await DeleteSessionMessageID(messageIDstr);
-        await createNewSession(newSessionData);
+        await CreateNewSession(newSessionData);
 
         //create actual UI for session
         await CreateCompositeImage(client, messageIDstr);

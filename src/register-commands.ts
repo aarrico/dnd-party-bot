@@ -1,4 +1,3 @@
-import "dotenv/config";
 import { REST, Routes, ApplicationCommandOptionType } from "discord.js";
 
 const commands = [

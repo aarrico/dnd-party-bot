@@ -14,17 +14,18 @@ datasource db {
 }
 
 enum SessionStatus {
-  Active
-  Complete
+  ACTIVE
+  COMPLETED
+  CANCELED
 }
 
 //host date time in UTC time.
 model Session {
-  id               String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  sessionMessageId String        @unique @map("session_message_id")
-  sessionName      String        @map("session_name")
-  sessionDate      DateTime      @map("session_date")
-  users            SessionUser[]
+  id        String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  messageId String        @unique @map("session_message_id")
+  name      String        @map("session_name")
+  date      DateTime      @map("session_date")
+  users     SessionUser[]
 }
 
 model User {

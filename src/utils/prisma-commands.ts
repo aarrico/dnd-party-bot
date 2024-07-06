@@ -3,7 +3,7 @@ import { roles } from "../../prisma/seed";
 
 const prisma = new PrismaClient();
 
-export async function createNewSession(data: {
+export async function CreateNewSession(data: {
   sessionData: {
     sessionMessageId: string;
     sessionName: string;
@@ -16,12 +16,12 @@ export async function createNewSession(data: {
   interaction: any;
   messageID: string;
 }) {
-  await createNewSessionInDB(data.sessionData);
-  await createNewUserInDB(data.userData);
-  await createNewSessionUserInDB(data.interaction, data.messageID, roles.DM);
+  await CreateNewSessionInDB(data.sessionData);
+  await CreateNewUserInDB(data.userData);
+  await CreateNewSessionUserInDB(data.interaction, data.messageID, roles.DM);
 }
 
-export async function createNewSessionInDB(data: {
+export async function CreateNewSessionInDB(data: {
   sessionMessageId: string;
   sessionName: string;
   sessionDate: Date;
@@ -29,7 +29,7 @@ export async function createNewSessionInDB(data: {
   await prisma.session.create({ data });
 }
 
-export async function createNewUserInDB(data: {
+export async function CreateNewUserInDB(data: {
   username: string;
   userChannelId: string;
 }) {
@@ -48,7 +48,7 @@ export async function createNewUserInDB(data: {
   }
 }
 
-export async function createNewSessionUserInDB(
+export async function CreateNewSessionUserInDB(
   interaction: any,
   messageID: string,
   role: string

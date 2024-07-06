@@ -11,10 +11,9 @@ import { ExtendedInteraction } from "../../typings/Command";
 import path from "path";
 import sendMessageReplyDisappearingMessage from "../../utils/send-message-reply-disappearing-message";
 import {
-  createNewSessionUserInDB,
-  createNewUserInDB,
+  CreateNewSessionUserInDB,
+  CreateNewUserInDB,
 } from "../../utils/prisma-commands";
-import "dotenv/config";
 import { CreateCompositeImage } from "../../utils/create-composite-session-Image";
 import { getPNGAttachmentBuilder } from "../../utils/attachmentBuilders";
 import {
@@ -74,8 +73,8 @@ function addUserToDB(interaction: ButtonInteraction<CacheType>) {
           username: interaction.user.displayName,
           userChannelId: interaction.user.id,
         };
-        await createNewUserInDB(userData);
-        const actionTaken = await createNewSessionUserInDB(
+        await CreateNewUserInDB(userData);
+        const actionTaken = await CreateNewSessionUserInDB(
           interaction,
           interaction.message.id,
           subComp.label

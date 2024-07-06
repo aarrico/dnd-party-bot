@@ -1,4 +1,3 @@
-import "dotenv/config";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 import { getPNGAttachmentBuilder } from "./attachmentBuilders";
 import { BotAttachmentFileNames, BotPaths } from "./botDialogStrings";
