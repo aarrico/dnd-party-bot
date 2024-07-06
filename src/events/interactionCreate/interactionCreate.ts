@@ -36,7 +36,7 @@ export default new Event("interactionCreate", async (interaction) => {
       const message = channel?.messages?.cache?.get(interaction.message.id);
       addUserToDB(interaction);
       setTimeout(async () => {
-        await CreateCompositeImage(client, message?.id as string, interaction);
+        await CreateCompositeImage(client, message?.id as string);
 
         const absolutePath = path
           .resolve("./src/resources/temp/current-session.png")

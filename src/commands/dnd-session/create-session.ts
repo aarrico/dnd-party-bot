@@ -131,7 +131,7 @@ export default new Command({
         await createNewSession(newSessionData);
 
         //create actual UI for session
-        await CreateCompositeImage(client, "messageID", interaction);
+        await CreateCompositeImage(client, "messageID");
 
         setTimeout(async () => {
           const messageID = await createSessionMessage(

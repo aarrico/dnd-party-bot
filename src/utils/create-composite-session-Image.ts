@@ -1,16 +1,13 @@
 import Jimp from "jimp";
 import { GetSessionByMessageID, getUsersByMessageID } from "./prisma-commands";
 import { getRoleImage, getRoleSTR, roles } from "./role";
-import path from "path";
-import { AttachmentBuilder } from "discord.js";
 import { ExtendedClient } from "../structures/ExtendedClient";
-const baseSessionImage = "./src/utils/TW_ui_menu_backplate.png";
+const baseSessionImage = "./src/resources/images/TW_ui_menu_backplate.png";
 const profileMaskImage = "./src/resources/images/profile_mask.png";
 
 export async function CreateCompositeImage(
   client: ExtendedClient,
-  messageID: string,
-  interaction: any
+  messageID: string
 ) {
   const userImageData = await GetUserImageData(client, messageID);
   const session = await GetSessionByMessageID(messageID);
