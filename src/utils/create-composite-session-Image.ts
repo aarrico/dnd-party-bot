@@ -2,8 +2,7 @@ import Jimp from "jimp";
 import { GetSessionByMessageID, getUsersByMessageID } from "./prisma-commands";
 import { getRoleImage, getRoleSTR, roles } from "./role";
 import { ExtendedClient } from "../structures/ExtendedClient";
-const baseSessionImage = "./src/resources/images/TW_ui_menu_backplate.png";
-const profileMaskImage = "./src/resources/images/profile_mask.png";
+import { BotAttachmentFileNames, BotPaths } from "./botDialogStrings";
 
 export async function CreateCompositeImage(
   client: ExtendedClient,
@@ -11,18 +10,25 @@ export async function CreateCompositeImage(
 ) {
   const userImageData = await GetUserImageData(client, messageID);
   const session = await GetSessionByMessageID(messageID);
+  //fix this
   const font = await Jimp.loadFont(
     "C:/Users/Shawn/Documents/dnd-party-bot/src/resources/fonts/Vecna-oppx-64.fnt"
   );
 
   //creates a promise to handle the jimps
   await Promise.all([userImageData, font]).then(async (data) => {
-    const baseImage = await Jimp.read(baseSessionImage);
-    const mask = await Jimp.read(profileMaskImage);
+    const baseImage = await Jimp.read(BotPaths.BaseSessionImageDir);
+    const mask = await Jimp.read(BotPaths.ProfileMaskImageDir);
     const xValues = [365, 795, 1225, 1655, 2085];
     let spotValue = 0;
 
     baseImage.print(font, 585, 940, session?.sessionName);
+    baseImage.print(
+      font,
+      1035,
+      1140,
+      `${session?.sessionDate.toLocaleString()}`
+    );
 
     for (var i = 0; i < data[0].length; i++) {
       const image = await Jimp.read(data[0][i].userAvatarURL);
@@ -50,7 +56,9 @@ export async function CreateCompositeImage(
       }
     }
     //this saves our modified image
-    await baseImage.write(`./src/resources/temp/current-session.png`);
+    await baseImage.write(
+      `${BotPaths.TempDir}${BotAttachmentFileNames.CurrentSession}`
+    );
   });
 }
 

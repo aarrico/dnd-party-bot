@@ -16,6 +16,8 @@ import {
 } from "../../utils/prisma-commands";
 import "dotenv/config";
 import { CreateCompositeImage } from "../../utils/create-composite-session-Image";
+import { getPNGAttachmentBuilder } from "../../utils/attachmentBuilders";
+import { BotAttachmentFileNames, BotPaths } from "../../utils/botDialogStrings";
 
 export default new Event("interactionCreate", async (interaction) => {
   if (interaction.isCommand()) {
@@ -38,13 +40,10 @@ export default new Event("interactionCreate", async (interaction) => {
       setTimeout(async () => {
         await CreateCompositeImage(client, message?.id as string);
 
-        const absolutePath = path
-          .resolve("./src/resources/temp/current-session.png")
-          .replace(/\//g, "/");
-
-        const attachment = new AttachmentBuilder(absolutePath, {
-          name: `./src/resources/temp/current-session.png`,
-        });
+        const attachment = getPNGAttachmentBuilder(
+          `${BotPaths.TempDir}${BotAttachmentFileNames.CurrentSession}`,
+          BotAttachmentFileNames.CurrentSession
+        );
 
         message?.edit({
           content: "Hello everyone, we have a new session for people to join!",

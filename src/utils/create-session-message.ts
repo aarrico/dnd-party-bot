@@ -1,11 +1,7 @@
 import "dotenv/config";
-import * as path from "path";
-import {
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-  AttachmentBuilder,
-} from "discord.js";
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
+import { getPNGAttachmentBuilder } from "./attachmentBuilders";
+import { BotAttachmentFileNames, BotPaths } from "./botDialogStrings";
 
 export class RoleClass {
   id!: string;
@@ -79,13 +75,10 @@ export default async function createSessionMessage(
 
     const row1 = createActionRowOfButtons(roles_row1);
     const row2 = createActionRowOfButtons(roles_row2);
-    const absolutePath = path
-      .resolve("./src/resources/temp/current-session.png")
-      .replace(/\//g, "/");
-
-    const attachment = new AttachmentBuilder(absolutePath, {
-      name: `./src/resources/temp/current-session.png`,
-    });
+    const attachment = getPNGAttachmentBuilder(
+      `${BotPaths.TempDir}${BotAttachmentFileNames.CurrentSession}`,
+      BotAttachmentFileNames.CurrentSession
+    );
 
     const sentMessage = await channel.send({
       content: "Hello everyone, we have a new session for people to join!",

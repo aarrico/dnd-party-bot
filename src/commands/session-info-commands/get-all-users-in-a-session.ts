@@ -1,11 +1,11 @@
-import { ApplicationCommandOptionType, AttachmentBuilder } from "discord.js";
+import { ApplicationCommandOptionType } from "discord.js";
 import { Command } from "../../structures/Command";
 import {
   GetSessionByID,
   GetUsersBySessionID,
 } from "../../utils/prisma-commands";
-import { writeFileSync } from "fs";
-import path from "path";
+import { getTxtAttachmentBuilder } from "../../utils/attachmentBuilders";
+import { BotAttachmentFileNames, BotPaths } from "../../utils/botDialogStrings";
 
 export default new Command({
   name: "get-all-users-in-a-session",
@@ -62,28 +62,17 @@ export default new Command({
 
       sessionUsers.sort().forEach((user) => {
         list = list.concat(`${user.user.username}`);
-        if (addUserID) list = list.concat(` : ${user.user.id}`);
         if (addUserRoleInThisSession) list = list.concat(` : ${user.role}`);
+        if (addUserID) list = list.concat(` : ${user.user.id}`);
         if (addUserDMMessageID)
           list = list.concat(` : ${user.user.userChannelId}`);
         list = list.concat(`\n`);
       });
 
-      writeFileSync(
-        "./src/resources/temp/AllUsersInSessionInformation.txt",
-        list,
-        {
-          flag: "w",
-        }
-      );
-
-      const attachment = new AttachmentBuilder(
-        path
-          .resolve("./src/resources/temp/AllUsersInSessionInformation.txt")
-          .replace(/\//g, "/"),
-        {
-          name: "AllUsersInSessionInformation.txt",
-        }
+      const attachment = getTxtAttachmentBuilder(
+        `${BotPaths.TempDir}${BotAttachmentFileNames.AllUsersInSessionInformation}`,
+        BotAttachmentFileNames.AllUsersInSessionInformation,
+        list
       );
 
       interaction.reply({

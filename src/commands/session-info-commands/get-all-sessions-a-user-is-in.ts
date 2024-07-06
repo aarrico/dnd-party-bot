@@ -1,11 +1,11 @@
-import { ApplicationCommandOptionType, AttachmentBuilder } from "discord.js";
+import { ApplicationCommandOptionType } from "discord.js";
 import { Command } from "../../structures/Command";
 import {
   GetAllSessionsAUserIsIn,
   GetUserByID,
 } from "../../utils/prisma-commands";
-import path from "path";
-import { writeFileSync } from "fs";
+import { getTxtAttachmentBuilder } from "../../utils/attachmentBuilders";
+import { BotAttachmentFileNames, BotPaths } from "../../utils/botDialogStrings";
 
 export default new Command({
   name: "get-all-sessions-a-user-is-in",
@@ -74,21 +74,10 @@ export default new Command({
         list = list.concat(`\n`);
       });
 
-      writeFileSync(
-        "./src/resources/temp/SessionsUserHasSignedUpFor.txt",
-        list,
-        {
-          flag: "w",
-        }
-      );
-
-      const attachment = new AttachmentBuilder(
-        path
-          .resolve("./src/resources/temp/SessionsUserHasSignedUpFor.txt")
-          .replace(/\//g, "/"),
-        {
-          name: "SessionsUserHasSignedUpFor.txt",
-        }
+      const attachment = getTxtAttachmentBuilder(
+        `${BotPaths.TempDir}${BotAttachmentFileNames.SessionsUserHasSignedUpFor}`,
+        BotAttachmentFileNames.SessionsUserHasSignedUpFor,
+        list
       );
 
       interaction.reply({

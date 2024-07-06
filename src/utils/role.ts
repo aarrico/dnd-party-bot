@@ -1,5 +1,4 @@
-import path from "path";
-
+import { getAbsolutePath } from "./getAbsolutePath";
 export const controlImage = "./src/resources/images/control-display.png";
 export const faceImage = "./src/resources/images/face-display.png";
 export const meleeDPSImage = "./src/resources/images/melee-dps-display.png";
@@ -18,28 +17,28 @@ export const roles = {
 };
 
 export function getRoleImage(role: string) {
-  let image = "";
+  let imagePathSTR = "";
   switch (role.toLowerCase()) {
     case roles.FACE:
-      image = faceImage;
+      imagePathSTR = faceImage;
       break;
     case roles.CONTROL:
-      image = controlImage;
+      imagePathSTR = controlImage;
       break;
     case roles.MELEEDPS:
-      image = meleeDPSImage;
+      imagePathSTR = meleeDPSImage;
       break;
     case roles.RANGEDPS:
-      image = rangeDPSImage;
+      imagePathSTR = rangeDPSImage;
       break;
     case roles.SUPPORT:
-      image = supportImage;
+      imagePathSTR = supportImage;
       break;
     default:
-      image = tankImage;
+      imagePathSTR = tankImage;
       break;
   }
-  return path.resolve(image).replace(/\//g, "/");
+  return getAbsolutePath(imagePathSTR);
 }
 
 export function getRoleSTR(role: string) {

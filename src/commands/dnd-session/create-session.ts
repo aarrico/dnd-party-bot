@@ -9,6 +9,7 @@ import {
   createNewSession,
 } from "../../utils/prisma-commands";
 import { CreateCompositeImage } from "../../utils/create-composite-session-Image";
+import { BotDialogs } from "../../utils/botDialogStrings";
 export default new Command({
   name: "create-session",
   description: "creates a session in the session stack.",
@@ -83,13 +84,13 @@ export default new Command({
     },
     {
       name: "year",
-      description: "year of session",
+      description: "Year of session",
       type: ApplicationCommandOptionType.Number,
       required: true,
     },
     {
       name: "time",
-      description: "time that session will take place Format:HH:MM",
+      description: "Time that session will take place Format:HH:MM",
       type: ApplicationCommandOptionType.String,
       required: true,
     },
@@ -99,24 +100,24 @@ export default new Command({
     const sessionName =
       //maybe pass this into the argument to post the right name
       interaction?.options?.get("session-name")?.value as string;
-    if (!sessionName) interaction.reply("Your session name is invalid.");
+    if (!sessionName)
+      interaction.reply(BotDialogs.CreateSessionInvalidSessionName);
 
     const date = DateChecker(interaction);
     if (date) {
-      const message = `Hey there, I have your session scheduled for: ${
+      const message = `${BotDialogs.CreateSessionDMSessionTime}${
         date.getMonth() + 1
       }/${date.getDate()}/${date.getFullYear()}`;
 
-      //send to general
       if (process.env.SESSION_CHANNEL_ID) {
-        //get session messages channel
         const channel = client.channels.cache.get(
           process.env.SESSION_CHANNEL_ID
         );
 
+        const messageIDstr = "messageID";
         const newSessionData = {
           sessionData: {
-            sessionMessageId: "messageID",
+            sessionMessageId: messageIDstr,
             sessionName: sessionName,
             sessionDate: date,
           },
@@ -125,20 +126,20 @@ export default new Command({
             userChannelId: interaction.user.id,
           },
           interaction,
-          messageID: "messageID",
+          messageID: messageIDstr,
         };
-        await DeleteSessionMessageID("messageID");
+        await DeleteSessionMessageID(messageIDstr);
         await createNewSession(newSessionData);
 
         //create actual UI for session
-        await CreateCompositeImage(client, "messageID");
+        await CreateCompositeImage(client, messageIDstr);
 
         setTimeout(async () => {
           const messageID = await createSessionMessage(
             client,
             process.env.SESSION_CHANNEL_ID
           );
-          await UpdateSessionMessageID("messageID", messageID);
+          await UpdateSessionMessageID(messageIDstr, messageID);
         }, 250);
 
         if (channel?.type === ChannelType.GuildText) channel?.send(message);
@@ -147,13 +148,9 @@ export default new Command({
       //send to DMs
       const user = client.users.cache.get(interaction.user.id);
       user?.send(message);
-      interaction?.reply(
-        "One Moment while I create your session. You will recieve a message via Direct Message when complete!"
-      );
+      interaction?.reply(BotDialogs.CreateSessionOneMoment);
     } else {
-      interaction?.reply(
-        "The date you entered is invalid. This could be due to the following reasons:\n- You entered a date that doesnt exist.\n- You entered a day that has already passed."
-      );
+      interaction?.reply(BotDialogs.CreateSessionInvalidDateEntered);
     }
   },
 });

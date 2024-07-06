@@ -1,8 +1,8 @@
-import { writeFileSync } from "fs";
 import { Command } from "../../structures/Command";
-import { GetAllSessions, GetAllUsers } from "../../utils/prisma-commands";
-import { ApplicationCommandOptionType, AttachmentBuilder } from "discord.js";
-import path from "path";
+import { GetAllSessions } from "../../utils/prisma-commands";
+import { ApplicationCommandOptionType } from "discord.js";
+import { getTxtAttachmentBuilder } from "../../utils/attachmentBuilders";
+import { BotAttachmentFileNames, BotPaths } from "../../utils/botDialogStrings";
 
 export default new Command({
   name: "get-all-sessions",
@@ -50,17 +50,10 @@ export default new Command({
         list = list.concat(`\n`);
       });
 
-      writeFileSync("./src/resources/temp/AllSessionInformation.txt", list, {
-        flag: "w",
-      });
-
-      const attachment = new AttachmentBuilder(
-        path
-          .resolve("./src/resources/temp/AllSessionInformation.txt")
-          .replace(/\//g, "/"),
-        {
-          name: "Session_Info.txt",
-        }
+      const attachment = getTxtAttachmentBuilder(
+        `${BotPaths.TempDir}${BotAttachmentFileNames.AllSessionInformation}`,
+        BotAttachmentFileNames.AllSessionInformation,
+        list
       );
 
       interaction.reply({

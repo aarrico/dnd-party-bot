@@ -1,8 +1,8 @@
-import { ApplicationCommandOptionType, AttachmentBuilder } from "discord.js";
+import { ApplicationCommandOptionType } from "discord.js";
 import { Command } from "../../structures/Command";
 import { GetAllUsers } from "../../utils/prisma-commands";
-import { writeFileSync } from "fs";
-import path from "path";
+import { getTxtAttachmentBuilder } from "../../utils/attachmentBuilders";
+import { BotAttachmentFileNames, BotPaths } from "../../utils/botDialogStrings";
 
 export default new Command({
   name: "get-all-users",
@@ -40,17 +40,10 @@ export default new Command({
         list = list.concat(`\n`);
       });
 
-      writeFileSync("./src/resources/temp/AllUserInformation.txt", list, {
-        flag: "w",
-      });
-
-      const attachment = new AttachmentBuilder(
-        path
-          .resolve("./src/resources/temp/AllUserInformation.txt")
-          .replace(/\//g, "/"),
-        {
-          name: "User_Info.txt",
-        }
+      const attachment = getTxtAttachmentBuilder(
+        `${BotPaths.TempDir}${BotAttachmentFileNames.AllUserInformation}`,
+        BotAttachmentFileNames.AllUserInformation,
+        list
       );
 
       interaction.reply({
