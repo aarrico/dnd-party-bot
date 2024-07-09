@@ -62,10 +62,6 @@ export default new Command({
 
     const date = DateChecker(interaction);
     if (date) {
-      const message = `${BotDialogs.CreateSessionDMSessionTime}${
-        date.getMonth() + 1
-      }/${date.getDate()}/${date.getFullYear()}`;
-
       if (process.env.SESSION_CHANNEL_ID) {
         const channel = client.channels.cache.get(
           process.env.SESSION_CHANNEL_ID
@@ -99,12 +95,13 @@ export default new Command({
           await UpdateSessionMessageID(messageIDstr, messageID);
         }, 250);
 
-        if (channel?.type === ChannelType.GuildText) channel?.send(message);
+        const message = `${
+          BotDialogs.CreateSessionDMSessionTime
+        }${date.toLocaleString()}`;
+        const user = client.users.cache.get(interaction.user.id);
+        user?.send(message);
       }
-
       //send to DMs
-      const user = client.users.cache.get(interaction.user.id);
-      user?.send(message);
       interaction?.reply(BotDialogs.CreateSessionOneMoment);
     } else {
       interaction?.reply(BotDialogs.CreateSessionInvalidDateEntered);

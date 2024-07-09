@@ -167,7 +167,7 @@ export async function GetSessionUserByUserID(userID: string) {
 
 export async function GetUsersBySessionID(sessionID: string) {
   return await prisma.sessionUser.findMany({
-    select: { user: true, role: true },
+    select: { user: true, session: true, role: true },
     where: { sessionId: sessionID },
   });
 }
@@ -207,6 +207,39 @@ export async function UpdateSessionMessageID(
       sessionMessageId: newMessageID,
     },
   });
+}
+
+export async function UpdateSession(
+  sessionID: string,
+  sessionUpdateData: {
+    sessionName: string;
+    sessionDate: Date;
+    sessionMessageId: string;
+  }
+) {
+  await prisma.session.update({
+    data: {
+      sessionName: sessionUpdateData.sessionName,
+      sessionDate: sessionUpdateData.sessionDate,
+      sessionMessageId: sessionUpdateData.sessionMessageId,
+    },
+    where: {
+      id: sessionID,
+    },
+  });
+
+  //get all session users in session
+  // const users = await GetUsersBySessionID(sessionID);
+  //loop through and update each ones session
+  // users.forEach(async (user) => {
+  //   await prisma.sessionUser.create({
+  //     data: {
+  //       userId: user.user.id,
+  //       sessionId: sessionID,
+  //       role: user.role,
+  //     },
+  //   });
+  // });
 }
 
 export async function DeleteSessionMessageID(messageID: string) {

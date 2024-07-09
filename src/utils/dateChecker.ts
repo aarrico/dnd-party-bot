@@ -20,18 +20,16 @@ export default function DateChecker(interaction: any) {
   const hour = parseInt(timeArray[0]);
   const mins = parseInt(timeArray[1]);
 
-  if (month && day && year && hour && mins) {
-    if (
-      !isValidMonth(month) ||
-      (!isValidDay(month, day) && !isLeapYearDay(month, year, day))
-    )
-      return undefined;
+  if (
+    !isValidMonth(month) ||
+    (!isValidDay(month, day) && !isLeapYearDay(month, year, day))
+  )
+    return undefined;
 
-    const sessionDate = new Date(year, month, day, hour, mins);
-
-    return isDateAfterCurrentDate(sessionDate) ? sessionDate : undefined;
-  }
-  return undefined;
+  const sessionDate = new Date(
+    new Date(year, month, day, hour, mins).toUTCString()
+  );
+  return isDateAfterCurrentDate(sessionDate) ? sessionDate : undefined;
 }
 
 function isValidMonth(month: number) {
@@ -39,11 +37,11 @@ function isValidMonth(month: number) {
 }
 
 function isValidDay(month: number, day: number) {
-  return day > 0 && day <= monthMaxDayCounts[month - 1];
+  return day > 0 && day <= monthMaxDayCounts[month];
 }
 
 function isLeapYearDay(month: number, year: number, day: number) {
-  return month === 2 && year % 4 === 0 && !(day > 29);
+  return month === 1 && year % 4 === 0 && !(day > 29);
 }
 
 function isDateAfterCurrentDate(date: Date) {

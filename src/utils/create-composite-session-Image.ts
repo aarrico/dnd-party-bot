@@ -23,12 +23,7 @@ export async function CreateCompositeImage(
     let spotValue = 0;
 
     baseImage.print(font, 585, 940, session?.sessionName);
-    baseImage.print(
-      font,
-      1035,
-      1140,
-      `${session?.sessionDate.toLocaleString()}`
-    );
+    baseImage.print(font, 1035, 1140, `${session?.sessionDate.toUTCString()}`);
 
     for (var i = 0; i < data[0].length; i++) {
       const image = await Jimp.read(data[0][i].userAvatarURL);
