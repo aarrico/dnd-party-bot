@@ -53,54 +53,75 @@ export async function CreateNewSessionUserInDB(
   messageID: string,
   role: string
 ) {
-  const createdUserID = await prisma.user.findFirstOrThrow({
+  // is this the only place you use interaction in this func?
+  // pass the username instead. also took advantage of destructuring
+  // i would suggest renaming this to existingUserId
+  const { id: createdUserID } = await prisma.user.findFirstOrThrow({
     select: { id: true },
     where: { username: interaction?.user?.displayName },
   });
 
-  const createdSessionID = await prisma.session.findFirstOrThrow({
-    select: { id: true },
+  // note the updated select. remember the relation in the schema.
+  // this is where prisma shines, you can tell it to grab those relations
+  // during the session query and now you have all related user ids. 
+  // note the 'users' field in this case is actually SessionUser[]
+  // so that's why we select userId & role instead of id.
+  // i would suggest renaming createdSessionID to existingSessionId
+  const { id: createdSessionID, users: usersInSession } = await prisma.session.findFirstOrThrow({
+    select: { id: true, users: { select: { userId: true, role: true }} },
     where: { sessionMessageId: messageID },
   });
 
-  if (createdUserID?.id && createdSessionID?.id) {
-    const allUserInSession = await GetUsersBySessionID(createdSessionID?.id);
-    if (allUserInSession.length >= 6) return "party full";
+ // you don't need this if statement here. you're doing a findFirstOrThrow
+ // so the value will always be there. if it doens't find a user or session
+ // it will throw an exception. 
+ // if (createdUserID?.id && createdSessionID?.id) {
+  
+ // don't need this anymore bc you now have usersInSession
+ //const allUserInSession = await GetUsersBySessionID(createdSessionID?.id);
+  if (usersInSession.length >= 6) return "party full";
 
-    const existingUser = await prisma.sessionUser.findFirst({
-      where: { userId: createdUserID.id, sessionId: createdSessionID.id },
-    });
+  // const existingUser = await prisma.sessionUser.findFirst({
+  //   where: { userId: createdUserID, sessionId: createdSessionID },
+  // });
+  // ^^^^
+  // Here we get rid of an expensive db query since we already got the data with the session query
+  // && more destructuring fun. We only really need the role. the existingUser.userId and existingUser.sessionId
+  // are the same as createdUserID and createdSessionID. And i think it reads better.
+  // if you do the renaming on created***ID then you'll have a set of three 'existing' variables
+  const { role: existingUserRole } = usersInSession.find(user => user.userId === createdUserID) || undefined;
+  const isUserBeingAddedTheDM =
+    existingUserRole && existingUserRole === roles.DM;
 
-    const isUserBeingAddedTheDM =
-      existingUser && existingUser.role === roles.DM;
-
-    if (!existingUser) {
+    if (!existingUserRole) {
       await prisma.sessionUser.create({
         data: {
-          userId: createdUserID?.id,
-          sessionId: createdSessionID?.id,
+          userId: createdUserID,
+          sessionId: createdSessionID,
           role,
         },
       });
       return "created";
-    } else if (role === existingUser?.role) {
+    } else if (role === existingUserRole) {
+      // what is this case for??
       await prisma.sessionUser.delete({
         where: {
           role,
           sessionId_userId: {
-            userId: existingUser.userId,
-            sessionId: existingUser.sessionId,
+            userId: createdUserID,
+            sessionId: createdSessionID,
           },
         },
       });
       return "deleted";
     } else {
       if (isUserBeingAddedTheDM) return "Cant Change DM";
+      // you shouldn't need to cast these as strings anymore.
       await prisma.sessionUser.update({
         where: {
           sessionId_userId: {
-            userId: existingUser?.userId as string,
-            sessionId: existingUser?.sessionId as string,
+            userId: createdUserID as string,
+            sessionId: createdSessionID as string,
           },
         },
         data: {
@@ -109,7 +130,7 @@ export async function CreateNewSessionUserInDB(
       });
       return "updated";
     }
-  }
+  //}
 }
 
 export async function getUsersByMessageID(messageID: string) {
@@ -228,6 +249,9 @@ export async function UpdateSession(
     },
   });
 
+  // i'm guessing below was an attempted fix for your issue?
+  // nothing in the above code would touch the SessionUser table
+  // 
   //get all session users in session
   // const users = await GetUsersBySessionID(sessionID);
   //loop through and update each ones session

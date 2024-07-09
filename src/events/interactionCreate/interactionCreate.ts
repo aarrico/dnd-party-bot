@@ -73,6 +73,16 @@ function addUserToDB(interaction: ButtonInteraction<CacheType>) {
           username: interaction.user.displayName,
           userChannelId: interaction.user.id,
         };
+
+        // these could all be done in the same database query.
+        // similarly to how i pulled SessionUser data in the get session query
+        // you can create related data in a natural way in prisma.
+        // https://www.prisma.io/docs/orm/prisma-client/queries/relation-queries#connect-multiple-records
+        // in the link's example, sessions would take the place of posts. look past the first section that links to
+        // this gives a lot of prisma way to handle relations without querying SessionUser directly, you shouldn't have to. 
+        // if you just have one record, you can get rid of the array
+        // then you pass the session id like
+        // sessions: { connect: { id: sessionID } }
         await CreateNewUserInDB(userData);
         const actionTaken = await CreateNewSessionUserInDB(
           interaction,
