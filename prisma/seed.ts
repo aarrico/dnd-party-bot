@@ -108,33 +108,33 @@ async function createUsers() {
   return prisma.user.findMany();
 }
 
-async function createSessionUsers(sessionData: any, userData: any) {
+async function createParties(sessionData: any, userData: any) {
   //Session 1 with 5 users
-  createSessionUser(sessionData[0].id, userData[10].id, roles.DM);
-  createSessionUser(sessionData[0].id, userData[0].id, roles.CONTROL);
-  createSessionUser(sessionData[0].id, userData[1].id, roles.MELEEDPS);
-  createSessionUser(sessionData[0].id, userData[2].id, roles.RANGEDPS);
-  createSessionUser(sessionData[0].id, userData[3].id, roles.TANK);
-  createSessionUser(sessionData[0].id, userData[4].id, roles.SUPPORT);
+  addPartyMember(sessionData[0].id, userData[10].id, roles.DM);
+  addPartyMember(sessionData[0].id, userData[0].id, roles.CONTROL);
+  addPartyMember(sessionData[0].id, userData[1].id, roles.MELEEDPS);
+  addPartyMember(sessionData[0].id, userData[2].id, roles.RANGEDPS);
+  addPartyMember(sessionData[0].id, userData[3].id, roles.TANK);
+  addPartyMember(sessionData[0].id, userData[4].id, roles.SUPPORT);
   //Session 2 with 5 users
-  createSessionUser(sessionData[1].id, userData[11].id, roles.DM);
-  createSessionUser(sessionData[1].id, userData[0].id, roles.FACE);
-  createSessionUser(sessionData[1].id, userData[5].id, roles.MELEEDPS);
-  createSessionUser(sessionData[1].id, userData[6].id, roles.RANGEDPS);
-  createSessionUser(sessionData[1].id, userData[7].id, roles.TANK);
-  createSessionUser(sessionData[1].id, userData[8].id, roles.SUPPORT);
+  addPartyMember(sessionData[1].id, userData[11].id, roles.DM);
+  addPartyMember(sessionData[1].id, userData[0].id, roles.FACE);
+  addPartyMember(sessionData[1].id, userData[5].id, roles.MELEEDPS);
+  addPartyMember(sessionData[1].id, userData[6].id, roles.RANGEDPS);
+  addPartyMember(sessionData[1].id, userData[7].id, roles.TANK);
+  addPartyMember(sessionData[1].id, userData[8].id, roles.SUPPORT);
   //Session 3 with 3 users
-  createSessionUser(sessionData[2].id, userData[12].id, roles.DM);
-  createSessionUser(sessionData[2].id, userData[2].id, roles.RANGEDPS);
-  createSessionUser(sessionData[2].id, userData[3].id, roles.TANK);
-  createSessionUser(sessionData[2].id, userData[5].id, roles.SUPPORT);
+  addPartyMember(sessionData[2].id, userData[12].id, roles.DM);
+  addPartyMember(sessionData[2].id, userData[2].id, roles.RANGEDPS);
+  addPartyMember(sessionData[2].id, userData[3].id, roles.TANK);
+  addPartyMember(sessionData[2].id, userData[5].id, roles.SUPPORT);
   //Session 4 with 1 users
-  createSessionUser(sessionData[3].id, userData[10].id, roles.DM);
-  createSessionUser(sessionData[3].id, userData[8].id, roles.SUPPORT);
+  addPartyMember(sessionData[3].id, userData[10].id, roles.DM);
+  addPartyMember(sessionData[3].id, userData[8].id, roles.SUPPORT);
 }
 
-async function createSessionUser(sessionID: any, userID: any, role: any) {
-  await prisma.sessionUser.create({
+async function addPartyMember(sessionID: any, userID: any, role: any) {
+  await prisma.partyMember.create({
     data: {
       sessionId: sessionID,
       userId: userID,
@@ -147,7 +147,7 @@ async function main() {
   if ((await prisma.session.findMany())?.length > 0) return;
   const sessionData = await createSessions();
   const userData = await createUsers();
-  await createSessionUsers(sessionData, userData);
+  await createParties(sessionData, userData);
 }
 
 main()

@@ -3,166 +3,104 @@ import { roles } from "../../prisma/seed";
 
 const prisma = new PrismaClient();
 
-export async function CreateNewSession(data: {
-  sessionData: {
-    sessionMessageId: string;
-    sessionName: string;
-    sessionDate: Date;
-  };
-  userData: {
-    username: string;
-    userChannelId: string;
-  };
-  interaction: any;
-  messageID: string;
-}) {
-  await CreateNewSessionInDB(data.sessionData);
-  await CreateNewUserInDB(data.userData);
-  await CreateNewSessionUserInDB(data.interaction, data.messageID, roles.DM);
-}
-
-export async function CreateNewSessionInDB(data: {
+type SessionData = {
   sessionMessageId: string;
   sessionName: string;
   sessionDate: Date;
-}) {
-  await prisma.session.create({ data });
-}
+};
 
-export async function CreateNewUserInDB(data: {
+type UserData = {
   username: string;
   userChannelId: string;
+};
+
+export async function CreateNewSession({ sessionData, userData }: {
+  sessionData: SessionData;
+  userData: UserData;
 }) {
-  const userUUID = await prisma.user.findMany({
-    where: { userChannelId: data.userChannelId },
-  });
-  if (userUUID?.length === 0) {
-    await prisma.user.create({
-      data,
-    });
-  } else {
-    await prisma.user.update({
-      data: { username: data?.username },
-      where: { id: userUUID[0]?.id },
-    });
-  }
-}
+  const user = await upsertUserWithUsername(userData);
 
-export async function CreateNewSessionUserInDB(
-  interaction: any,
-  messageID: string,
-  role: string
-) {
-  // is this the only place you use interaction in this func?
-  // pass the username instead. also took advantage of destructuring
-  // i would suggest renaming this to existingUserId
-  const { id: createdUserID } = await prisma.user.findFirstOrThrow({
-    select: { id: true },
-    where: { username: interaction?.user?.displayName },
-  });
-
-  // note the updated select. remember the relation in the schema.
-  // this is where prisma shines, you can tell it to grab those relations
-  // during the session query and now you have all related user ids. 
-  // note the 'users' field in this case is actually SessionUser[]
-  // so that's why we select userId & role instead of id.
-  // i would suggest renaming createdSessionID to existingSessionId
-  const { id: createdSessionID, users: usersInSession } = await prisma.session.findFirstOrThrow({
-    select: { id: true, users: { select: { userId: true, role: true }} },
-    where: { sessionMessageId: messageID },
-  });
-
- // you don't need this if statement here. you're doing a findFirstOrThrow
- // so the value will always be there. if it doens't find a user or session
- // it will throw an exception. 
- // if (createdUserID?.id && createdSessionID?.id) {
-  
- // don't need this anymore bc you now have usersInSession
- //const allUserInSession = await GetUsersBySessionID(createdSessionID?.id);
-  if (usersInSession.length >= 6) return "party full";
-
-  // const existingUser = await prisma.sessionUser.findFirst({
-  //   where: { userId: createdUserID, sessionId: createdSessionID },
-  // });
-  // ^^^^
-  // Here we get rid of an expensive db query since we already got the data with the session query
-  // && more destructuring fun. We only really need the role. the existingUser.userId and existingUser.sessionId
-  // are the same as createdUserID and createdSessionID. And i think it reads better.
-  // if you do the renaming on created***ID then you'll have a set of three 'existing' variables
-  const { role: existingUserRole } = usersInSession.find(user => user.userId === createdUserID) || undefined;
-  const isUserBeingAddedTheDM =
-    existingUserRole && existingUserRole === roles.DM;
-
-    if (!existingUserRole) {
-      await prisma.sessionUser.create({
-        data: {
-          userId: createdUserID,
-          sessionId: createdSessionID,
-          role,
+  await prisma.session.create({
+    data: {
+      ...sessionData,
+      users: {
+        create: {
+          user: { connect: { id: user.id } },
+          role: roles.DM
         },
-      });
-      return "created";
-    } else if (role === existingUserRole) {
-      // what is this case for??
-      await prisma.sessionUser.delete({
-        where: {
-          role,
-          sessionId_userId: {
-            userId: createdUserID,
-            sessionId: createdSessionID,
-          },
-        },
-      });
-      return "deleted";
-    } else {
-      if (isUserBeingAddedTheDM) return "Cant Change DM";
-      // you shouldn't need to cast these as strings anymore.
-      await prisma.sessionUser.update({
-        where: {
-          sessionId_userId: {
-            userId: createdUserID as string,
-            sessionId: createdSessionID as string,
-          },
-        },
-        data: {
-          role,
-        },
-      });
-      return "updated";
+      }
     }
-  //}
+  })
 }
 
-export async function getUsersByMessageID(messageID: string) {
-  const sessionID = await prisma.session.findFirst({
-    where: { sessionMessageId: messageID },
+export async function AddUserToSession(newUserData: UserData, sessionMessageId: string, role: string) {
+  const { id: sessionId, sessionDate, users: party } = await GetPartyBySessionMessageId(sessionMessageId);
+
+  const existingUser = await upsertUserWithUsername(newUserData);
+
+  // reject changes if the session has already occured, but allow for user upsert first?? 
+  if (sessionDate < new Date()) {
+    return "session expired";
+  }
+
+  const partyMember = party.find(member => member.user.userChannelId === newUserData.userChannelId);
+  if (partyMember) {
+    if (partyMember.role === roles.DM) return "Cant Change DM";
+
+    if (role === partyMember.role) {
+      await deletePartyMember(partyMember.user.id, sessionId);
+      return "deleted";
+    }
+
+    await updatePartyMemberRole(partyMember.user.id, sessionId, role);
+    return "updated";
+  }
+
+  if (party.length >= 6) return "party full";
+
+  await addUserToParty(existingUser.id, sessionId, role);
+  return "created";
+}
+
+export async function getUsersByMessageId(messageId: string) {
+  const session = await prisma.session.findFirst({
+    where: { sessionMessageId: messageId },
+    include: { users: { select: { user: true, role: true } } },
   });
 
-  return await prisma.sessionUser.findMany({
-    select: { user: true, role: true },
-    where: { sessionId: sessionID?.id },
-  });
+  return session ? [...session.users] : [];
 }
 
 export async function GetAllSessions() {
   return await prisma.session.findMany();
 }
+
 export async function GetSessionsByName(sessionName: string) {
   return await prisma.session.findMany({ where: { sessionName } });
 }
 
-export async function GetSessionByID(id: string) {
-  return await prisma.session.findFirstOrThrow({ where: { id } });
+export async function GetSessionById(id: string) {
+  return await prisma.session.findUniqueOrThrow({ where: { id } });
 }
 
-export async function GetSessionByMessageID(messageID: string) {
-  return await prisma.session.findFirstOrThrow({
-    where: { sessionMessageId: messageID },
+export async function GetSessionByMessageId(messageId: string) {
+  return await prisma.session.findUniqueOrThrow({
+    where: { sessionMessageId: messageId },
   });
 }
 
-export async function DeleteSessionByID(id: string) {
-  await prisma.sessionUser.deleteMany({ where: { sessionId: id } });
+async function GetPartyBySessionMessageId(messageId: string) {
+  return await prisma.session.findUniqueOrThrow({
+    select: {
+      id: true,
+      sessionDate: true,
+      users: { select: { user: true, role: true } }
+    },
+    where: { sessionMessageId: messageId },
+  });
+}
+
+export async function DeleteSessionById(id: string) {
   return await prisma.session.delete({ where: { id } });
 }
 
@@ -174,107 +112,122 @@ export async function GetUsersByUsername(username: string) {
   return await prisma.user.findMany({ where: { username } });
 }
 
-export async function GetUserByID(id: string) {
-  return await prisma.user.findFirstOrThrow({ where: { id } });
+export async function GetUserById(id: string) {
+  return await prisma.user.findUniqueOrThrow({ where: { id } });
 }
 
-export async function GetAllSessionUsers() {
-  return await prisma.sessionUser.findMany();
+export async function GetAllPartyMembers() {
+  return await prisma.partyMember.findMany();
 }
 
-export async function GetSessionUserByUserID(userID: string) {
-  return await prisma.sessionUser.findMany({ where: { userId: userID } });
+// could be updated to go through user table
+export async function GetPartyMemberByUserId(userId: string) {
+  return await prisma.partyMember.findMany({ where: { userId } });
 }
 
-export async function GetUsersBySessionID(sessionID: string) {
-  return await prisma.sessionUser.findMany({
+// could be updated to go through session table
+export async function GetPartyForSession(sessionId: string, sortByUsername = false) {
+  return await prisma.partyMember.findMany({
     select: { user: true, session: true, role: true },
-    where: { sessionId: sessionID },
+    where: { sessionId },
+    ...(sortByUsername && { orderBy: { user: { username: 'asc' } } }),
   });
 }
 
-export async function GetAllSessionsAUserIsIn(userID: string) {
-  return await prisma.sessionUser.findMany({
-    select: { session: true, role: true },
-    where: { userId: userID },
+export async function GetAllSessionsAUserIsIn(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { sessions: { select: { session: true, role: true } } }
   });
+
+  return user?.sessions || [];
 }
 
 export async function DeleteAllUsersWithDisplayName(displayName: string) {
-  const users = await prisma.user.findMany({
-    where: { username: displayName },
-  });
-
-  users.forEach(async (user) => {
-    await prisma.sessionUser.deleteMany({
-      where: { userId: user.id },
-    });
-  });
-
   return await prisma.user.deleteMany({
     where: { username: displayName },
   });
 }
 
-export async function UpdateSessionMessageID(
-  oldMessageID: string,
-  newMessageID: string
+export async function UpdateSessionMessageId(
+  oldMessageId: string,
+  newMessageId: string
 ) {
-  await prisma.session.update({
+  return await prisma.session.update({
     where: {
-      sessionMessageId: oldMessageID,
+      sessionMessageId: oldMessageId,
     },
     data: {
-      sessionMessageId: newMessageID,
+      sessionMessageId: newMessageId,
     },
   });
 }
 
 export async function UpdateSession(
-  sessionID: string,
-  sessionUpdateData: {
-    sessionName: string;
-    sessionDate: Date;
-    sessionMessageId: string;
-  }
+  sessionId: string,
+  sessionUpdateData: SessionData
 ) {
-  await prisma.session.update({
+  return await prisma.session.update({
     data: {
       sessionName: sessionUpdateData.sessionName,
       sessionDate: sessionUpdateData.sessionDate,
       sessionMessageId: sessionUpdateData.sessionMessageId,
     },
     where: {
-      id: sessionID,
+      id: sessionId,
     },
   });
-
-  // i'm guessing below was an attempted fix for your issue?
-  // nothing in the above code would touch the SessionUser table
-  // 
-  //get all session users in session
-  // const users = await GetUsersBySessionID(sessionID);
-  //loop through and update each ones session
-  // users.forEach(async (user) => {
-  //   await prisma.sessionUser.create({
-  //     data: {
-  //       userId: user.user.id,
-  //       sessionId: sessionID,
-  //       role: user.role,
-  //     },
-  //   });
-  // });
 }
 
-export async function DeleteSessionMessageID(messageID: string) {
-  await prisma.sessionUser.deleteMany({
+export async function DeleteSessionMessageId(messageId: string) {
+  return await prisma.session.deleteMany({
     where: {
-      session: { sessionMessageId: messageID },
+      sessionMessageId: messageId,
     },
   });
-  await prisma.session.deleteMany({
-    where: {
-      sessionMessageId: messageID,
-    },
+}
+
+async function upsertUserWithUsername(userData: UserData) {
+  return await prisma.user.upsert({
+    where: { userChannelId: userData.userChannelId },
+    create: userData,
+    update: { username: userData.username },
+  });
+}
+
+async function updatePartyMemberRole(userId: string, sessionId: string, role: string) {
+  return prisma.user.update({
+    where: { id: userId },
+    data: {
+      sessions: {
+        update: {
+          where: { party_member_id: { sessionId, userId } },
+          data: { role }
+        }
+      }
+    }
+  });
+}
+
+async function deletePartyMember(userId: string, sessionId: string) {
+  return prisma.user.update({
+    where: { id: userId },
+    data: {
+      sessions: {
+        disconnect: { party_member_id: { sessionId, userId } }
+      }
+
+    }
+  });
+}
+
+async function addUserToParty(userId: string, sessionId: string, role: string) {
+  return prisma.user.update({
+    where: { id: userId },
+    data: {
+      sessions: {
+        create: { sessionId, role }
+      }
+    }
   });
 }

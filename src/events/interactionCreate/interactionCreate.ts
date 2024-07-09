@@ -1,5 +1,4 @@
 import {
-  AttachmentBuilder,
   ButtonInteraction,
   CacheType,
   ChannelType,
@@ -8,11 +7,9 @@ import {
 import { client } from "../..";
 import { Event } from "../../structures/Event";
 import { ExtendedInteraction } from "../../typings/Command";
-import path from "path";
 import sendMessageReplyDisappearingMessage from "../../utils/send-message-reply-disappearing-message";
 import {
-  CreateNewSessionUserInDB,
-  CreateNewUserInDB,
+  AddUserToSession,
 } from "../../utils/prisma-commands";
 import { CreateCompositeImage } from "../../utils/create-composite-session-Image";
 import { getPNGAttachmentBuilder } from "../../utils/attachmentBuilders";
@@ -63,32 +60,18 @@ function addUserToDB(interaction: ButtonInteraction<CacheType>) {
   interaction.message.components.forEach((component) => {
     component.components.forEach(async (subComp: any) => {
       if (subComp.customId === interaction.customId) {
-        let sessionPMData = {
+        const sessionPMData = {
           userId: interaction.user.id,
           username: interaction.user.username,
           role: subComp.label,
         };
 
-        let userData = {
+        const userData = {
           username: interaction.user.displayName,
           userChannelId: interaction.user.id,
         };
 
-        // these could all be done in the same database query.
-        // similarly to how i pulled SessionUser data in the get session query
-        // you can create related data in a natural way in prisma.
-        // https://www.prisma.io/docs/orm/prisma-client/queries/relation-queries#connect-multiple-records
-        // in the link's example, sessions would take the place of posts. look past the first section that links to
-        // this gives a lot of prisma way to handle relations without querying SessionUser directly, you shouldn't have to. 
-        // if you just have one record, you can get rid of the array
-        // then you pass the session id like
-        // sessions: { connect: { id: sessionID } }
-        await CreateNewUserInDB(userData);
-        const actionTaken = await CreateNewSessionUserInDB(
-          interaction,
-          interaction.message.id,
-          subComp.label
-        );
+        const actionTaken = await AddUserToSession(userData, interaction.message.id, sessionPMData.role)
 
         const messageContent = GetMessageContent(actionTaken, sessionPMData);
 

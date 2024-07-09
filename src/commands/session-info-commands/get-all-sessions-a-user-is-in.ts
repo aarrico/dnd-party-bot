@@ -2,7 +2,7 @@ import { ApplicationCommandOptionType } from "discord.js";
 import { Command } from "../../structures/Command";
 import {
   GetAllSessionsAUserIsIn,
-  GetUserByID,
+  GetUserById,
 } from "../../utils/prisma-commands";
 import { getTxtAttachmentBuilder } from "../../utils/attachmentBuilders";
 import {
@@ -66,9 +66,8 @@ export default new Command({
         BotCommandOptionInfo.GetAllUserSessions_SessionMessageIDName
       )?.value as boolean;
 
-      let list = `Session List that ${
-        (await GetUserByID(userID)).username
-      } has signed up for:\nFormat:\n\nSession Name`;
+      let list = `Session List that ${(await GetUserById(userID)).username
+        } has signed up for:\nFormat:\n\nSession Name`;
       if (addUserRoleInThisSession) list = list.concat(` : User Role`);
       if (addSessionDateTime) list = list.concat(` : Session Date Time`);
       if (addSessionID) list = list.concat(` : Session ID`);
