@@ -34,7 +34,7 @@ export async function CreateNewSession({ sessionData, userData }: {
 }
 
 export async function AddUserToSession(newUserData: UserData, sessionMessageId: string, role: string) {
-  const { id: sessionId, sessionDate, users: party } = await GetPartyBySessionMessageId(sessionMessageId);
+  const { id: sessionId, sessionDate, users: party } = await getPartyBySessionMessageId(sessionMessageId);
 
   const existingUser = await upsertUserWithUsername(newUserData);
 
@@ -85,17 +85,6 @@ export async function GetSessionById(id: string) {
 
 export async function GetSessionByMessageId(messageId: string) {
   return await prisma.session.findUniqueOrThrow({
-    where: { sessionMessageId: messageId },
-  });
-}
-
-async function GetPartyBySessionMessageId(messageId: string) {
-  return await prisma.session.findUniqueOrThrow({
-    select: {
-      id: true,
-      sessionDate: true,
-      users: { select: { user: true, role: true } }
-    },
     where: { sessionMessageId: messageId },
   });
 }
@@ -229,5 +218,16 @@ async function addUserToParty(userId: string, sessionId: string, role: string) {
         create: { sessionId, role }
       }
     }
+  });
+}
+
+async function getPartyBySessionMessageId(messageId: string) {
+  return await prisma.session.findUniqueOrThrow({
+    select: {
+      id: true,
+      sessionDate: true,
+      users: { select: { user: true, role: true } }
+    },
+    where: { sessionMessageId: messageId },
   });
 }
