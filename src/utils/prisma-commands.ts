@@ -14,7 +14,10 @@ type UserData = {
   userChannelId: string;
 };
 
-export async function CreateNewSession({ sessionData, userData }: {
+export async function CreateNewSession({
+  sessionData,
+  userData,
+}: {
   sessionData: SessionData;
   userData: UserData;
 }) {
@@ -26,24 +29,34 @@ export async function CreateNewSession({ sessionData, userData }: {
       users: {
         create: {
           user: { connect: { id: user.id } },
-          role: roles.DM
+          role: roles.DM,
         },
-      }
-    }
-  })
+      },
+    },
+  });
 }
 
-export async function AddUserToSession(newUserData: UserData, sessionMessageId: string, role: string) {
-  const { id: sessionId, sessionDate, users: party } = await getPartyBySessionMessageId(sessionMessageId);
+export async function AddUserToSession(
+  newUserData: UserData,
+  sessionMessageId: string,
+  role: string
+) {
+  const {
+    id: sessionId,
+    sessionDate,
+    users: party,
+  } = await getPartyBySessionMessageId(sessionMessageId);
 
   const existingUser = await upsertUserWithUsername(newUserData);
 
-  // reject changes if the session has already occured, but allow for user upsert first?? 
+  // reject changes if the session has already occured, but allow for user upsert first??
   if (sessionDate < new Date()) {
     return "session expired";
   }
 
-  const partyMember = party.find(member => member.user.userChannelId === newUserData.userChannelId);
+  const partyMember = party.find(
+    (member) => member.user.userChannelId === newUserData.userChannelId
+  );
   if (partyMember) {
     if (partyMember.role === roles.DM) return "Cant Change DM";
 
@@ -115,18 +128,21 @@ export async function GetPartyMemberByUserId(userId: string) {
 }
 
 // could be updated to go through session table
-export async function GetPartyForSession(sessionId: string, sortByUsername = false) {
+export async function GetPartyForSession(
+  sessionId: string,
+  sortByUsername = false
+) {
   return await prisma.partyMember.findMany({
     select: { user: true, session: true, role: true },
     where: { sessionId },
-    ...(sortByUsername && { orderBy: { user: { username: 'asc' } } }),
+    ...(sortByUsername && { orderBy: { user: { username: "asc" } } }),
   });
 }
 
 export async function GetAllSessionsAUserIsIn(userId: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { sessions: { select: { session: true, role: true } } }
+    select: { sessions: { select: { session: true, role: true } } },
   });
 
   return user?.sessions || [];
@@ -184,29 +200,27 @@ async function upsertUserWithUsername(userData: UserData) {
   });
 }
 
-async function updatePartyMemberRole(userId: string, sessionId: string, role: string) {
+async function updatePartyMemberRole(
+  userId: string,
+  sessionId: string,
+  role: string
+) {
   return prisma.user.update({
     where: { id: userId },
     data: {
       sessions: {
         update: {
           where: { party_member_id: { sessionId, userId } },
-          data: { role }
-        }
-      }
-    }
+          data: { role },
+        },
+      },
+    },
   });
 }
 
 async function deletePartyMember(userId: string, sessionId: string) {
-  return prisma.user.update({
-    where: { id: userId },
-    data: {
-      sessions: {
-        disconnect: { party_member_id: { sessionId, userId } }
-      }
-
-    }
+  return prisma.partyMember.delete({
+    where: { party_member_id: { sessionId, userId } },
   });
 }
 
@@ -215,9 +229,9 @@ async function addUserToParty(userId: string, sessionId: string, role: string) {
     where: { id: userId },
     data: {
       sessions: {
-        create: { sessionId, role }
-      }
-    }
+        create: { sessionId, role },
+      },
+    },
   });
 }
 
@@ -226,7 +240,7 @@ async function getPartyBySessionMessageId(messageId: string) {
     select: {
       id: true,
       sessionDate: true,
-      users: { select: { user: true, role: true } }
+      users: { select: { user: true, role: true } },
     },
     where: { sessionMessageId: messageId },
   });
