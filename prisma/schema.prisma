@@ -25,23 +25,27 @@ model Session {
   sessionMessageId String        @unique @map("session_message_id")
   sessionName      String        @map("session_name")
   sessionDate      DateTime      @map("session_date")
-  users            SessionUser[]
+  users            PartyMember[]
+
+  @@map("session")
 }
 
 model User {
   id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   username      String
-  userChannelId String        @map("user_channel_id")
-  sessions      SessionUser[]
+  userChannelId String        @unique @map("user_channel_id")
+  sessions      PartyMember[]
+
+  @@map("user")
 }
 
-model SessionUser {
+model PartyMember {
   sessionId String  @map("session_id") @db.Uuid
-  session   Session @relation(fields: [sessionId], references: [id])
+  session   Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   userId    String  @map("user_id") @db.Uuid
-  user      User    @relation(fields: [userId], references: [id])
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   role      String
 
-  @@id([sessionId, userId])
-  @@map("session_user")
+  @@id(fields: [sessionId, userId], name: "party_member_id")
+  @@map("party_member")
 }

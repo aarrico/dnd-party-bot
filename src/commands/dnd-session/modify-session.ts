@@ -2,9 +2,9 @@ import { ApplicationCommandOptionType } from "discord.js";
 import { monthOptionChoicesArray } from "../../utils/genericInformation";
 import { Command } from "../../structures/Command";
 import {
-  GetSessionByID,
+  GetSessionById,
   UpdateSession,
-  UpdateSessionMessageID,
+  UpdateSessionMessageId,
 } from "../../utils/prisma-commands";
 import DateChecker from "../../utils/dateChecker";
 import { CreateCompositeImage } from "../../utils/create-composite-session-Image";
@@ -69,7 +69,7 @@ export default new Command({
       const newProposedDate = DateChecker(interaction);
 
       //get session by uuid
-      const existingSession = await GetSessionByID(sessionID);
+      const existingSession = await GetSessionById(sessionID);
 
       if (newProposedDate && newSessionName) {
         if (

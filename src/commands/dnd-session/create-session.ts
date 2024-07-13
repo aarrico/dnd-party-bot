@@ -3,8 +3,8 @@ import { Command } from "../../structures/Command";
 import DateChecker from "../../utils/dateChecker";
 import createSessionMessage from "../../utils/create-session-message";
 import {
-  DeleteSessionMessageID,
-  UpdateSessionMessageID,
+  DeleteSessionMessageId,
+  UpdateSessionMessageId,
   CreateNewSession,
 } from "../../utils/prisma-commands";
 import { CreateCompositeImage } from "../../utils/create-composite-session-Image";
@@ -81,7 +81,7 @@ export default new Command({
           interaction,
           messageID: messageIDstr,
         };
-        await DeleteSessionMessageID(messageIDstr);
+        await DeleteSessionMessageId(messageIDstr);
         await CreateNewSession(newSessionData);
 
         //create actual UI for session
@@ -92,12 +92,11 @@ export default new Command({
             client,
             process.env.SESSION_CHANNEL_ID
           );
-          await UpdateSessionMessageID(messageIDstr, messageID);
+          await UpdateSessionMessageId(messageIDstr, messageID);
         }, 250);
 
-        const message = `${
-          BotDialogs.CreateSessionDMSessionTime
-        }${date.toLocaleString()}`;
+        const message = `${BotDialogs.CreateSessionDMSessionTime
+          }${date.toLocaleString()}`;
         const user = client.users.cache.get(interaction.user.id);
         user?.send(message);
       }

@@ -1,5 +1,5 @@
 import Jimp from "jimp";
-import { GetSessionByMessageID, getUsersByMessageID } from "./prisma-commands";
+import { GetSessionByMessageId, getUsersByMessageId } from "./prisma-commands";
 import { getRoleImage, getRoleSTR, roles } from "./role";
 import { ExtendedClient } from "../structures/ExtendedClient";
 import { BotAttachmentFileNames, BotPaths } from "./botDialogStrings";
@@ -9,7 +9,7 @@ export async function CreateCompositeImage(
   messageID: string
 ) {
   const userImageData = await GetUserImageData(client, messageID);
-  const session = await GetSessionByMessageID(messageID);
+  const session = await GetSessionByMessageId(messageID);
   //fix this
   const font = await Jimp.loadFont(
     "C:/Users/Shawn/Documents/dnd-party-bot/src/resources/fonts/Vecna-oppx-64.fnt"
@@ -58,7 +58,7 @@ export async function CreateCompositeImage(
 }
 
 async function GetUserImageData(client: ExtendedClient, messageId: string) {
-  const usersInThisSession = await getUsersByMessageID(messageId);
+  const usersInThisSession = await getUsersByMessageId(messageId);
 
   const guildMembers = await (
     await client.guilds?.fetch(`${process.env.GUILD_ID}`)

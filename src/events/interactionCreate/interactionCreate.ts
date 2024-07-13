@@ -1,5 +1,4 @@
 import {
-  AttachmentBuilder,
   ButtonInteraction,
   CacheType,
   ChannelType,
@@ -8,12 +7,8 @@ import {
 import { client } from "../..";
 import { Event } from "../../structures/Event";
 import { ExtendedInteraction } from "../../typings/Command";
-import path from "path";
 import sendMessageReplyDisappearingMessage from "../../utils/send-message-reply-disappearing-message";
-import {
-  CreateNewSessionUserInDB,
-  CreateNewUserInDB,
-} from "../../utils/prisma-commands";
+import { AddUserToSession } from "../../utils/prisma-commands";
 import { CreateCompositeImage } from "../../utils/create-composite-session-Image";
 import { getPNGAttachmentBuilder } from "../../utils/attachmentBuilders";
 import {
@@ -63,21 +58,21 @@ function addUserToDB(interaction: ButtonInteraction<CacheType>) {
   interaction.message.components.forEach((component) => {
     component.components.forEach(async (subComp: any) => {
       if (subComp.customId === interaction.customId) {
-        let sessionPMData = {
+        const sessionPMData = {
           userId: interaction.user.id,
           username: interaction.user.username,
           role: subComp.label,
         };
 
-        let userData = {
+        const userData = {
           username: interaction.user.displayName,
           userChannelId: interaction.user.id,
         };
-        await CreateNewUserInDB(userData);
-        const actionTaken = await CreateNewSessionUserInDB(
-          interaction,
+
+        const actionTaken = await AddUserToSession(
+          userData,
           interaction.message.id,
-          subComp.label
+          sessionPMData.role
         );
 
         const messageContent = GetMessageContent(actionTaken, sessionPMData);
@@ -101,18 +96,11 @@ function GetMessageContent(
 ) {
   switch (actionTaken) {
     case "created":
-      return `${BotDialogs.RoleChosenMessageContent_WelcomeToTheParty1}${sessionPMData.username}
-      ${BotDialogs.RoleChosenMessageContent_WelcomeToTheParty2}${sessionPMData.role}
-      ${BotDialogs.RoleChosenMessageContent_WelcomeToTheParty3}`;
+      return `${BotDialogs.RoleChosenMessageContent_WelcomeToTheParty1} ${sessionPMData.username}. ${BotDialogs.RoleChosenMessageContent_WelcomeToTheParty2} ${sessionPMData.role}!`;
     case "deleted":
-      return `${BotDialogs.RoleChosenMessageContent_Farewell1}${sessionPMData.username}
-      ${BotDialogs.RoleChosenMessageContent_Farewell2}`;
+      return `${BotDialogs.RoleChosenMessageContent_Farewell1} ${sessionPMData.username}! ${BotDialogs.RoleChosenMessageContent_Farewell2}`;
     case "updated":
-      return `${BotDialogs.RoleChosenMessageContent_RoleSwap1}${sessionPMData.username}
-      ${BotDialogs.RoleChosenMessageContent_RoleSwap2}${sessionPMData.role}
-      ${BotDialogs.RoleChosenMessageContent_RoleSwap3}`;
-    case "role taken":
-      return BotDialogs.RoleChosenMessageContent_RoleTaken;
+      return `${BotDialogs.RoleChosenMessageContent_RoleSwap1} ${sessionPMData.username}? ${BotDialogs.RoleChosenMessageContent_RoleSwap2} ${sessionPMData.role}!`;
     case "party full":
       return BotDialogs.RoleChosenMessageContent_PartyFull;
     case "Cant Change DM":
