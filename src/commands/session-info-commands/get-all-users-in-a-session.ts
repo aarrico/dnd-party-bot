@@ -63,8 +63,9 @@ export default new Command({
         BotCommandOptionInfo.GetAllUsersInASession_UserChannelIDName
       )?.value as boolean;
 
-      let list: string = `User List for ${(await GetSessionById(sessionID)).sessionName
-        }:\nFormat:\n\nUsername`;
+      let list: string = `User List for ${
+        (await GetSessionById(sessionID)).name
+      }:\nFormat:\n\nUsername`;
       if (addUserRoleInThisSession) list = list.concat(` : User Role`);
       if (addUserID) list = list.concat(` : User ID`);
       if (addUserDMMessageID) list = list.concat(` : User DM Message ID`);

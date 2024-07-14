@@ -1,4 +1,4 @@
-import { ApplicationCommandOptionType, ChannelType } from "discord.js";
+import { ApplicationCommandOptionType } from "discord.js";
 import { Command } from "../../structures/Command";
 import DateChecker from "../../utils/dateChecker";
 import createSessionMessage from "../../utils/create-session-message";
@@ -14,6 +14,7 @@ import {
   BotDialogs,
 } from "../../utils/botDialogStrings";
 import { monthOptionChoicesArray } from "../../utils/genericInformation";
+import { CreateChannel } from "../../utils/channel-methods";
 
 export default new Command({
   name: BotCommandInfo.CreateSessionName,
@@ -63,16 +64,17 @@ export default new Command({
     const date = DateChecker(interaction);
     if (date) {
       if (process.env.SESSION_CHANNEL_ID) {
-        const channel = client.channels.cache.get(
-          process.env.SESSION_CHANNEL_ID
+        const newChannelId = await CreateChannel(
+          client,
+          sessionName.replace(" ", "-")
         );
-
         const messageIDstr = "messageID";
         const newSessionData = {
           sessionData: {
-            sessionMessageId: messageIDstr,
-            sessionName: sessionName,
-            sessionDate: date,
+            messageId: messageIDstr,
+            name: sessionName,
+            date: date,
+            channelId: newChannelId,
           },
           userData: {
             username: interaction.user.displayName,
@@ -88,22 +90,26 @@ export default new Command({
         await CreateCompositeImage(client, messageIDstr);
 
         setTimeout(async () => {
-          const messageID = await createSessionMessage(
-            client,
-            process.env.SESSION_CHANNEL_ID
-          );
+          const messageID = await createSessionMessage(client, newChannelId);
           await UpdateSessionMessageId(messageIDstr, messageID);
         }, 250);
 
-        const message = `${BotDialogs.CreateSessionDMSessionTime
-          }${date.toLocaleString()}`;
+        const message = `${
+          BotDialogs.CreateSessionDMSessionTime
+        }${date.toLocaleString()}`;
         const user = client.users.cache.get(interaction.user.id);
         user?.send(message);
       }
       //send to DMs
-      interaction?.reply(BotDialogs.CreateSessionOneMoment);
+      interaction?.reply({
+        content: BotDialogs.CreateSessionOneMoment,
+        ephemeral: true,
+      });
     } else {
-      interaction?.reply(BotDialogs.CreateSessionInvalidDateEntered);
+      interaction?.reply({
+        content: BotDialogs.CreateSessionInvalidDateEntered,
+        ephemeral: true,
+      });
     }
   },
 });

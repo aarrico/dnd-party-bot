@@ -21,11 +21,12 @@ enum SessionStatus {
 
 //host date time in UTC time.
 model Session {
-  id               String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  sessionMessageId String        @unique @map("session_message_id")
-  sessionName      String        @map("session_name")
-  sessionDate      DateTime      @map("session_date")
-  users            PartyMember[]
+  id        String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  messageId String        @unique @map("message_id")
+  name      String        @map("name")
+  date      DateTime      @map("date")
+  channelId String        @unique @map("channel_id")
+  users     PartyMember[]
 
   @@map("session")
 }

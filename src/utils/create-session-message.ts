@@ -71,7 +71,6 @@ export default async function createSessionMessage(
 ) {
   try {
     const channel = await client.channels.cache.get(channel_id);
-
     const row1 = createActionRowOfButtons(roles_row1);
     const row2 = createActionRowOfButtons(roles_row2);
     const attachment = getPNGAttachmentBuilder(

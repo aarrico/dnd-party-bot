@@ -66,8 +66,9 @@ export default new Command({
         BotCommandOptionInfo.GetAllUserSessions_SessionMessageIDName
       )?.value as boolean;
 
-      let list = `Session List that ${(await GetUserById(userID)).username
-        } has signed up for:\nFormat:\n\nSession Name`;
+      let list = `Session List that ${
+        (await GetUserById(userID)).username
+      } has signed up for:\nFormat:\n\nSession Name`;
       if (addUserRoleInThisSession) list = list.concat(` : User Role`);
       if (addSessionDateTime) list = list.concat(` : Session Date Time`);
       if (addSessionID) list = list.concat(` : Session ID`);
@@ -75,13 +76,12 @@ export default new Command({
       list = list.concat(`\n`);
 
       sessions.forEach((session) => {
-        list = list.concat(`${session.session.sessionName}`);
+        list = list.concat(`${session.session.name}`);
         if (addUserRoleInThisSession) list = list.concat(` : ${session.role}`);
         if (addSessionDateTime)
-          list = list.concat(` : ${session.session.sessionDate}`);
+          list = list.concat(` : ${session.session.date}`);
         if (addSessionID) list = list.concat(` : ${session.session.id}`);
-        if (addMessageID)
-          list = list.concat(` : ${session.session.sessionMessageId}`);
+        if (addMessageID) list = list.concat(` : ${session.session.messageId}`);
         list = list.concat(`\n`);
       });
 

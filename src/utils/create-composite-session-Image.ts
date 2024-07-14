@@ -22,8 +22,8 @@ export async function CreateCompositeImage(
     const xValues = [365, 795, 1225, 1655, 2085];
     let spotValue = 0;
 
-    baseImage.print(font, 585, 940, session?.sessionName);
-    baseImage.print(font, 1035, 1140, `${session?.sessionDate.toUTCString()}`);
+    baseImage.print(font, 585, 940, session?.name);
+    baseImage.print(font, 1035, 1140, `${session?.date.toUTCString()}`);
 
     for (var i = 0; i < data[0].length; i++) {
       const image = await Jimp.read(data[0][i].userAvatarURL);

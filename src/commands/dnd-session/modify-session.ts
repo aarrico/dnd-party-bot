@@ -73,21 +73,19 @@ export default new Command({
 
       if (newProposedDate && newSessionName) {
         if (
-          !existingSession?.sessionName?.match(newSessionName) ||
-          !existingSession?.sessionDate
+          !existingSession?.name?.match(newSessionName) ||
+          !existingSession?.date
             .toUTCString()
             .match(newProposedDate?.toUTCString())
         ) {
           await UpdateSession(sessionID, {
-            sessionName: newSessionName,
-            sessionDate: newProposedDate,
-            sessionMessageId: existingSession.sessionMessageId,
+            name: newSessionName,
+            date: newProposedDate,
+            messageId: existingSession.messageId,
+            channelId: existingSession.channelId,
           });
           setTimeout(async () => {
-            await CreateCompositeImage(
-              client,
-              existingSession.sessionMessageId
-            );
+            await CreateCompositeImage(client, existingSession.messageId);
 
             const attachment = getPNGAttachmentBuilder(
               `${BotPaths.TempDir}${BotAttachmentFileNames.CurrentSession}`,
@@ -99,7 +97,7 @@ export default new Command({
             );
             if (channel?.isTextBased()) {
               const message = await channel?.messages.fetch(
-                existingSession.sessionMessageId
+                existingSession.messageId
               );
               message?.edit({
                 content: BotDialogs.InteractionCreate_HereIsANewSessionMessage,

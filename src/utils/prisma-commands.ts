@@ -4,9 +4,10 @@ import { roles } from "../../prisma/seed";
 const prisma = new PrismaClient();
 
 type SessionData = {
-  sessionMessageId: string;
-  sessionName: string;
-  sessionDate: Date;
+  messageId: string;
+  name: string;
+  date: Date;
+  channelId: string;
 };
 
 type UserData = {
@@ -43,14 +44,14 @@ export async function AddUserToSession(
 ) {
   const {
     id: sessionId,
-    sessionDate,
+    date,
     users: party,
   } = await getPartyBySessionMessageId(sessionMessageId);
 
   const existingUser = await upsertUserWithUsername(newUserData);
 
   // reject changes if the session has already occured, but allow for user upsert first??
-  if (sessionDate < new Date()) {
+  if (date < new Date()) {
     return "session expired";
   }
 
@@ -77,7 +78,7 @@ export async function AddUserToSession(
 
 export async function getUsersByMessageId(messageId: string) {
   const session = await prisma.session.findFirst({
-    where: { sessionMessageId: messageId },
+    where: { messageId: messageId },
     include: { users: { select: { user: true, role: true } } },
   });
 
@@ -89,7 +90,7 @@ export async function GetAllSessions() {
 }
 
 export async function GetSessionsByName(sessionName: string) {
-  return await prisma.session.findMany({ where: { sessionName } });
+  return await prisma.session.findMany({ where: { name: sessionName } });
 }
 
 export async function GetSessionById(id: string) {
@@ -98,7 +99,7 @@ export async function GetSessionById(id: string) {
 
 export async function GetSessionByMessageId(messageId: string) {
   return await prisma.session.findUniqueOrThrow({
-    where: { sessionMessageId: messageId },
+    where: { messageId: messageId },
   });
 }
 
@@ -160,10 +161,10 @@ export async function UpdateSessionMessageId(
 ) {
   return await prisma.session.update({
     where: {
-      sessionMessageId: oldMessageId,
+      messageId: oldMessageId,
     },
     data: {
-      sessionMessageId: newMessageId,
+      messageId: newMessageId,
     },
   });
 }
@@ -174,9 +175,9 @@ export async function UpdateSession(
 ) {
   return await prisma.session.update({
     data: {
-      sessionName: sessionUpdateData.sessionName,
-      sessionDate: sessionUpdateData.sessionDate,
-      sessionMessageId: sessionUpdateData.sessionMessageId,
+      name: sessionUpdateData.name,
+      date: sessionUpdateData.date,
+      messageId: sessionUpdateData.messageId,
     },
     where: {
       id: sessionId,
@@ -187,7 +188,7 @@ export async function UpdateSession(
 export async function DeleteSessionMessageId(messageId: string) {
   return await prisma.session.deleteMany({
     where: {
-      sessionMessageId: messageId,
+      messageId: messageId,
     },
   });
 }
@@ -239,9 +240,9 @@ async function getPartyBySessionMessageId(messageId: string) {
   return await prisma.session.findUniqueOrThrow({
     select: {
       id: true,
-      sessionDate: true,
+      date: true,
       users: { select: { user: true, role: true } },
     },
-    where: { sessionMessageId: messageId },
+    where: { messageId },
   });
 }

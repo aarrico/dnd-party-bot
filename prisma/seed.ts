@@ -14,24 +14,28 @@ export const roles = {
 
 const sessions = [
   {
-    sessionMessageId: "1",
-    sessionName: "Session 1",
-    sessionDate: new Date(),
+    messageId: "1",
+    name: "Session 1",
+    date: new Date(),
+    channelId: "1",
   },
   {
-    sessionMessageId: "2",
-    sessionName: "Session 2",
-    sessionDate: new Date(),
+    messageId: "2",
+    name: "Session 2",
+    date: new Date(),
+    channelId: "2",
   },
   {
-    sessionMessageId: "3",
-    sessionName: "Session 3",
-    sessionDate: new Date(),
+    messageId: "3",
+    name: "Session 3",
+    date: new Date(),
+    channelId: "3",
   },
   {
-    sessionMessageId: "4",
-    sessionName: "Session 4",
-    sessionDate: new Date(),
+    messageId: "4",
+    name: "Session 4",
+    date: new Date(),
+    channelId: "4",
   },
 ];
 

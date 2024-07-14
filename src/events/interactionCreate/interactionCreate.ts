@@ -31,9 +31,7 @@ export default new Event("interactionCreate", async (interaction) => {
       interaction: interaction as ExtendedInteraction,
     });
   } else if (interaction.isButton() && interaction.message) {
-    const channel = client?.channels?.cache?.get(
-      process.env.SESSION_CHANNEL_ID as string
-    );
+    const channel = interaction.channel;
     if (channel?.type === ChannelType.GuildText) {
       const message = channel?.messages?.cache?.get(interaction.message.id);
       addUserToDB(interaction);

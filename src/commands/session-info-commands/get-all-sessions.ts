@@ -54,10 +54,10 @@ export default new Command({
       list = list.concat(`\n`);
 
       sessions.forEach((session) => {
-        list = list.concat(`${session.sessionName}`);
+        list = list.concat(`${session.name}`);
         if (addSessionID) list = list.concat(` : ${session.id}`);
-        if (addSessionDateTime) list = list.concat(` : ${session.sessionDate}`);
-        if (addMessageID) list = list.concat(` : ${session.sessionMessageId}`);
+        if (addSessionDateTime) list = list.concat(` : ${session.date}`);
+        if (addMessageID) list = list.concat(` : ${session.messageId}`);
         list = list.concat(`\n`);
       });
 
