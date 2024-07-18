@@ -9,6 +9,7 @@ import {
   BotDialogs,
   BotPaths,
 } from "../../utils/botDialogStrings";
+import { sendEphemeralReply } from "../../utils/send-ephemeral-reply";
 
 export default new Command({
   name: BotCommandInfo.GetAllUsers_Name,
@@ -55,13 +56,11 @@ export default new Command({
         list
       );
 
-      interaction.reply({
-        content: BotDialogs.GetAllUsers_HereIsTheList,
-        files: [attachment],
-        ephemeral: true,
-      });
+      sendEphemeralReply(BotDialogs.GetAllUsers_HereIsTheList, interaction, [
+        attachment,
+      ]);
     } catch (error) {
-      console.log(error);
+      sendEphemeralReply(`There was an error: ${error}`, interaction);
     }
   },
 });

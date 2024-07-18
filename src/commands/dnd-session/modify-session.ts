@@ -15,6 +15,7 @@ import {
   BotDialogs,
   BotPaths,
 } from "../../utils/botDialogStrings";
+import { sendEphemeralReply } from "../../utils/send-ephemeral-reply";
 
 export default new Command({
   name: "modify-session",
@@ -93,7 +94,7 @@ export default new Command({
             );
 
             const channel = await client.channels.fetch(
-              process.env.SESSION_CHANNEL_ID as string
+              existingSession.channelId as string
             );
             if (channel?.isTextBased()) {
               const message = await channel?.messages.fetch(
@@ -106,17 +107,19 @@ export default new Command({
             }
           }, 250);
 
-          interaction.reply(
-            "Session has been updated successfully. I will generate a new image for that message now. Please give it a few seconds to update it."
+          sendEphemeralReply(
+            "Session has been updated successfully. I will generate a new image for that message now. Please give it a few seconds to update it.",
+            interaction
           );
         } else {
-          interaction.reply(
-            "You have entered in data that would completely match the existing session data."
+          sendEphemeralReply(
+            "You have entered in data that would completely match the existing session data.",
+            interaction
           );
         }
       }
     } catch (error) {
-      interaction.reply(`There was an error: ${error}`);
+      sendEphemeralReply(`There was an error: ${error}`, interaction);
     }
   },
 });

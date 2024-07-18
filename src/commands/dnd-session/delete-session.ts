@@ -5,6 +5,7 @@ import {
   GetPartyForSession,
 } from "../../utils/prisma-commands";
 import { DeleteChannel } from "../../utils/channel-methods";
+import { sendEphemeralReply } from "../../utils/send-ephemeral-reply";
 
 export default new Command({
   name: "delete-session",
@@ -42,15 +43,12 @@ export default new Command({
       //delete session data
       DeleteSessionById(sessionId);
 
-      interaction.reply({
-        content: `Session, Channel, and data for session have been deleted.`,
-        ephemeral: true,
-      });
+      sendEphemeralReply(
+        `Session, Channel, and data for session have been deleted.`,
+        interaction
+      );
     } catch (error) {
-      interaction.reply({
-        content: `There was an error: ${error}`,
-        ephemeral: true,
-      });
+      sendEphemeralReply(`There was an error: ${error}`, interaction);
     }
   },
 });

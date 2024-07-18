@@ -9,6 +9,7 @@ import {
   BotDialogs,
   BotPaths,
 } from "../../utils/botDialogStrings";
+import { sendEphemeralReply } from "../../utils/send-ephemeral-reply";
 
 export default new Command({
   name: BotCommandInfo.GetAllSessions_Name,
@@ -67,13 +68,11 @@ export default new Command({
         list
       );
 
-      interaction.reply({
-        content: BotDialogs.GetAllSessions_HereIsTheList,
-        files: [attachment],
-        ephemeral: true,
-      });
+      sendEphemeralReply(BotDialogs.GetAllSessions_HereIsTheList, interaction, [
+        attachment,
+      ]);
     } catch (error) {
-      interaction.reply(`There was an error: ${error}`);
+      sendEphemeralReply(`There was an error: ${error}`, interaction);
     }
   },
 });

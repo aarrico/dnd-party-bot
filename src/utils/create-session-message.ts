@@ -1,4 +1,10 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
+import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  StringSelectMenuBuilder,
+  StringSelectMenuOptionBuilder,
+} from "discord.js";
 import { getPNGAttachmentBuilder } from "./attachmentBuilders";
 import { BotAttachmentFileNames, BotPaths } from "./botDialogStrings";
 
@@ -102,4 +108,30 @@ function createActionRowOfButtons(roles: RoleClass[]) {
     );
   });
   return row;
+}
+
+function createDropDownMenu(
+  customID: string,
+  placeholder: string,
+  options: { label: string; description: string; value: string }[]
+) {
+  return new StringSelectMenuBuilder()
+    .setCustomId(customID)
+    .setPlaceholder(placeholder)
+    .addOptions(createDropDownMenuItems(options));
+}
+
+function createDropDownMenuItems(
+  options: { label: string; description: string; value: string }[]
+) {
+  let createdOptions: StringSelectMenuOptionBuilder[] = [];
+  options.forEach((option) => {
+    const createdOption = new StringSelectMenuOptionBuilder()
+      .setLabel(option.label)
+      .setDescription(option.description)
+      .setValue(option.value);
+    createdOptions = [...createdOptions, createdOption];
+  });
+
+  return createdOptions;
 }

@@ -15,6 +15,7 @@ import {
 } from "../../utils/botDialogStrings";
 import { monthOptionChoicesArray } from "../../utils/genericInformation";
 import { CreateChannel } from "../../utils/channel-methods";
+import { sendEphemeralReply } from "../../utils/send-ephemeral-reply";
 
 export default new Command({
   name: BotCommandInfo.CreateSessionName,
@@ -83,10 +84,9 @@ export default new Command({
           interaction,
           messageID: messageIDstr,
         };
+
         await DeleteSessionMessageId(messageIDstr);
         await CreateNewSession(newSessionData);
-
-        //create actual UI for session
         await CreateCompositeImage(client, messageIDstr);
 
         setTimeout(async () => {
@@ -101,15 +101,12 @@ export default new Command({
         user?.send(message);
       }
       //send to DMs
-      interaction?.reply({
-        content: BotDialogs.CreateSessionOneMoment,
-        ephemeral: true,
-      });
+      sendEphemeralReply(BotDialogs.CreateSessionOneMoment, interaction);
     } else {
-      interaction?.reply({
-        content: BotDialogs.CreateSessionInvalidDateEntered,
-        ephemeral: true,
-      });
+      sendEphemeralReply(
+        BotDialogs.CreateSessionInvalidDateEntered,
+        interaction
+      );
     }
   },
 });
