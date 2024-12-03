@@ -16,6 +16,7 @@ import {
   BotPaths,
 } from "../../utils/botDialogStrings";
 import { sendEphemeralReply } from "../../utils/send-ephemeral-reply";
+import { RenameChannel } from "../../utils/channel-methods";
 
 export default new Command({
   name: "modify-session",
@@ -79,6 +80,13 @@ export default new Command({
             .toUTCString()
             .match(newProposedDate?.toUTCString())
         ) {
+          if (!existingSession?.name?.match(newSessionName)) {
+            await RenameChannel(
+              client,
+              existingSession.channelId,
+              newSessionName
+            );
+          }
           await UpdateSession(sessionID, {
             name: newSessionName,
             date: newProposedDate,

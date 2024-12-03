@@ -28,3 +28,14 @@ export async function DeleteChannel(
   const channelToDelete = await guild.channels.fetch(channelID as string);
   if (channelToDelete) guild.channels.delete(channelToDelete, reason);
 }
+
+export async function RenameChannel(
+  client: ExtendedClient,
+  channelID: string,
+  name: string
+) {
+  const guild = await client.guilds.fetch(process.env.GUILD_ID as string);
+  const channel = await guild.channels.fetch(channelID as string);
+  const newChannelName = name.replace(" ", "-");
+  if (channel) guild.channels.edit(channel, { name: newChannelName });
+}
