@@ -7,10 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "tsc": "tsc",
     "build": "npx prisma generate && tsc",
-    "start": "npm run build && node ./dist/src/index.js",
-    "dev": "npm run build && node ./dist/src/index.js",
-    "debug": "nodemon dist/app.js",
-    "nodemon": "nodemon dev-server.js"
+    "start": "npm run build && node ./dist/src/index.js"
   },
   "keywords": [],
   "author": "",
@@ -18,7 +15,7 @@
   "dependencies": {
     "@napi-rs/canvas": "^0.1.51",
     "@prisma/adapter-pg": "^5.22.0",
-    "@prisma/client": "^5.13.0",
+    "@prisma/client": "^6.0.1",
     "cron": "^3.1.7",
     "discord.js": "^14.15.2",
     "dotenv": "^16.4.5",
@@ -33,7 +30,7 @@
     "@types/node": "^20.12.12",
     "@types/pg": "^8.11.10",
     "discord-api-types": "^0.37.110",
-    "prisma": "^5.13.0",
+    "prisma": "^6.0.1",
     "ts-node": "^10.9.2",
     "tsx": "^4.19.2",
     "typescript": "^5.4.5"

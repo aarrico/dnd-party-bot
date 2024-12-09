@@ -1,149 +1,99 @@
 import {
-  ApplicationCommandDataResolvable,
-  Client,
-  ClientEvents,
-  Collection,
-  IntentsBitField,
-  REST,
-  Routes,
+    Client,
+    ClientEvents,
+    Collection,
+    IntentsBitField,
+    REST,
+    Routes,
 } from "discord.js";
-import { RegisterCommandOptions } from "../typings/client";
-import { Event } from "./Event";
-import { CommandType } from "../typings/Command";
+import {Event} from "./Event";
+import {CommandType} from "../typings/Command";
 import path from "path";
-import { getAllFolders, getAllFiles } from "../utils/getAllFiles";
+import {getAllFolders, getAllFiles} from "../utils/getAllFiles";
 
 export class ExtendedClient extends Client {
-  commands: Collection<string, CommandType> = new Collection();
-  events: Collection<string, Event<keyof ClientEvents>> = new Collection();
+    commands: Collection<string, CommandType> = new Collection();
+    events: Collection<string, Event<keyof ClientEvents>> = new Collection();
 
-  constructor() {
-    super({
-      intents: [
-        IntentsBitField.Flags.Guilds,
-        IntentsBitField.Flags.GuildMembers,
-        IntentsBitField.Flags.GuildMessages,
-        IntentsBitField.Flags.MessageContent,
-      ],
-    });
-  }
-
-  async start() {
-    this.login(process.env.TOKEN);
-    await this.registerModules();
-  }
-
-  async importFile(filePath: string) {
-    return (await import(filePath))?.default.default;
-  }
-
-  //registers commands and events
-  async registerModules() {
-    const commandFolders: string[] = await getAllFolders(
-      path.join(__dirname, "..", "commands")
-    );
-
-    await this.getCommands(commandFolders);
-
-    const eventFolders: string[] = await getAllFolders(
-      path.join(__dirname, "..", "events")
-    );
-
-    await this.getEvents(eventFolders);
-  }
-
-  async getCommands(commandFolders: string[]) {
-    const slashCommands: ApplicationCommandDataResolvable[] = [];
-
-    let commandFilesArray: string[] = [];
-    commandFolders?.forEach((folderPath) => {
-      const commandFiles: string[] = getAllFiles(folderPath);
-      commandFilesArray = [...commandFilesArray, ...commandFiles];
-    });
-
-    const commandsArray = await this.getCommandsFromFiles(commandFilesArray);
-
-    commandsArray.forEach((command) => {
-      if (!command || !command.name) return;
-      this.commands.set(command.name, command);
-      slashCommands.push(command);
-    });
-
-    this.registerCommands({
-      commands: slashCommands,
-      guildid: process.env.GUILD_ID,
-    });
-  }
-
-  async getCommandsFromFiles(commandFiles: string[]) {
-    let array: CommandType[] = [];
-
-    for (let commandFile of commandFiles) {
-      const commandPromise = await this.getCommandFromFile(commandFile);
-      array.push(commandPromise);
+    constructor() {
+        super({
+            intents: [
+                IntentsBitField.Flags.Guilds,
+                IntentsBitField.Flags.GuildMembers,
+                IntentsBitField.Flags.GuildMessages,
+                IntentsBitField.Flags.MessageContent,
+            ],
+        });
     }
 
-    return array;
-  }
+    start = async () => {
+        await this.getCommands(getAllFolders(path.join(__dirname, "..", "commands")));
+        await this.getEvents(getAllFolders(path.join(__dirname, "..", "events")));
+    };
 
-  getCommandFromFile(filePath: string) {
-    return this.importFile(filePath) as Promise<CommandType>;
-  }
+    importFile = async (filePath: string) => (await import(filePath))?.default.default;
 
-  async registerCommands(options: RegisterCommandOptions) {
-    if (options?.guildid) {
-      // const guild = await this.guilds?.fetch(options.guildid);
-      // const commands = guild.commands.set(options.commands);
+    getCommands = async (commandFolders: string[]) => {
+        const files = commandFolders.flatMap((folderPath) => getAllFiles(folderPath));
+        const commands = await this.getItemsFromFiles<CommandType>(files);
+        console.log(`${commands.length} commands found`);
 
-      // Construct and prepare an instance of the REST module
-      const rest = new REST().setToken(process.env.TOKEN as string);
-      try {
-        await rest.put(
-          Routes.applicationGuildCommands(
-            process.env.CLIENT_ID as string,
-            process.env.GUILD_ID as string
-          ),
-          { body: options?.commands }
-        );
-      } catch (error) {
-        console.error(error);
-      }
+        commands.forEach((command) => {
+            if (command && command.name) {
+                this.commands.set(command.name, command);
+            }
+        });
 
-      // await guild?.commands?.set(options?.commands);
-      // this.guilds.cache.get(options.guildid)?.commands?.set(options.commands);
-    } else {
-      this.application?.commands?.set(options?.commands);
-    }
-  }
+        await this.registerCommands();
+    };
 
-  async getEvents(eventFolders: string[]) {
-    let eventFilesArray: string[] = [];
+    getEvents = async (eventFolders: string[]) => {
+        const eventFiles = eventFolders.flatMap((folderPath) => getAllFiles(folderPath));
+        const events = await this.getItemsFromFiles<Event<keyof ClientEvents>>(eventFiles);
 
-    eventFolders?.forEach((folderPath) => {
-      const eventFiles: string[] = getAllFiles(folderPath);
-      eventFilesArray = [...eventFilesArray, ...eventFiles];
-    });
+        console.log(`${events.length} events found`);
 
-    const eventsArray = await this.getEventsFromFiles(eventFilesArray);
-
-    eventsArray.forEach((event) => {
-      // this.events.set(event.name, event);
-      this.on(event.name, event.execute);
-    });
-  }
-
-  async getEventsFromFiles(eventFiles: string[]) {
-    let array: Event<keyof ClientEvents>[] = [];
-
-    for (let eventFile of eventFiles) {
-      const eventPromise = await this.getEventFromFile(eventFile);
-      array.push(eventPromise);
+        events.forEach((event) => {
+            this.on(event.name, event.execute);
+        });
     }
 
-    return array;
-  }
+    getItemsFromFiles = async <T>(files: string[]): Promise<T[]> => {
+        try {
+            const promises = files.map((file) => this.importModule<T>(file));
+            return Promise.all(promises);
+        } catch (error) {
+            console.error(`Error loading commands:`, error);
+            process.exit(1);
+        }
+    }
 
-  getEventFromFile(filePath: string) {
-    return this.importFile(filePath) as Promise<Event<keyof ClientEvents>>;
-  }
+    importModule = async <T>(filePath: string): Promise<T> => {
+        try {
+            return await this.importFile(filePath) as T;
+        } catch (error) {
+            console.error(`Error importing module from ${filePath}:`, error);
+            process.exit(1);
+        }
+    }
+
+    registerCommands = async () => {
+        if (this.commands.size === 0) {
+            console.error('No commands to register!');
+            return;
+        }
+
+        const rest = new REST().setToken(process.env.TOKEN as string);
+        try {
+            await rest.put(
+                Routes.applicationGuildCommands(
+                    process.env.CLIENT_ID as string,
+                    process.env.GUILD_ID as string
+                ),
+                {body: this.commands.toJSON()}
+            );
+        } catch (error) {
+            console.error('failed registering commands to guild:', error);
+        }
+    };
 }
