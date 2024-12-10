@@ -13,7 +13,6 @@ import {getAllFolders, getAllFiles} from "../utils/getAllFiles";
 
 export class ExtendedClient extends Client {
     commands: Collection<string, CommandType> = new Collection();
-    events: Collection<string, Event<keyof ClientEvents>> = new Collection();
 
     constructor() {
         super({
@@ -28,6 +27,7 @@ export class ExtendedClient extends Client {
 
     start = async () => {
         await this.getCommands(getAllFolders(path.join(__dirname, "..", "commands")));
+        await this.registerCommands();
         await this.getEvents(getAllFolders(path.join(__dirname, "..", "events")));
     };
 
@@ -43,8 +43,6 @@ export class ExtendedClient extends Client {
                 this.commands.set(command.name, command);
             }
         });
-
-        await this.registerCommands();
     };
 
     getEvents = async (eventFolders: string[]) => {
@@ -60,19 +58,10 @@ export class ExtendedClient extends Client {
 
     getItemsFromFiles = async <T>(files: string[]): Promise<T[]> => {
         try {
-            const promises = files.map((file) => this.importModule<T>(file));
+            const promises = files.map(async (file) => await this.importFile(file) as T);
             return Promise.all(promises);
         } catch (error) {
-            console.error(`Error loading commands:`, error);
-            process.exit(1);
-        }
-    }
-
-    importModule = async <T>(filePath: string): Promise<T> => {
-        try {
-            return await this.importFile(filePath) as T;
-        } catch (error) {
-            console.error(`Error importing module from ${filePath}:`, error);
+            console.error(`Error loading modules from files:`, error);
             process.exit(1);
         }
     }
