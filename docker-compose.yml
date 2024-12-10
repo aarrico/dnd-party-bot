@@ -1,4 +1,3 @@
-version: "3.9"
 services:
   api:
     container_name: api
@@ -14,6 +13,11 @@ services:
     volumes:
       - .:/usr/src/app
       - postgres-data:/app/postgres-data
+    environment:
+        DB_PORT: ${DB_PORT}
+        DB_USER: ${DB_USER}
+        DB_NAME: ${DB_NAME}
+        DB_PASSWORD: ${DB_PASSWORD}
 
   db:
     container_name: postgres
@@ -24,7 +28,7 @@ services:
     expose:
       - ${DB_PORT}
     healthcheck:
-      test: ["CMD-SHELL", "sh -c 'pg_isready -U ${DB_USER} -d ${DB_NAME}'"]
+      test: [ "CMD-SHELL", "sh -c 'pg_isready -U ${DB_USER} -d ${DB_NAME}'" ]
       interval: 10s
       timeout: 3s
       retries: 3
