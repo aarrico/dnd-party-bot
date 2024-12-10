@@ -9,7 +9,7 @@ export const getAllFiles = (directory: string): string[] => {
       .map((file) => path.join(directory, file.name));
 }
 
-export function getAllFolders(directory: string): string[] {
+export const getAllFolders = (directory: string): string[] => {
   const files = fs.readdirSync(directory, { withFileTypes: true });
 
   return files
