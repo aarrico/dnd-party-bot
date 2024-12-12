@@ -41,7 +41,7 @@ export function getRoleImage(role: string) {
   return getAbsolutePath(imagePathSTR);
 }
 
-export function getRoleSTR(role: string) {
+export function getRoleName(role: string) {
   switch (role.toLowerCase()) {
     case roles.FACE:
       return "Face";

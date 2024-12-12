@@ -30,8 +30,7 @@ export enum BotDialogs {
 //potential resolve path here instead.
 export enum BotPaths {
   TempDir = "./src/resources/temp/",
-  BaseSessionImageDir = "./src/resources/images/TW_ui_menu_backplate.png",
-  ProfileMaskImageDir = "./src/resources/images/profile_mask.png",
+  SessionBackdrop = "./src/resources/images/TW_ui_menu_backplate.png",
 }
 
 export enum BotAttachmentFileNames {

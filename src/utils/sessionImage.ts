@@ -1,94 +1,136 @@
-import { Jimp, loadFont } from 'jimp';
-import { GetSessionByMessageId } from '../db/session';
-import { getRoleImage, getRoleSTR, roles } from './role';
+import sharp, { OverlayOptions } from 'sharp';
+import { GetSessionByMessageId, SessionData } from '../db/session';
+import { getRoleImage, getRoleName, roles } from './role';
 import { ExtendedClient } from '../structures/ExtendedClient';
 import { BotAttachmentFileNames, BotPaths } from './botDialogStrings';
 import path from 'path';
 import { getPartyMembers } from '../db/user';
 
 const coords = {
-  dm: { width: 350, x: 1185, y: 390 },
-  member: { width: 300, x: [365, 795, 1225, 1655, 2085], y: 1700 },
+  dm: { width: 350, height: 350, x: 1185, y: 390 },
+  member: { width: 300, height: 300, x: [365, 795, 1225, 1655, 2085], y: 1700 },
   sessionName: { x: 585, y: 940 },
   date: { x: 1035, y: 1140 },
-  role: { yImg: 1300, yName: 2150 },
+  role: { yImg: 1300, yName: 2150, width: 300, height: 300 },
 };
+
+const fontName = 'Vecna';
+const fontPath = path.resolve(
+  path.join(__dirname, '..', 'resources/fonts/Vecna-oppx-64.fnt')
+);
 
 export const createSessionImage = async (
   client: ExtendedClient,
   messageID: string
 ) => {
-  const [partyMembers, session, font, backdrop, mask] = await Promise.all([
+  const [users, session] = await Promise.all([
     getPartyMembers(client, messageID),
     GetSessionByMessageId(messageID),
-    loadFont(path.join(__dirname, '..', 'resources/fonts/Vecna-oppx-64.fnt')),
-    Jimp.read(BotPaths.BaseSessionImageDir),
-    Jimp.read(BotPaths.ProfileMaskImageDir),
   ]);
 
-  placeSessionInfo(session, font, backdrop);
+  const sessionOverlays = placeSessionInfo(session);
 
-  let memberSlot = 0;
-  for (const member of partyMembers) {
-    const image = await Jimp.read(member.userAvatarURL);
-    const isDM = member.role === roles.DM;
-
-    placeUserAvatar(image, mask, backdrop, isDM, memberSlot);
-
-    if (!isDM) {
-      await placeRole(member.role, backdrop, font, memberSlot);
-      memberSlot++;
-    }
+  const dm = users.find((member) => member.role === roles.DM);
+  if (!dm) {
+    console.error(`No Dungeon Master found for session ${session.name}`);
+    throw new Error('no dungeon master');
   }
+  const dmOverlay = await placeUserAvatar(
+    dm.userAvatarURL,
+    coords.dm.width,
+    coords.dm.height,
+    coords.dm.x,
+    coords.dm.y
+  );
 
-  backdrop.write(`${BotPaths.TempDir}${BotAttachmentFileNames.CurrentSession}`);
+  const partyMembers = users.filter((member) => member.role !== roles.DM);
+  const partyOverlays = (
+    await Promise.all(
+      partyMembers.flatMap((member, index) => [
+        placeUserAvatar(
+          member.userAvatarURL,
+          coords.member.width,
+          coords.member.height,
+          coords.member.x[index],
+          coords.member.y
+        ),
+        placeRole(member.role, index),
+      ])
+    )
+  ).flat();
+
+  await sharp(BotPaths.SessionBackdrop)
+    .composite([...sessionOverlays, dmOverlay, ...partyOverlays])
+    .toFile(BotPaths.TempDir + BotAttachmentFileNames.CurrentSession);
 };
 
-const placeSessionInfo = (session: any, font: any, backdrop: any) => {
-  backdrop.print(
-    font,
-    coords.sessionName.x,
-    coords.sessionName.y,
-    session.name
-  );
-  backdrop.print(
-    font,
-    coords.date.x,
-    coords.date.y,
-    `${session.date.toUTCString()}`
-  );
+const placeSessionInfo = (session: SessionData): OverlayOptions[] => {
+  return [
+    {
+      input: {
+        text: {
+          text: session.name,
+          font: fontName,
+          fontfile: fontPath,
+        },
+      },
+      left: coords.sessionName.x,
+      top: coords.sessionName.y,
+    },
+    {
+      input: {
+        text: {
+          text: session.date.toUTCString(),
+          font: fontName,
+          fontfile: fontPath,
+        },
+      },
+      left: coords.date.x,
+      top: coords.date.y,
+    },
+  ];
 };
 
-const placeUserAvatar = (
-  image: any,
-  mask: any,
-  backdrop: any,
-  isDM: boolean,
-  memberSlot: number
-) => {
-  const width = isDM ? coords.dm.width : coords.member.width;
-  const x = isDM ? coords.dm.x : coords.member.x[memberSlot];
-  const y = isDM ? coords.dm.y : coords.member.y;
+const placeUserAvatar = async (
+  image: string,
+  width: number,
+  height: number,
+  x: number,
+  y: number
+): Promise<OverlayOptions> => {
+  const mask = Buffer.from(
+    `<svg width="${width}" height="${width}">
+        <circle cx="${width / 2}" cy="${width / 2}" r="${width / 2}" fill="white" />
+     </svg>`
+  );
 
-  image.resize({ h: width, w: width });
-  mask.resize({ h: width, w: width });
-  image.mask({ src: mask, x: 0, y: 0 });
-  backdrop.composite(image, x, y);
+  const res = await fetch(image);
+  const buffer = Buffer.from(await res.arrayBuffer());
+
+  const userImg = await sharp(buffer)
+    .resize(width, height)
+    .composite([{ input: mask, blend: 'dest-in' }])
+    .toBuffer();
+
+  return { input: userImg, left: x, top: y };
 };
 
 const placeRole = async (
   role: string,
-  backdrop: any,
-  font: any,
   slot: number
-) => {
-  const roleImage = await Jimp.read(getRoleImage(role));
-  roleImage.resize({ h: coords.member.width, w: coords.member.width });
-  backdrop.composite(roleImage, coords.member.x[slot], coords.role.yImg);
-  backdrop.print({
-    font,
-    x: coords.member.x[slot],
-    y: coords.role.yName,
-    text: getRoleSTR(role),
-  });
+): Promise<OverlayOptions[]> => {
+  const roleImage = await sharp(getRoleImage(role))
+    .resize(coords.role.width, coords.role.height)
+    .toBuffer();
+
+  return [
+    { input: roleImage, left: coords.member.x[slot], top: coords.role.yImg },
+    {
+      input: {
+        text: { text: getRoleName(role), font: fontName, fontfile: fontPath },
+      },
+      left: coords.member.x[slot],
+      top: coords.role.yName,
+    },
+  ];
 };
