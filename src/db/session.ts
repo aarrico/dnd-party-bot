@@ -1,27 +1,23 @@
-import { PrismaClient } from "@prisma/client";
-import { roles } from "../../prisma/seed";
+import { PrismaClient } from '@prisma/client';
+import { roles } from '../../prisma/seed';
+import { UserData } from './user';
 
 const prisma = new PrismaClient();
 
-type SessionData = {
+export type SessionData = {
   messageId: string;
   name: string;
   date: Date;
   channelId: string;
 };
 
-type UserData = {
-  username: string;
-  userChannelId: string;
-};
-
-export async function CreateNewSession({
+export const createSession = async ({
   sessionData,
   userData,
 }: {
   sessionData: SessionData;
   userData: UserData;
-}) {
+}) => {
   const user = await upsertUserWithUsername(userData);
 
   await prisma.session.create({
@@ -35,7 +31,7 @@ export async function CreateNewSession({
       },
     },
   });
-}
+};
 
 export async function AddUserToSession(
   newUserData: UserData,
@@ -52,28 +48,28 @@ export async function AddUserToSession(
 
   // reject changes if the session has already occured, but allow for user upsert first??
   if (date < new Date()) {
-    return "session expired";
+    return 'session expired';
   }
 
   const partyMember = party.find(
     (member) => member.user.userChannelId === newUserData.userChannelId
   );
   if (partyMember) {
-    if (partyMember.role === roles.DM) return "Cant Change DM";
+    if (partyMember.role === roles.DM) return 'Cant Change DM';
 
     if (role === partyMember.role) {
       await deletePartyMember(partyMember.user.id, sessionId);
-      return "deleted";
+      return 'deleted';
     }
 
     await updatePartyMemberRole(partyMember.user.id, sessionId, role);
-    return "updated";
+    return 'updated';
   }
 
-  if (party.length >= 6) return "party full";
+  if (party.length >= 6) return 'party full';
 
   await addUserToParty(existingUser.id, sessionId, role);
-  return "created";
+  return 'created';
 }
 
 export async function getUsersByMessageId(messageId: string) {
@@ -136,7 +132,7 @@ export async function GetPartyForSession(
   return await prisma.partyMember.findMany({
     select: { user: true, session: true, role: true },
     where: { sessionId },
-    ...(sortByUsername && { orderBy: { user: { username: "asc" } } }),
+    ...(sortByUsername && { orderBy: { user: { username: 'asc' } } }),
   });
 }
 

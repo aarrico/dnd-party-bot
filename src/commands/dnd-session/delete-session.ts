@@ -3,7 +3,7 @@ import { Command } from "../../structures/Command";
 import {
   DeleteSessionById,
   GetPartyForSession,
-} from "../../utils/prisma-commands";
+} from "../../db/session";
 import { DeleteChannel } from "../../utils/channel-methods";
 import { sendEphemeralReply } from "../../utils/send-ephemeral-reply";
 

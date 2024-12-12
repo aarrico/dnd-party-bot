@@ -1,5 +1,5 @@
 import { Command } from "../../structures/Command";
-import { DeleteAllUsersWithDisplayName } from "../../utils/prisma-commands";
+import { DeleteAllUsersWithDisplayName } from "../../db/session";
 
 export default new Command({
   name: "delete-all-by-display-name",

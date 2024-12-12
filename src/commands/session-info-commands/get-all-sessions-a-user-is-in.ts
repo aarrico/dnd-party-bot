@@ -3,7 +3,7 @@ import { Command } from "../../structures/Command";
 import {
   GetAllSessionsAUserIsIn,
   GetUserById,
-} from "../../utils/prisma-commands";
+} from "../../db/session";
 import { getTxtAttachmentBuilder } from "../../utils/attachmentBuilders";
 import {
   BotAttachmentFileNames,

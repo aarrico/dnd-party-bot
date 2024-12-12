@@ -1,21 +1,21 @@
-import { ApplicationCommandOptionType } from "discord.js";
-import { Command } from "../../structures/Command";
-import DateChecker from "../../utils/dateChecker";
-import createSessionMessage from "../../utils/create-session-message";
+import { ApplicationCommandOptionType } from 'discord.js';
+import { Command } from '../../structures/Command';
+import DateChecker from '../../utils/dateChecker';
+import createSessionMessage from '../../utils/create-session-message';
 import {
+  createSession,
   DeleteSessionMessageId,
   UpdateSessionMessageId,
-  CreateNewSession,
-} from "../../utils/prisma-commands";
-import { CreateCompositeImage } from "../../utils/create-composite-session-Image";
+} from '../../db/session';
+import { createSessionImage } from '../../utils/sessionImage';
 import {
   BotCommandInfo,
   BotCommandOptionInfo,
   BotDialogs,
-} from "../../utils/botDialogStrings";
-import { monthOptionChoicesArray } from "../../utils/genericInformation";
-import { CreateChannel } from "../../utils/channel-methods";
-import { sendEphemeralReply } from "../../utils/send-ephemeral-reply";
+} from '../../utils/botDialogStrings';
+import { monthOptionChoicesArray } from '../../utils/genericInformation';
+import { CreateChannel } from '../../utils/channel-methods';
+import { sendEphemeralReply } from '../../utils/send-ephemeral-reply';
 
 export default new Command({
   name: BotCommandInfo.CreateSessionName,
@@ -67,9 +67,9 @@ export default new Command({
       if (process.env.SESSION_CHANNEL_ID) {
         const newChannelId = await CreateChannel(
           client,
-          sessionName.replace(" ", "-")
+          sessionName.replace(' ', '-')
         );
-        const messageIDstr = "messageID";
+        const messageIDstr = 'messageID';
         const newSessionData = {
           sessionData: {
             messageId: messageIDstr,
@@ -86,8 +86,8 @@ export default new Command({
         };
 
         await DeleteSessionMessageId(messageIDstr);
-        await CreateNewSession(newSessionData);
-        await CreateCompositeImage(client, messageIDstr);
+        await createSession(newSessionData);
+        await createSessionImage(client, messageIDstr);
 
         setTimeout(async () => {
           const messageID = await createSessionMessage(client, newChannelId);

@@ -1,5 +1,5 @@
 import { Command } from "../../structures/Command";
-import { GetAllSessions } from "../../utils/prisma-commands";
+import { GetAllSessions } from "../../db/session";
 import { ApplicationCommandOptionType } from "discord.js";
 import { getTxtAttachmentBuilder } from "../../utils/attachmentBuilders";
 import {

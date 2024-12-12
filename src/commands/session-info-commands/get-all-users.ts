@@ -1,6 +1,6 @@
 import { ApplicationCommandOptionType } from "discord.js";
 import { Command } from "../../structures/Command";
-import { GetAllUsers } from "../../utils/prisma-commands";
+import { GetAllUsers } from "../../db/session";
 import { getTxtAttachmentBuilder } from "../../utils/attachmentBuilders";
 import {
   BotAttachmentFileNames,

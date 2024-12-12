@@ -1,62 +1,57 @@
-import { ApplicationCommandOptionType } from "discord.js";
-import { monthOptionChoicesArray } from "../../utils/genericInformation";
-import { Command } from "../../structures/Command";
-import {
-  GetSessionById,
-  UpdateSession,
-  UpdateSessionMessageId,
-} from "../../utils/prisma-commands";
-import DateChecker from "../../utils/dateChecker";
-import { CreateCompositeImage } from "../../utils/create-composite-session-Image";
-import createSessionMessage from "../../utils/create-session-message";
-import { getPNGAttachmentBuilder } from "../../utils/attachmentBuilders";
+import { ApplicationCommandOptionType } from 'discord.js';
+import { monthOptionChoicesArray } from '../../utils/genericInformation';
+import { Command } from '../../structures/Command';
+import { GetSessionById, UpdateSession } from '../../db/session';
+import DateChecker from '../../utils/dateChecker';
+import { createSessionImage } from '../../utils/sessionImage';
+import { getPNGAttachmentBuilder } from '../../utils/attachmentBuilders';
 import {
   BotAttachmentFileNames,
   BotDialogs,
   BotPaths,
-} from "../../utils/botDialogStrings";
-import { sendEphemeralReply } from "../../utils/send-ephemeral-reply";
-import { RenameChannel } from "../../utils/channel-methods";
+} from '../../utils/botDialogStrings';
+import { sendEphemeralReply } from '../../utils/send-ephemeral-reply';
+import { RenameChannel } from '../../utils/channel-methods';
 
 export default new Command({
-  name: "modify-session",
+  name: 'modify-session',
   description:
-    "Makes changes to existing session. Also updates photos to reflect changes.",
+    'Makes changes to existing session. Also updates photos to reflect changes.',
   options: [
     {
-      name: "session-id",
-      description: "uuid of session you want to modify",
+      name: 'session-id',
+      description: 'uuid of session you want to modify',
       type: ApplicationCommandOptionType.String,
       required: true,
     },
     {
-      name: "new-session-name",
-      description: "New proposed session name",
+      name: 'new-session-name',
+      description: 'New proposed session name',
       type: ApplicationCommandOptionType.String,
       required: true,
     },
     {
-      name: "month",
-      description: "New proposed session month",
+      name: 'month',
+      description: 'New proposed session month',
       choices: monthOptionChoicesArray,
       type: ApplicationCommandOptionType.Number,
       required: true,
     },
     {
-      name: "day",
-      description: "New proposed session day",
+      name: 'day',
+      description: 'New proposed session day',
       type: ApplicationCommandOptionType.Number,
       required: true,
     },
     {
-      name: "year",
-      description: "New proposed session year",
+      name: 'year',
+      description: 'New proposed session year',
       type: ApplicationCommandOptionType.Number,
       required: true,
     },
     {
-      name: "time",
-      description: "New proposed session time Format: HH:MM\nEX:23:59",
+      name: 'time',
+      description: 'New proposed session time Format: HH:MM\nEX:23:59',
       type: ApplicationCommandOptionType.String,
       required: true,
     },
@@ -64,9 +59,9 @@ export default new Command({
   cooldown: 0,
   callBack: async ({ client, interaction }) => {
     try {
-      const sessionID = interaction?.options?.get("session-id")
+      const sessionID = interaction?.options?.get('session-id')
         ?.value as string;
-      const newSessionName = interaction?.options?.get("new-session-name")
+      const newSessionName = interaction?.options?.get('new-session-name')
         ?.value as string;
       const newProposedDate = DateChecker(interaction);
 
@@ -94,7 +89,7 @@ export default new Command({
             channelId: existingSession.channelId,
           });
           setTimeout(async () => {
-            await CreateCompositeImage(client, existingSession.messageId);
+            await createSessionImage(client, existingSession.messageId);
 
             const attachment = getPNGAttachmentBuilder(
               `${BotPaths.TempDir}${BotAttachmentFileNames.CurrentSession}`,
@@ -116,12 +111,12 @@ export default new Command({
           }, 250);
 
           sendEphemeralReply(
-            "Session has been updated successfully. I will generate a new image for that message now. Please give it a few seconds to update it.",
+            'Session has been updated successfully. I will generate a new image for that message now. Please give it a few seconds to update it.',
             interaction
           );
         } else {
           sendEphemeralReply(
-            "You have entered in data that would completely match the existing session data.",
+            'You have entered in data that would completely match the existing session data.',
             interaction
           );
         }

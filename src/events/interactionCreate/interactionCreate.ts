@@ -3,21 +3,21 @@ import {
   CacheType,
   ChannelType,
   CommandInteractionOptionResolver,
-} from "discord.js";
-import { client } from "../..";
-import { Event } from "../../structures/Event";
-import { ExtendedInteraction } from "../../typings/Command";
-import sendMessageReplyDisappearingMessage from "../../utils/send-message-reply-disappearing-message";
-import { AddUserToSession } from "../../utils/prisma-commands";
-import { CreateCompositeImage } from "../../utils/create-composite-session-Image";
-import { getPNGAttachmentBuilder } from "../../utils/attachmentBuilders";
+} from 'discord.js';
+import { client } from '../..';
+import { Event } from '../../structures/Event';
+import { ExtendedInteraction } from '../../typings/Command';
+import sendMessageReplyDisappearingMessage from '../../utils/send-message-reply-disappearing-message';
+import { AddUserToSession } from '../../db/session';
+import { createSessionImage } from '../../utils/sessionImage';
+import { getPNGAttachmentBuilder } from '../../utils/attachmentBuilders';
 import {
   BotAttachmentFileNames,
   BotDialogs,
   BotPaths,
-} from "../../utils/botDialogStrings";
+} from '../../utils/botDialogStrings';
 
-export default new Event("interactionCreate", async (interaction) => {
+export default new Event('interactionCreate', async (interaction) => {
   if (interaction.isCommand()) {
     const command = client.commands.get(interaction.commandName);
     if (!command) {
@@ -36,7 +36,7 @@ export default new Event("interactionCreate", async (interaction) => {
       const message = channel?.messages?.cache?.get(interaction.message.id);
       addUserToDB(interaction);
       setTimeout(async () => {
-        await CreateCompositeImage(client, message?.id as string);
+        await createSessionImage(client, message?.id as string);
 
         const attachment = getPNGAttachmentBuilder(
           `${BotPaths.TempDir}${BotAttachmentFileNames.CurrentSession}`,
@@ -93,15 +93,15 @@ function GetMessageContent(
   sessionPMData: { userId: string; username: string; role: any }
 ) {
   switch (actionTaken) {
-    case "created":
+    case 'created':
       return `${BotDialogs.RoleChosenMessageContent_WelcomeToTheParty1} ${sessionPMData.username}. ${BotDialogs.RoleChosenMessageContent_WelcomeToTheParty2} ${sessionPMData.role}!`;
-    case "deleted":
+    case 'deleted':
       return `${BotDialogs.RoleChosenMessageContent_Farewell1} ${sessionPMData.username}! ${BotDialogs.RoleChosenMessageContent_Farewell2}`;
-    case "updated":
+    case 'updated':
       return `${BotDialogs.RoleChosenMessageContent_RoleSwap1} ${sessionPMData.username}? ${BotDialogs.RoleChosenMessageContent_RoleSwap2} ${sessionPMData.role}!`;
-    case "party full":
+    case 'party full':
       return BotDialogs.RoleChosenMessageContent_PartyFull;
-    case "Cant Change DM":
+    case 'Cant Change DM':
       return BotDialogs.RoleChosenMessageContent_DMCantSwap;
     default:
       return BotDialogs.RoleChosenMessageContent_NoActionTaken;
