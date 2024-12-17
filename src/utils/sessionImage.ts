@@ -5,6 +5,7 @@ import { ExtendedClient } from '../structures/ExtendedClient';
 import { BotAttachmentFileNames, BotPaths } from './botDialogStrings';
 import path from 'path';
 import { getPartyMembers } from '../db/user';
+import { createCanvas, registerFont } from 'canvas';
 
 const coords = {
   dm: { width: 350, height: 350, x: 1185, y: 390 },
@@ -16,13 +17,17 @@ const coords = {
 
 const fontName = 'Vecna';
 const fontPath = path.resolve(
-  path.join(__dirname, '..', 'resources/fonts/Vecna-oppx-64.fnt')
+  path.join(__dirname, '..', 'resources', 'fonts', 'Vecna-oppx.ttf')
 );
+registerFont(fontPath, { family: fontName });
+const canvas = createCanvas(500, 100, 'svg');
+const textCtx = canvas.getContext('2d');
+textCtx.font = `100px ${fontName}`;
 
 export const createSessionImage = async (
   client: ExtendedClient,
   messageID: string
-) => {
+): Promise<void> => {
   const [users, session] = await Promise.all([
     getPartyMembers(client, messageID),
     GetSessionByMessageId(messageID),
@@ -67,24 +72,12 @@ export const createSessionImage = async (
 const placeSessionInfo = (session: SessionData): OverlayOptions[] => {
   return [
     {
-      input: {
-        text: {
-          text: session.name,
-          font: fontName,
-          fontfile: fontPath,
-        },
-      },
+      input: createTextOverlay(session.name),
       left: coords.sessionName.x,
       top: coords.sessionName.y,
     },
     {
-      input: {
-        text: {
-          text: session.date.toUTCString(),
-          font: fontName,
-          fontfile: fontPath,
-        },
-      },
+      input: createTextOverlay(session.date.toUTCString()),
       left: coords.date.x,
       top: coords.date.y,
     },
@@ -126,11 +119,26 @@ const placeRole = async (
   return [
     { input: roleImage, left: coords.member.x[slot], top: coords.role.yImg },
     {
-      input: {
-        text: { text: getRoleName(role), font: fontName, fontfile: fontPath },
-      },
+      input: createTextOverlay(getRoleName(role)),
       left: coords.member.x[slot],
       top: coords.role.yName,
     },
   ];
+};
+
+const createTextOverlay = (text: string): Buffer => {
+  const textMetrics = textCtx.measureText(text);
+  const textWidth = textMetrics.width;
+  const textHeight =
+    textMetrics.actualBoundingBoxAscent + textMetrics.actualBoundingBoxDescent;
+
+  canvas.width = textWidth + 50;
+  canvas.height = textHeight + 50;
+
+  coords.date.x = Math.ceil(coords.date.x - textWidth / 4);
+
+  textCtx.font = `100px ${fontName}`;
+  textCtx.fillStyle = 'black';
+  textCtx.fillText(text, 50, textHeight + 25);
+  return canvas.toBuffer('image/png');
 };
