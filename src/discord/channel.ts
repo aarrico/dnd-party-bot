@@ -1,7 +1,7 @@
-import { ChannelType } from "discord.js";
-import { ExtendedClient } from "../structures/ExtendedClient";
+import { ChannelType } from 'discord.js';
+import { ExtendedClient } from '../structures/ExtendedClient';
 
-export async function CreateChannel(
+export async function createChannel(
   client: ExtendedClient,
   channelName: string
 ) {
@@ -13,20 +13,19 @@ export async function CreateChannel(
     name: channelName,
     type: ChannelType.GuildText,
     parent: parentChannel?.id,
-    // your permission overwrites or other options here
   });
 
   return createdGuild.id;
 }
 
-export async function DeleteChannel(
+export async function deleteChannel(
   client: ExtendedClient,
   channelID: string,
-  reason: string = "session expired."
+  reason: string = 'session expired.'
 ) {
   const guild = await client.guilds.fetch(process.env.GUILD_ID as string);
   const channelToDelete = await guild.channels.fetch(channelID as string);
-  if (channelToDelete) guild.channels.delete(channelToDelete, reason);
+  if (channelToDelete) await guild.channels.delete(channelToDelete, reason);
 }
 
 export async function RenameChannel(
@@ -36,6 +35,6 @@ export async function RenameChannel(
 ) {
   const guild = await client.guilds.fetch(process.env.GUILD_ID as string);
   const channel = await guild.channels.fetch(channelID as string);
-  const newChannelName = name.replace(" ", "-");
-  if (channel) guild.channels.edit(channel, { name: newChannelName });
+  const newChannelName = name.replace(' ', '-');
+  if (channel) await guild.channels.edit(channel, { name: newChannelName });
 }

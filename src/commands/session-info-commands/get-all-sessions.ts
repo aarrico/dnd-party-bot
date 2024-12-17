@@ -9,7 +9,7 @@ import {
   BotDialogs,
   BotPaths,
 } from "../../utils/botDialogStrings";
-import { sendEphemeralReply } from "../../utils/send-ephemeral-reply";
+import { sendEphemeralReply } from "../../discord/send-ephemeral-reply";
 
 export default new Command({
   name: BotCommandInfo.GetAllSessions_Name,

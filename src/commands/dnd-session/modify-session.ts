@@ -10,8 +10,8 @@ import {
   BotDialogs,
   BotPaths,
 } from '../../utils/botDialogStrings';
-import { sendEphemeralReply } from '../../utils/send-ephemeral-reply';
-import { RenameChannel } from '../../utils/channel-methods';
+import { sendEphemeralReply } from '../../discord/send-ephemeral-reply';
+import { RenameChannel } from '../../discord/channel';
 
 export default new Command({
   name: 'modify-session',

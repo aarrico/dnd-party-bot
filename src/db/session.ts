@@ -1,8 +1,6 @@
-import { PrismaClient } from '@prisma/client';
 import { roles } from '../../prisma/seed';
 import { UserData } from './user';
-
-const prisma = new PrismaClient();
+import { prisma } from '../index';
 
 export type SessionData = {
   messageId: string;

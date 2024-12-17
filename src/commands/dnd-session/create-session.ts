@@ -1,7 +1,7 @@
 import { ApplicationCommandOptionType } from 'discord.js';
 import { Command } from '../../structures/Command';
 import DateChecker from '../../utils/dateChecker';
-import createSessionMessage from '../../utils/create-session-message';
+import { createSessionMessage } from '../../discord/message';
 import {
   createSession,
   DeleteSessionMessageId,
@@ -14,8 +14,8 @@ import {
   BotDialogs,
 } from '../../utils/botDialogStrings';
 import { monthOptionChoicesArray } from '../../utils/genericInformation';
-import { CreateChannel } from '../../utils/channel-methods';
-import { sendEphemeralReply } from '../../utils/send-ephemeral-reply';
+import { createChannel } from '../../discord/channel';
+import { sendEphemeralReply } from '../../discord/send-ephemeral-reply';
 
 export default new Command({
   name: BotCommandInfo.CreateSessionName,
@@ -65,7 +65,7 @@ export default new Command({
     const date = DateChecker(interaction);
     if (date) {
       if (process.env.SESSION_CHANNEL_ID) {
-        const newChannelId = await CreateChannel(
+        const newChannelId = await createChannel(
           client,
           sessionName.replace(' ', '-')
         );

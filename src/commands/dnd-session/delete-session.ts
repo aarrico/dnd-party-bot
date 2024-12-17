@@ -4,8 +4,8 @@ import {
   DeleteSessionById,
   GetPartyForSession,
 } from "../../db/session";
-import { DeleteChannel } from "../../utils/channel-methods";
-import { sendEphemeralReply } from "../../utils/send-ephemeral-reply";
+import { deleteChannel } from "../../discord/channel";
+import { sendEphemeralReply } from "../../discord/send-ephemeral-reply";
 
 export default new Command({
   name: "delete-session",
@@ -39,7 +39,7 @@ export default new Command({
         });
       });
       //delete session channel
-      DeleteChannel(client, party[0].session.channelId, reason);
+      deleteChannel(client, party[0].session.channelId, reason);
       //delete session data
       DeleteSessionById(sessionId);
 

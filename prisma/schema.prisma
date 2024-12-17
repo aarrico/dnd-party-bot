@@ -50,3 +50,11 @@ model PartyMember {
   @@id(fields: [sessionId, userId], name: "party_member_id")
   @@map("party_member")
 }
+
+model Role {
+  id      String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name    String
+  emojiId String @map("emoji_id")
+
+  @@map("role")
+}

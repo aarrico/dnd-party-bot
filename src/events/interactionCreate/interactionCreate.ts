@@ -7,7 +7,7 @@ import {
 import { client } from '../..';
 import { Event } from '../../structures/Event';
 import { ExtendedInteraction } from '../../typings/Command';
-import sendMessageReplyDisappearingMessage from '../../utils/send-message-reply-disappearing-message';
+import sendMessageReplyDisappearingMessage from '../../discord/send-message-reply-disappearing-message';
 import { AddUserToSession } from '../../db/session';
 import { createSessionImage } from '../../utils/sessionImage';
 import { getPNGAttachmentBuilder } from '../../utils/attachmentBuilders';
