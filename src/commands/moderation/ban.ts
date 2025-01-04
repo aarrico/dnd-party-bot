@@ -1,13 +1,11 @@
-import { Command } from "../../structures/Command";
-export default new Command({
-  name: "ban",
-  description: "bans a member from server!",
-  // devOnly: Boolean,
-  // testOnly: Boolean,
-  cooldown: 0,
-  // permissionsRequired: [PermissionFlagsBits.Administrator],
-  // botPermissions: [PermissionFlagsBits.Administrator],
-  callBack: ({ interaction }) => {
-    interaction.followUp(`ban..`);
+import { SlashCommandBuilder } from 'discord.js';
+import { ExtendedInteraction } from '../../typings/Command';
+
+export default {
+  data: new SlashCommandBuilder()
+    .setName('ban')
+    .setDescription('bans a member from server!'),
+  async execute(interaction: ExtendedInteraction) {
+    await interaction.followUp(`ban..`);
   },
-});
+};
