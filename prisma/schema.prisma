@@ -68,8 +68,8 @@ model Session {
 }
 
 model User {
-  id       String @id
-  username String
+  id        String @id
+  channelId String @unique
 
   sessions PartyMember[]
   guilds   GuildMember[]

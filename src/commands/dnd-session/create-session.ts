@@ -11,33 +11,35 @@ export default {
   data: new SlashCommandBuilder()
     .setName(BotCommandInfo.CreateSessionName)
     .setDescription(BotCommandInfo.CreateSessionDescription)
-    .addStringOption((option) =>
-      option
+    .addStringOption((name) =>
+      name
         .setName(BotCommandOptionInfo.CreateSession_SessionName)
-        .setDescription(BotCommandOptionInfo.CreateSession_SessionDescription)
+        .setDescription(
+          BotCommandOptionInfo.CreateSession_SessionName_Description
+        )
         .setRequired(true)
     )
-    .addIntegerOption((option) =>
-      option
+    .addIntegerOption((month) =>
+      month
         .setName(BotCommandOptionInfo.CreateSession_MonthName)
         .setDescription(BotCommandOptionInfo.CreateSession_MonthDescription)
         .setChoices(monthOptionChoicesArray)
         .setRequired(true)
     )
-    .addIntegerOption((option) =>
-      option
+    .addIntegerOption((day) =>
+      day
         .setName(BotCommandOptionInfo.CreateSession_DayName)
         .setDescription(BotCommandOptionInfo.CreateSession_DayDescription)
         .setRequired(true)
     )
-    .addIntegerOption((option) =>
-      option
+    .addIntegerOption((year) =>
+      year
         .setName(BotCommandOptionInfo.CreateSession_YearName)
         .setDescription(BotCommandOptionInfo.CreateSession_YearDescription)
         .setRequired(true)
     )
-    .addNumberOption((option) =>
-      option
+    .addStringOption((time) =>
+      time
         .setName(BotCommandOptionInfo.CreateSession_TimeName)
         .setDescription(BotCommandOptionInfo.CreateSession_TimeDescription)
         .setRequired(true)

@@ -1,5 +1,5 @@
 import { prisma } from '../index';
-import { RoleType } from '@prisma/client';
+import { Prisma, RoleType } from '@prisma/client';
 import { PartyMember } from '../models/party';
 
 export type Session = {
@@ -28,8 +28,7 @@ export const createSession = async (newSession: Session, userId: string) => {
 export const getSession = async (sessionId: string) =>
   await prisma.session.findUniqueOrThrow({
     where: { id: sessionId },
-    select: {
-      date: true,
+    include: {
       partyMembers: { select: { user: true, role: true } },
     },
   });
@@ -60,18 +59,6 @@ export const getAllUsers = async () => await prisma.user.findMany();
 export const getUserById = async (id: string) =>
   await prisma.user.findUniqueOrThrow({ where: { id } });
 
-// could be updated to go through session table
-export async function GetPartyForSession(
-  sessionId: string,
-  sortByUsername = false
-) {
-  return prisma.partyMember.findMany({
-    select: { user: true, session: true, role: true },
-    where: { sessionId },
-    ...(sortByUsername && { orderBy: { user: { username: 'asc' } } }),
-  });
-}
-
 export const getAllSessionsForUser = async (userId: string) => {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -84,11 +71,6 @@ export const getAllSessionsForUser = async (userId: string) => {
 
   return user.sessions || [];
 };
-
-export const deleteAllUsersWithDisplayName = async (displayName: string) =>
-  prisma.user.deleteMany({
-    where: { username: displayName },
-  });
 
 export const updateSessionCampaignId = async (
   oldCampaignId: string,
@@ -105,18 +87,25 @@ export const updateSessionCampaignId = async (
 
 export const updateSession = async (
   sessionId: string,
-  sessionUpdateData: Session
-) =>
+  data: { name?: string; date?: Date; campaignId?: string }
+) => {
   prisma.session.update({
+    where: { id: sessionId },
     data: {
-      name: sessionUpdateData.name,
-      date: sessionUpdateData.date,
-      campaignId: sessionUpdateData.campaignId,
-    },
-    where: {
-      id: sessionId,
+      ...(data.name && { name: data.name }),
+      ...(data.date && {
+        date: data.date,
+      }),
+      ...(data.campaignId && {
+        campaign: {
+          connect: {
+            id: data.campaignId,
+          },
+        },
+      }),
     },
   });
+};
 
 export const updatePartyMemberRole = async (
   userId: string,

@@ -23,25 +23,18 @@ export const createChannel = async (
 };
 
 export const deleteChannel = async (
-  guildId: string,
   channelId: string,
   reason: string = 'session expired.'
 ) => {
-  const guild = await client.guilds.fetch(guildId);
-  const channelToDelete = await guild.channels.fetch(channelId);
-  if (channelToDelete) {
-    await guild.channels.delete(channelToDelete, reason);
+  const channel = await client.channels.fetch(channelId);
+  if (channel) {
+    await channel.delete(reason);
   }
 };
 
-export const renameChannel = async (
-  guildId: string,
-  channelId: string,
-  name: string
-) => {
-  const guild = await client.guilds.fetch(guildId);
-  const channel = await guild.channels.fetch(channelId as string);
-  if (channel) {
-    await guild.channels.edit(channel, { name: name.replace(' ', '-') });
+export const renameChannel = async (channelId: string, name: string) => {
+  const channel = await client.channels.fetch(channelId as string);
+  if (channel && channel.type === ChannelType.GuildText) {
+    await channel.edit({ name: name.replace(' ', '-') });
   }
 };

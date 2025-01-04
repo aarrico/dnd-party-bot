@@ -18,8 +18,8 @@ export default new Command({
   cooldown: 0,
   options: [
     {
-      name: BotCommandOptionInfo.GetAllUsers_UserIDName,
-      description: BotCommandOptionInfo.GetAllUsers_UserIDDescription,
+      name: BotCommandOptionInfo.UserId_Name,
+      description: BotCommandOptionInfo.UserId_Description,
       type: ApplicationCommandOptionType.Boolean,
     },
     {
@@ -31,7 +31,7 @@ export default new Command({
   callBack: async ({ interaction }) => {
     try {
       const addUserID = interaction?.options?.get(
-        BotCommandOptionInfo.GetAllUsers_UserIDName
+        BotCommandOptionInfo.UserId_Name
       )?.value as boolean;
       const addUserDMMessageID = interaction?.options?.get(
         BotCommandOptionInfo.GetAllUsers_UserChannelIDName

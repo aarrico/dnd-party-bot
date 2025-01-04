@@ -2,9 +2,12 @@ import {
   addUserToParty,
   createSession,
   deletePartyMember,
+  deleteSessionById,
   getParty,
   getSession,
+  getSessionById,
   updatePartyMemberRole,
+  updateSession,
 } from '../db/session';
 import { client } from '../index';
 import { TextChannel } from 'discord.js';
@@ -14,7 +17,11 @@ import { getActiveCampaign } from '../db/campaign';
 import { BotCommandOptionInfo, BotDialogs } from '../utils/botDialogStrings';
 import DateChecker from '../utils/dateChecker';
 import { createSessionMessage, sendEphemeralReply } from '../discord/message';
-import { createChannel } from '../discord/channel';
+import {
+  createChannel,
+  deleteChannel,
+  renameChannel,
+} from '../discord/channel';
 import { createSessionImage } from '../utils/sessionImage';
 import { ExtendedInteraction } from '../typings/Command';
 
@@ -77,6 +84,91 @@ export const initSession = async (interaction: ExtendedInteraction) => {
 
   //send to DMs
   await sendEphemeralReply(BotDialogs.CreateSessionOneMoment, interaction);
+};
+
+export const cancelSession = async (interaction: ExtendedInteraction) => {
+  try {
+    const sessionId = interaction.options.get(
+      BotCommandOptionInfo.SessionId_Name
+    )?.value as string;
+    const reason = interaction.options.get(
+      BotCommandOptionInfo.CancelSession_ReasonName
+    )?.value as string;
+
+    const session = await getSession(sessionId);
+
+    for (const partyMember of session.partyMembers) {
+      const user = await client.users.fetch(partyMember.user.channelId);
+      await user.send({
+        content: `🚨 Notice: ${session.name} on ${session.date} has been canceled!\n${reason}`,
+      });
+    }
+
+    await deleteChannel(session.id, reason);
+    await deleteSessionById(sessionId);
+
+    await sendEphemeralReply(`Session data has been deleted.`, interaction);
+  } catch (error) {
+    await sendEphemeralReply(`There was an error: ${error}`, interaction);
+  }
+};
+
+export const modifySession = async (interaction: ExtendedInteraction) => {
+  try {
+    const sessionId = interaction?.options?.get(
+      BotCommandOptionInfo.SessionId_Name
+    )?.value as string;
+    const newSessionName = interaction?.options?.get('new-session-name')
+      ?.value as string;
+    const newProposedDate = DateChecker(interaction);
+
+    const existingSession = await getSessionById(sessionId);
+    let updateData = {};
+
+    if (newProposedDate) {
+      if (existingSession.date.getDate() !== newProposedDate.getDate()) {
+        updateData = { date: newProposedDate };
+      }
+    }
+
+    if (newSessionName && newSessionName !== existingSession.name) {
+      await renameChannel(existingSession.id, newSessionName);
+      updateData = { name: newSessionName, ...updateData };
+    }
+
+    if (!updateData) {
+      await sendEphemeralReply(
+        'You have entered in data that would completely match the existing session data.',
+        interaction
+      );
+      return;
+    }
+
+    await updateSession(sessionId, updateData);
+
+    await sendEphemeralReply(
+      '🎉 Session has been updated successfully.\n🤖 Generating new image...give me a few seconds!',
+      interaction
+    );
+
+    await createSessionImage(sessionId);
+
+    const attachment = getPNGAttachmentBuilder(
+      `${BotPaths.TempDir}${BotAttachmentFileNames.CurrentSession}`,
+      BotAttachmentFileNames.CurrentSession
+    );
+
+    const channel = await client.channels.fetch(sessionId);
+    if (channel?.isTextBased()) {
+      const message = await channel?.messages.fetch(existingSession.messageId);
+      message?.edit({
+        content: BotDialogs.InteractionCreate_HereIsANewSessionMessage,
+        files: [attachment],
+      });
+    }
+  } catch (error) {
+    await sendEphemeralReply(`There was an error: ${error}`, interaction);
+  }
 };
 
 export const processRoleSelection = async (

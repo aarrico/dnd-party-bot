@@ -62,9 +62,15 @@ export enum BotCommandInfo {
 }
 
 export enum BotCommandOptionInfo {
+  SessionId_Name = 'session-id',
+  SessionId_Description = 'Channel ID of the session - found by right-clicking channel.',
+  UserId_Name = 'user-id',
+  UserId_Description = 'User ID of the session - found by right-clicking user.',
+  SessionTime_Name = 'session-date-time',
+  SessionTime_Description = 'Date/Time of session in DB',
   //CreateSession
   CreateSession_SessionName = 'session-name',
-  CreateSession_SessionDescription = 'Name of session',
+  CreateSession_SessionName_Description = 'Name of session',
   CreateSession_MonthName = 'month',
   CreateSession_MonthDescription = 'Month of session',
   CreateSession_DayName = 'day',
@@ -72,39 +78,30 @@ export enum BotCommandOptionInfo {
   CreateSession_YearName = 'year',
   CreateSession_YearDescription = 'Year of session',
   CreateSession_TimeName = 'time',
-  CreateSession_TimeDescription = 'Time that session will take place Format:HH:MM',
+  CreateSession_TimeDescription = 'Time using 24 hour HH:MM format',
   //GetAllUserSessions
-  GetAllUserSessions_UserIDName = 'user-id',
-  GetAllUserSessions_UserIDDescription = 'User UUID string that you are finding the sessions for.',
-  GetAllUserSessions_SessionIDName = 'session-id',
+  GetAllUserSessions_UserIDDescription = 'User ID that you are finding the sessions for.',
   GetAllUserSessions_SessionIDDescription = 'UUID of session in DB(unique identifier)',
   GetAllUserSessions_UserRoleName = 'user-role-in-this-session',
   GetAllUserSessions_UserRoleDescription = 'User role for session',
-  GetAllUserSessions_SessionDateTimeName = 'session-date-time',
-  GetAllUserSessions_SessionDateTimeDescription = 'Date/Time of session in DB',
   GetAllUserSessions_SessionMessageIDName = 'session-message-id',
   GetAllUserSessions_SessionMessageIDDescription = 'discord message id for session',
   //GetAllSessions
-  GetAllSessions_SessionIDName = 'session-id',
-  GetAllSessions_SessionIDDescription = 'UUID of session in DB(unique identifier)',
-  GetAllSessions_SessionDateTimeName = 'session-date-time',
-  GetAllSessions_SessionDateTimeDescription = 'Date/Time of session in DB',
   GetAllSessions_SessionMessageIDName = 'session-message-id',
   GetAllSessions_SessionMessageIDDescription = 'discord message id for session',
   //GetAllUsersInASession
-  GetAllUsersInASession_SessionIDName = 'session-id',
-  GetAllUsersInASession_SessionIDDescription = 'UUID of session in DB(unique identifier)',
-  GetAllUsersInASession_UserIDName = 'user-id',
   GetAllUsersInASession_UserIDDescription = 'UUID of user in DB(unique identifier)',
   GetAllUsersInASession_UserRoleName = 'user-role-in-this-session',
   GetAllUsersInASession_UserRoleDescription = 'discord message id for session',
   GetAllUsersInASession_UserChannelIDName = 'user-channel-id',
   GetAllUsersInASession_UserChannelIDDescription = 'User DM channel id',
   //GetAllUsers
-  GetAllUsers_UserIDName = 'user-id',
-  GetAllUsers_UserIDDescription = 'UUID of user in DB(unique identifier)',
   GetAllUsers_UserChannelIDName = 'user-dm-channel-id',
   GetAllUsers_UserChannelIDDescription = 'User DM channel id',
+  CancelSession_Name = 'cancel-session',
+  CancelSession_Description = 'Deletes a session from a campaign, including its associated channel.',
+  CancelSession_ReasonName = 'reason',
+  CancelSession_ReasonDescription = 'Message to party members about the cancellation of the session.',
 }
 
 export const getAddPartyMemberMsg = (

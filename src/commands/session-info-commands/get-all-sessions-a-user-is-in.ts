@@ -21,13 +21,13 @@ export default new Command({
   cooldown: 0,
   options: [
     {
-      name: BotCommandOptionInfo.GetAllUserSessions_UserIDName,
+      name: BotCommandOptionInfo.UserId_Name,
       description: BotCommandOptionInfo.GetAllUserSessions_UserIDDescription,
       type: ApplicationCommandOptionType.String,
       required: true,
     },
     {
-      name: BotCommandOptionInfo.GetAllUserSessions_SessionIDName,
+      name: BotCommandOptionInfo.SessionId_Name,
       description: BotCommandOptionInfo.GetAllUserSessions_SessionIDDescription,
       type: ApplicationCommandOptionType.Boolean,
     },
@@ -37,9 +37,9 @@ export default new Command({
       type: ApplicationCommandOptionType.Boolean,
     },
     {
-      name: BotCommandOptionInfo.GetAllUserSessions_SessionDateTimeName,
+      name: BotCommandOptionInfo.SessionTime_Name,
       description:
-        BotCommandOptionInfo.GetAllUserSessions_SessionDateTimeDescription,
+        BotCommandOptionInfo.SessionTime_Description,
       type: ApplicationCommandOptionType.Boolean,
     },
     {
@@ -52,17 +52,17 @@ export default new Command({
   callBack: async ({ interaction }) => {
     try {
       const userID = interaction?.options?.get(
-        BotCommandOptionInfo.GetAllUserSessions_UserIDName
+        BotCommandOptionInfo.UserId_Name
       )?.value as string;
       const sessions = await getAllSessionsForUser(userID);
       const addUserRoleInThisSession = interaction?.options?.get(
         BotCommandOptionInfo.GetAllUserSessions_UserRoleName
       )?.value as boolean;
       const addSessionDateTime = interaction?.options?.get(
-        BotCommandOptionInfo.GetAllUserSessions_SessionDateTimeName
+        BotCommandOptionInfo.SessionTime_Name
       )?.value as boolean;
       const addSessionID = interaction?.options?.get(
-        BotCommandOptionInfo.GetAllUserSessions_SessionIDName
+        BotCommandOptionInfo.SessionId_Name
       )?.value as boolean;
       const addMessageID = interaction?.options?.get(
         BotCommandOptionInfo.GetAllUserSessions_SessionMessageIDName

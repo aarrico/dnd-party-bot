@@ -18,14 +18,14 @@ export default new Command({
   cooldown: 0,
   options: [
     {
-      name: BotCommandOptionInfo.GetAllSessions_SessionIDName,
-      description: BotCommandOptionInfo.GetAllSessions_SessionIDDescription,
+      name: BotCommandOptionInfo.SessionId_Name,
+      description: BotCommandOptionInfo.SessionId_Description,
       type: ApplicationCommandOptionType.Boolean,
     },
     {
-      name: BotCommandOptionInfo.GetAllSessions_SessionDateTimeName,
+      name: BotCommandOptionInfo.SessionTime_Name,
       description:
-        BotCommandOptionInfo.GetAllSessions_SessionDateTimeDescription,
+        BotCommandOptionInfo.SessionTime_Description,
       type: ApplicationCommandOptionType.Boolean,
     },
     {
@@ -38,10 +38,10 @@ export default new Command({
   callBack: async ({ interaction }) => {
     try {
       const addSessionID = interaction?.options?.get(
-        BotCommandOptionInfo.GetAllSessions_SessionIDName
+        BotCommandOptionInfo.SessionId_Name
       )?.value as boolean;
       const addSessionDateTime = interaction?.options?.get(
-        BotCommandOptionInfo.GetAllSessions_SessionDateTimeName
+        BotCommandOptionInfo.SessionTime_Name
       )?.value as boolean;
       const addMessageID = interaction?.options?.get(
         BotCommandOptionInfo.GetAllSessions_SessionMessageIDName

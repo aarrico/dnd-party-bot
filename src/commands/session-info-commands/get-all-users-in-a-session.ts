@@ -2,7 +2,7 @@ import { ApplicationCommandOptionType } from "discord.js";
 import { Command } from "../../structures/Command";
 import {
   getSessionById,
-  GetPartyForSession,
+  getPartyForSession,
 } from "../../db/session";
 import { getTxtAttachmentBuilder } from "../../utils/attachmentBuilders";
 import {
@@ -21,14 +21,14 @@ export default new Command({
   cooldown: 0,
   options: [
     {
-      name: BotCommandOptionInfo.GetAllUsersInASession_SessionIDName,
+      name: BotCommandOptionInfo.SessionId_Name,
       description:
-        BotCommandOptionInfo.GetAllUsersInASession_SessionIDDescription,
+        BotCommandOptionInfo.SessionId_Description,
       type: ApplicationCommandOptionType.String,
       required: true,
     },
     {
-      name: BotCommandOptionInfo.GetAllUsersInASession_UserIDName,
+      name: BotCommandOptionInfo.UserId_Name,
       description: BotCommandOptionInfo.GetAllUsersInASession_UserIDDescription,
       type: ApplicationCommandOptionType.Boolean,
     },
@@ -52,11 +52,11 @@ export default new Command({
         return;
       }
       const sessionID = interaction?.options?.get(
-        BotCommandOptionInfo.GetAllUsersInASession_SessionIDName
+        BotCommandOptionInfo.SessionId_Name
       )?.value as string;
 
       const addUserID = interaction?.options?.get(
-        BotCommandOptionInfo.GetAllUsersInASession_UserIDName
+        BotCommandOptionInfo.UserId_Name
       )?.value as boolean;
       const addUserRoleInThisSession = interaction?.options?.get(
         BotCommandOptionInfo.GetAllUsersInASession_UserRoleName
@@ -73,7 +73,7 @@ export default new Command({
       if (addUserDMMessageID) list = list.concat(` : User DM Message ID`);
       list = list.concat(`\n`);
 
-      const party = await GetPartyForSession(sessionID, true);
+      const party = await getPartyForSession(sessionID, true);
       party.forEach((user) => {
         list = list.concat(`${user.user.username}`);
         if (addUserRoleInThisSession) list = list.concat(` : ${user.role}`);
