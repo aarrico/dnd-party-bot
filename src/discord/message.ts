@@ -1,53 +1,35 @@
 import {
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
+  AttachmentBuilder,
+  ButtonInteraction,
   ChannelType,
   MessagePayload,
   TextChannel,
 } from 'discord.js';
-import { getPNGAttachmentBuilder } from '../utils/attachmentBuilders';
-import { BotAttachmentFileNames, BotPaths } from '../utils/botDialogStrings';
 import { ExtendedClient } from '../structures/ExtendedClient';
-import { roles } from '../index';
-import { Role } from '@prisma/client';
-
-const createActionRowOfButtons = (roles: Role[]) => {
-  const row = new ActionRowBuilder<ButtonBuilder>();
-  roles.forEach((role) => {
-    row.components.push(
-      new ButtonBuilder()
-        .setCustomId(role.id)
-        .setLabel(role.name)
-        .setStyle(ButtonStyle.Secondary)
-        .setEmoji(`<:${role.name}:${role.emojiId}`)
-    );
-  });
-  return row;
-};
-
-const rolesRow1 = createActionRowOfButtons(roles.slice(0, 3));
-const rolesRow2 = createActionRowOfButtons(roles.slice(3));
+import { roleButtons } from '../index';
+import { ExtendedInteraction } from '../typings/Command';
+import { Session } from '../db/session';
 
 export const createSessionMessage = async (
   client: ExtendedClient,
-  channel_id: string
+  session: Session
 ) => {
   try {
-    const channel = client.channels.cache.get(channel_id);
+    const channel = client.channels.cache.get(session.campaignId);
     if (!channel || channel.type !== ChannelType.GuildText) {
-      throw new Error(`Couldn't find text channel ${channel_id}`);
+      throw new Error(`Couldn't find text channel ${session.campaignId}`);
     }
 
-    const attachment = getPNGAttachmentBuilder(
-      `${BotPaths.TempDir}${BotAttachmentFileNames.CurrentSession}`,
-      BotAttachmentFileNames.CurrentSession
-    );
+    // const attachment = getPNGAttachmentBuilder(
+    //   `${BotPaths.TempDir}${BotAttachmentFileNames.CurrentSession}`,
+    //   BotAttachmentFileNames.CurrentSession
+    // );
+    // content: `🎉 New session - ${session.name} has been scheduled for ${session.date}! Choose a role below 🧙`,
 
     const sentMessage = await channel.send({
-      content: 'Hello everyone, we have a new session for people to join!',
-      files: [attachment],
-      components: [rolesRow1, rolesRow2],
+      content: `🎉 A session - ${session.name} has been scheduled for ${session.date}!\n🤖 Please wait a moment while I get things ready!`,
+      //files: [attachment],
+      components: roleButtons,
     });
 
     return sentMessage.id;
@@ -64,6 +46,36 @@ export const sendChannelDisappearingMessage = async (
   if (!channel || channel.type !== ChannelType.GuildText) return;
 
   const msg = await channel.send(messageContentPayload);
+  if (duration === -1) {
+    return;
+  }
+
+  setTimeout(async () => {
+    await msg.delete();
+  }, 1000 * duration);
+};
+
+export const sendEphemeralReply = (
+  messageContent: string,
+  interaction: ExtendedInteraction,
+  files?: AttachmentBuilder[]
+) =>
+  interaction.reply({
+    content: messageContent,
+    files: files ? [...files] : undefined,
+    ephemeral: true,
+  });
+
+export const sendMessageReplyDisappearingMessage = async (
+  interaction: ButtonInteraction,
+  content: string,
+  duration = 10
+) => {
+  const msg = await interaction.reply({
+    content,
+    ephemeral: true,
+  });
+
   if (duration === -1) {
     return;
   }

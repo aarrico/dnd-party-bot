@@ -1,47 +1,9 @@
-import { ExtendedClient } from '../structures/ExtendedClient';
-import { getUsersByMessageId } from './session';
+import { User } from '@prisma/client';
+import { prisma } from '../index';
 
-export type UserData = {
-  username: string;
-  userChannelId: string;
-};
-
-export async function getPartyMembers(
-  client: ExtendedClient,
-  messageId: string
-) {
-  const usersInThisSession = await getUsersByMessageId(messageId);
-
-  const guildMembers = await (
-    await client.guilds?.fetch(`${process.env.GUILD_ID}`)
-  ).members.fetch();
-
-  let sessionMemberData: {
-    userAvatarURL: string;
-    username: string;
-    role: string;
-  }[] = [];
-
-  guildMembers.forEach((member) => {
-    const matchingUser: any = usersInThisSession.find(
-      (user) => user.user.userChannelId === member.id
-    );
-    const memberImageURL: any = member.displayAvatarURL({
-      extension: 'png',
-      forceStatic: true,
-    });
-
-    if (matchingUser && memberImageURL) {
-      sessionMemberData = [
-        ...sessionMemberData,
-        {
-          userAvatarURL: memberImageURL,
-          username: matchingUser?.user?.username as string,
-          role: matchingUser?.role as string,
-        },
-      ];
-    }
+export const upsertUserWithUsername = async (userData: User) =>
+  await prisma.user.upsert({
+    where: { id: userData.id },
+    create: userData,
+    update: { username: userData.username },
   });
-
-  return sessionMemberData;
-}

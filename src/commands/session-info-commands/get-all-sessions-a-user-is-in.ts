@@ -1,8 +1,8 @@
 import { ApplicationCommandOptionType } from "discord.js";
 import { Command } from "../../structures/Command";
 import {
-  GetAllSessionsAUserIsIn,
-  GetUserById,
+  getAllSessionsForUser,
+  getUserById,
 } from "../../db/session";
 import { getTxtAttachmentBuilder } from "../../utils/attachmentBuilders";
 import {
@@ -12,7 +12,8 @@ import {
   BotDialogs,
   BotPaths,
 } from "../../utils/botDialogStrings";
-import { sendEphemeralReply } from "../../discord/send-ephemeral-reply";
+
+import {sendEphemeralReply} from "../../discord/message";
 
 export default new Command({
   name: BotCommandInfo.GetAllUserSessions_Name,
@@ -53,7 +54,7 @@ export default new Command({
       const userID = interaction?.options?.get(
         BotCommandOptionInfo.GetAllUserSessions_UserIDName
       )?.value as string;
-      const sessions = await GetAllSessionsAUserIsIn(userID);
+      const sessions = await getAllSessionsForUser(userID);
       const addUserRoleInThisSession = interaction?.options?.get(
         BotCommandOptionInfo.GetAllUserSessions_UserRoleName
       )?.value as boolean;
@@ -68,7 +69,7 @@ export default new Command({
       )?.value as boolean;
 
       let list = `Session List that ${
-        (await GetUserById(userID)).username
+        (await getUserById(userID)).username
       } has signed up for:\nFormat:\n\nSession Name`;
       if (addUserRoleInThisSession) list = list.concat(` : User Role`);
       if (addSessionDateTime) list = list.concat(` : Session Date Time`);

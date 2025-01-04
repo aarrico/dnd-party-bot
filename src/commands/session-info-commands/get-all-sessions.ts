@@ -1,5 +1,5 @@
 import { Command } from "../../structures/Command";
-import { GetAllSessions } from "../../db/session";
+import { getSessions } from "../../db/session";
 import { ApplicationCommandOptionType } from "discord.js";
 import { getTxtAttachmentBuilder } from "../../utils/attachmentBuilders";
 import {
@@ -9,7 +9,8 @@ import {
   BotDialogs,
   BotPaths,
 } from "../../utils/botDialogStrings";
-import { sendEphemeralReply } from "../../discord/send-ephemeral-reply";
+
+import {sendEphemeralReply} from "../../discord/message";
 
 export default new Command({
   name: BotCommandInfo.GetAllSessions_Name,
@@ -46,7 +47,7 @@ export default new Command({
         BotCommandOptionInfo.GetAllSessions_SessionMessageIDName
       )?.value as boolean;
 
-      const sessions = await GetAllSessions();
+      const sessions = await getSessions();
       let list: string = "Session List:\nFormat:\n\nSession Name";
 
       if (addSessionID) list = list.concat(` : Session ID`);

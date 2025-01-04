@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -19,31 +13,86 @@ enum SessionStatus {
   CANCELED
 }
 
-//host date time in UTC time.
+enum RoleType {
+  GAME_MASTER
+  TANK
+  SUPPORT
+  RANGE_DPS
+  MELEE_DPS
+  FACE
+  CONTROL
+}
+
+model Guild {
+  id        String   @id
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  campaigns Campaign[]
+  members   GuildMember[]
+
+  @@map("guild")
+}
+
+// discord channel with channel type GUILD_CATEGORY
+model Campaign {
+  id        String   @id // discord channel id
+  name      String   @unique
+  active    Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  guildId String @map("guild_id")
+  guild   Guild  @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  sessions Session[]
+
+  @@unique([guildId, active], name: "one_active_campaign_per_guild", map: "one_active_campaign_per_guild_index")
+  @@map("campaign")
+}
+
+// discord channel with channel type GUILD_TEXT
 model Session {
-  id        String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  messageId String        @unique @map("message_id")
-  name      String        @map("name")
-  date      DateTime      @map("date")
-  channelId String        @unique @map("channel_id")
-  users     PartyMember[]
+  id         String   @id // discord channel id
+  campaignId String   @unique @map("campaign_id")
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  name       String
+  date       DateTime
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  partyMembers PartyMember[]
 
   @@map("session")
 }
 
 model User {
-  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  username      String
-  userChannelId String        @unique @map("user_channel_id")
-  sessions      PartyMember[]
+  id       String @id
+  username String
+
+  sessions PartyMember[]
+  guilds   GuildMember[]
 
   @@map("user")
 }
 
+model GuildMember {
+  guildId String @map("guild_id")
+  guild   Guild  @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  userId  String @map("user_id")
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@id([guildId, userId], name: "guild_member_id")
+  @@map("guild_member")
+}
+
 model PartyMember {
-  sessionId String  @map("session_id") @db.Uuid
+  sessionId String  @map("session_id")
   session   Session @relation(fields: [sessionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  userId    String  @map("user_id") @db.Uuid
+  userId    String  @map("user_id")
   user      User    @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   role      String
 
@@ -52,9 +101,10 @@ model PartyMember {
 }
 
 model Role {
-  id      String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id      String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name    String
-  emojiId String @map("emoji_id")
+  type    RoleType
+  emojiId String   @map("emoji_id")
 
   @@map("role")
 }

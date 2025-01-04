@@ -1,11 +1,12 @@
 import { ApplicationCommandOptionType } from "discord.js";
 import { Command } from "../../structures/Command";
 import {
-  DeleteSessionById,
+  deleteSessionById,
   GetPartyForSession,
 } from "../../db/session";
 import { deleteChannel } from "../../discord/channel";
-import { sendEphemeralReply } from "../../discord/send-ephemeral-reply";
+
+import {sendEphemeralReply} from "../../discord/message";
 
 export default new Command({
   name: "delete-session",
@@ -41,7 +42,7 @@ export default new Command({
       //delete session channel
       deleteChannel(client, party[0].session.channelId, reason);
       //delete session data
-      DeleteSessionById(sessionId);
+      deleteSessionById(sessionId);
 
       sendEphemeralReply(
         `Session, Channel, and data for session have been deleted.`,

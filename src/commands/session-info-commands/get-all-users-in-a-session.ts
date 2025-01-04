@@ -1,7 +1,7 @@
 import { ApplicationCommandOptionType } from "discord.js";
 import { Command } from "../../structures/Command";
 import {
-  GetSessionById,
+  getSessionById,
   GetPartyForSession,
 } from "../../db/session";
 import { getTxtAttachmentBuilder } from "../../utils/attachmentBuilders";
@@ -12,7 +12,8 @@ import {
   BotDialogs,
   BotPaths,
 } from "../../utils/botDialogStrings";
-import { sendEphemeralReply } from "../../discord/send-ephemeral-reply";
+
+import {sendEphemeralReply} from "../../discord/message";
 
 export default new Command({
   name: BotCommandInfo.GetAllUsersInASession_Name,
@@ -65,7 +66,7 @@ export default new Command({
       )?.value as boolean;
 
       let list: string = `User List for ${
-        (await GetSessionById(sessionID)).name
+        (await getSessionById(sessionID)).name
       }:\nFormat:\n\nUsername`;
       if (addUserRoleInThisSession) list = list.concat(` : User Role`);
       if (addUserID) list = list.concat(` : User ID`);

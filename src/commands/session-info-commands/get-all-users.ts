@@ -1,6 +1,6 @@
 import { ApplicationCommandOptionType } from "discord.js";
 import { Command } from "../../structures/Command";
-import { GetAllUsers } from "../../db/session";
+import { getAllUsers } from "../../db/session";
 import { getTxtAttachmentBuilder } from "../../utils/attachmentBuilders";
 import {
   BotAttachmentFileNames,
@@ -9,7 +9,8 @@ import {
   BotDialogs,
   BotPaths,
 } from "../../utils/botDialogStrings";
-import { sendEphemeralReply } from "../../discord/send-ephemeral-reply";
+
+import {sendEphemeralReply} from "../../discord/message";
 
 export default new Command({
   name: BotCommandInfo.GetAllUsers_Name,
@@ -35,7 +36,7 @@ export default new Command({
       const addUserDMMessageID = interaction?.options?.get(
         BotCommandOptionInfo.GetAllUsers_UserChannelIDName
       )?.value as boolean;
-      const users = await GetAllUsers();
+      const users = await getAllUsers();
 
       let list: string = "User List:\nFormat:\n\nUser Name";
 

@@ -1,40 +1,47 @@
 import { ChannelType } from 'discord.js';
-import { ExtendedClient } from '../structures/ExtendedClient';
+import { client } from '../index';
 
-export async function createChannel(
-  client: ExtendedClient,
+export const createChannel = async (
+  guildId: string,
+  campaignId: string,
   channelName: string
-) {
-  const guild = await client.guilds.fetch(process.env.GUILD_ID as string);
-  const parentChannel = await guild.channels.fetch(
-    process.env.SESSION_CATEGORY_CHANNEL_ID as string
-  );
-  const createdGuild = await guild.channels.create({
-    name: channelName,
+) => {
+  const guild = await client.guilds.fetch(guildId);
+  const campaign = await guild.channels.fetch(campaignId);
+
+  if (!campaign) {
+    throw new Error('No campaign channel found to host session in!');
+  }
+
+  const session = await guild.channels.create({
+    name: channelName.replace(' ', '-'),
     type: ChannelType.GuildText,
-    parent: parentChannel?.id,
+    parent: campaign.id,
   });
 
-  return createdGuild.id;
-}
+  return session.id;
+};
 
-export async function deleteChannel(
-  client: ExtendedClient,
-  channelID: string,
+export const deleteChannel = async (
+  guildId: string,
+  channelId: string,
   reason: string = 'session expired.'
-) {
-  const guild = await client.guilds.fetch(process.env.GUILD_ID as string);
-  const channelToDelete = await guild.channels.fetch(channelID as string);
-  if (channelToDelete) await guild.channels.delete(channelToDelete, reason);
-}
+) => {
+  const guild = await client.guilds.fetch(guildId);
+  const channelToDelete = await guild.channels.fetch(channelId);
+  if (channelToDelete) {
+    await guild.channels.delete(channelToDelete, reason);
+  }
+};
 
-export async function RenameChannel(
-  client: ExtendedClient,
-  channelID: string,
+export const renameChannel = async (
+  guildId: string,
+  channelId: string,
   name: string
-) {
-  const guild = await client.guilds.fetch(process.env.GUILD_ID as string);
-  const channel = await guild.channels.fetch(channelID as string);
-  const newChannelName = name.replace(' ', '-');
-  if (channel) await guild.channels.edit(channel, { name: newChannelName });
-}
+) => {
+  const guild = await client.guilds.fetch(guildId);
+  const channel = await guild.channels.fetch(channelId as string);
+  if (channel) {
+    await guild.channels.edit(channel, { name: name.replace(' ', '-') });
+  }
+};

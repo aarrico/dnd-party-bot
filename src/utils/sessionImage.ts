@@ -1,11 +1,11 @@
-import sharp, { OverlayOptions } from 'sharp';
-import { GetSessionByMessageId, SessionData } from '../db/session';
-import { getRoleImage, getRoleName, roles } from './role';
-import { ExtendedClient } from '../structures/ExtendedClient';
-import { BotAttachmentFileNames, BotPaths } from './botDialogStrings';
 import path from 'path';
-import { getPartyMembers } from '../db/user';
+import sharp, { OverlayOptions } from 'sharp';
 import { createCanvas, registerFont } from 'canvas';
+
+import { getSessionById, Session } from '../db/session';
+import { getRoleImage, getRoleName, roles } from './role';
+import { BotAttachmentFileNames, BotPaths } from './botDialogStrings';
+import { getPartyInfoForImg } from '../controllers/session';
 
 const coords = {
   dm: { width: 350, height: 350, x: 1185, y: 390 },
@@ -20,17 +20,15 @@ const fontPath = path.resolve(
   path.join(__dirname, '..', 'resources', 'fonts', 'Vecna-oppx.ttf')
 );
 registerFont(fontPath, { family: fontName });
+
 const canvas = createCanvas(500, 100, 'svg');
 const textCtx = canvas.getContext('2d');
 textCtx.font = `100px ${fontName}`;
 
-export const createSessionImage = async (
-  client: ExtendedClient,
-  messageID: string
-): Promise<void> => {
+export const createSessionImage = async (channelId: string): Promise<void> => {
   const [users, session] = await Promise.all([
-    getPartyMembers(client, messageID),
-    GetSessionByMessageId(messageID),
+    getPartyInfoForImg(channelId),
+    getSessionById(channelId),
   ]);
 
   const sessionOverlays = placeSessionInfo(session);
@@ -69,7 +67,7 @@ export const createSessionImage = async (
     .toFile(BotPaths.TempDir + BotAttachmentFileNames.CurrentSession);
 };
 
-const placeSessionInfo = (session: SessionData): OverlayOptions[] => {
+const placeSessionInfo = (session: Session): OverlayOptions[] => {
   return [
     {
       input: createTextOverlay(session.name),

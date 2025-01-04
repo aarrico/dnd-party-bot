@@ -1,7 +1,7 @@
 import { ApplicationCommandOptionType } from 'discord.js';
 import { monthOptionChoicesArray } from '../../utils/genericInformation';
 import { Command } from '../../structures/Command';
-import { GetSessionById, UpdateSession } from '../../db/session';
+import { getSessionById, updateSession } from '../../db/session';
 import DateChecker from '../../utils/dateChecker';
 import { createSessionImage } from '../../utils/sessionImage';
 import { getPNGAttachmentBuilder } from '../../utils/attachmentBuilders';
@@ -10,8 +10,8 @@ import {
   BotDialogs,
   BotPaths,
 } from '../../utils/botDialogStrings';
-import { sendEphemeralReply } from '../../discord/send-ephemeral-reply';
-import { RenameChannel } from '../../discord/channel';
+import { renameChannel } from '../../discord/channel';
+import {sendEphemeralReply} from "../../discord/message";
 
 export default new Command({
   name: 'modify-session',
@@ -66,7 +66,7 @@ export default new Command({
       const newProposedDate = DateChecker(interaction);
 
       //get session by uuid
-      const existingSession = await GetSessionById(sessionID);
+      const existingSession = await getSessionById(sessionID);
 
       if (newProposedDate && newSessionName) {
         if (
@@ -76,13 +76,13 @@ export default new Command({
             .match(newProposedDate?.toUTCString())
         ) {
           if (!existingSession?.name?.match(newSessionName)) {
-            await RenameChannel(
+            await renameChannel(
               client,
               existingSession.channelId,
               newSessionName
             );
           }
-          await UpdateSession(sessionID, {
+          await updateSession(sessionID, {
             name: newSessionName,
             date: newProposedDate,
             messageId: existingSession.messageId,
