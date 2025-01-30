@@ -1,6 +1,4 @@
-import path from 'path';
 import sharp, { OverlayOptions } from 'sharp';
-import { createCanvas, registerFont } from 'canvas';
 
 import { getSessionById, Session } from '../db/session';
 import { getRoleImage, getRoleName, roles } from './role';
@@ -15,23 +13,13 @@ const coords = {
   role: { yImg: 1300, yName: 2150, width: 300, height: 300 },
 };
 
-const fontName = 'Vecna';
-const fontPath = path.resolve(
-  path.join(__dirname, '..', 'resources', 'fonts', 'Vecna-oppx.ttf')
-);
-registerFont(fontPath, { family: fontName });
-
-const canvas = createCanvas(500, 100, 'svg');
-const textCtx = canvas.getContext('2d');
-textCtx.font = `100px ${fontName}`;
-
 export const createSessionImage = async (channelId: string): Promise<void> => {
   const [users, session] = await Promise.all([
     getPartyInfoForImg(channelId),
     getSessionById(channelId),
   ]);
 
-  const sessionOverlays = placeSessionInfo(session);
+  const sessionOverlays = await placeSessionInfo(session);
 
   const dm = users.find((member) => member.role === roles.DM);
   if (!dm) {
@@ -67,15 +55,17 @@ export const createSessionImage = async (channelId: string): Promise<void> => {
     .toFile(BotPaths.TempDir + BotAttachmentFileNames.CurrentSession);
 };
 
-const placeSessionInfo = (session: Session): OverlayOptions[] => {
+const placeSessionInfo = async (
+  session: Session
+): Promise<OverlayOptions[]> => {
   return [
     {
-      input: createTextOverlay(session.name),
+      input: await createTextOverlay(session.name),
       left: coords.sessionName.x,
       top: coords.sessionName.y,
     },
     {
-      input: createTextOverlay(session.date.toUTCString()),
+      input: await createTextOverlay(session.date.toUTCString()),
       left: coords.date.x,
       top: coords.date.y,
     },
@@ -117,26 +107,26 @@ const placeRole = async (
   return [
     { input: roleImage, left: coords.member.x[slot], top: coords.role.yImg },
     {
-      input: createTextOverlay(getRoleName(role)),
+      input: await createTextOverlay(getRoleName(role)),
       left: coords.member.x[slot],
       top: coords.role.yName,
     },
   ];
 };
 
-const createTextOverlay = (text: string): Buffer => {
-  const textMetrics = textCtx.measureText(text);
-  const textWidth = textMetrics.width;
-  const textHeight =
-    textMetrics.actualBoundingBoxAscent + textMetrics.actualBoundingBoxDescent;
+const createTextOverlay = async (text: string): Promise<Buffer> => {
+  // Create text overlay using SVG
+  const svg = `
+    <svg width="500" height="100">
+      <text
+        x="0"
+        y="50"
+        font-family="Vecna"
+        font-size="40"
+        fill="white"
+      >${text}</text>
+    </svg>
+  `;
 
-  canvas.width = textWidth + 50;
-  canvas.height = textHeight + 50;
-
-  coords.date.x = Math.ceil(coords.date.x - textWidth / 4);
-
-  textCtx.font = `100px ${fontName}`;
-  textCtx.fillStyle = 'black';
-  textCtx.fillText(text, 50, textHeight + 25);
-  return canvas.toBuffer('image/png');
+  return await sharp(Buffer.from(svg)).png().toBuffer();
 };

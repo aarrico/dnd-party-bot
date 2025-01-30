@@ -1,3 +1,5 @@
+import { TextChannel } from 'discord.js';
+import { getActiveCampaign } from '../db/campaign';
 import {
   addUserToParty,
   createSession,
@@ -10,11 +12,18 @@ import {
   updatePartyMemberRole,
   updateSession,
 } from '../db/session';
+import {
+  createChannel,
+  deleteChannel,
+  renameChannel,
+} from '../discord/channel';
+import { createSessionMessage, sendEphemeralReply } from '../discord/message';
 import { client } from '../index';
-import { TextChannel } from 'discord.js';
-import { PartyMember, RoleSelectionStatus } from '../models/party';
-import { AvatarOptions, PartyMemberImgInfo } from '../models/discord';
-import { getActiveCampaign } from '../db/campaign';
+import { ExtendedInteraction } from '../typings/Command';
+import { AvatarOptions, PartyMemberImgInfo } from '../typings/discord';
+import { PartyMember, RoleSelectionStatus } from '../typings/party';
+import { ListSessionsOptions, ListSessionsResult } from '../typings/session';
+import { getPNGAttachmentBuilder } from '../utils/attachmentBuilders';
 import {
   BotAttachmentFileNames,
   BotCommandOptionInfo,
@@ -22,15 +31,7 @@ import {
   BotPaths,
 } from '../utils/botDialogStrings';
 import DateChecker from '../utils/dateChecker';
-import { createSessionMessage, sendEphemeralReply } from '../discord/message';
-import {
-  createChannel,
-  deleteChannel,
-  renameChannel,
-} from '../discord/channel';
 import { createSessionImage } from '../utils/sessionImage';
-import { ExtendedInteraction } from '../typings/Command';
-import { getPNGAttachmentBuilder } from '../utils/attachmentBuilders';
 
 export const initSession = async (interaction: ExtendedInteraction) => {
   const guild = interaction.guild;
@@ -251,32 +252,37 @@ export const getPartyInfoForImg = async (
   });
 };
 
-export const listSessions = async ({
-  addSessionId = false,
-  addSessionTime = false,
-  includeCampaign = false,
-  addUserRoleInThisSession = false,
-  userId = '',
-}) => {
+export const listSessions = async (
+  options: ListSessionsOptions,
+  asString: boolean
+) => {
   try {
-    const sessions = await getSessions({ userId, includeCampaign });
-    const list = [
-      [
-        `Session Name${addSessionId && '\tSession Channel ID'}${addSessionTime && '\tScheduled Date'}${includeCampaign && '\tCampaign Name'}`,
-      ],
-    ];
+    const sessions = await getSessions(options);
 
-    sessions.map((session) => {
-      const row = [session.name];
-      if (addSessionId) row.push(session.id);
-      if (addSessionTime) row.push(session.date.toUTCString());
-      //if (addUserRoleInThisSession) row.push(session);
-      if (includeCampaign) row.push(session.campaign);
-      list.push(row);
-    });
-
-    return list;
+    return asString ? formatAsString(sessions, options) : sessions;
   } catch (error) {
     console.error(error);
   }
+};
+
+const formatAsString = (
+  sessions: ListSessionsResult[],
+  options: ListSessionsOptions,
+  delimiter = ', '
+) => {
+  const { includeTime, includeCampaign, includeSessionId, userId } = options;
+  const header = [
+    `Session Name${includeSessionId && '\tSession Channel ID'}${includeTime && '\tScheduled Date'}${includeCampaign && '\tCampaign Name'}${userId && '\tUser Role'}`,
+  ];
+
+  const data = sessions.map((session) => {
+    const row = [session.name];
+    if (includeSessionId) row.push(session.id);
+    if (includeTime) row.push(session.date.toUTCString());
+    if (session.campaign) row.push(session.campaign);
+    if (session.userRole) row.push(session.userRole);
+    return row;
+  });
+
+  return [header, ...data].map((row) => row.join(delimiter)).join('\n');
 };

@@ -1,6 +1,7 @@
 import { prisma } from '../index';
 import { RoleType } from '@prisma/client';
-import { PartyMember } from '../models/party';
+import { PartyMember } from '../typings/party';
+import { ListSessionsOptions } from '../typings/session';
 
 export type Session = {
   id: string;
@@ -46,11 +47,8 @@ export const getParty = async (channelId: string): Promise<PartyMember[]> => {
   return session.partyMembers;
 };
 
-export const getSessions = async ({
-  userId = '',
-  campaignId = '',
-  includeCampaign = false,
-}) => {
+export const getSessions = async (options: ListSessionsOptions) => {
+  const { userId = '', campaignId = '', includeCampaign = false } = options;
   const sessions = await prisma.session.findMany({
     where: {
       ...(userId && { partyMembers: { some: { userId } } }),
@@ -64,16 +62,21 @@ export const getSessions = async ({
           },
         },
       }),
+      ...(userId && { partyMembers: { select: { role: true } } }),
     },
   });
 
-  if (includeCampaign) {
-    return sessions.map(({ campaign: { name: campaign }, ...session }) => {
-      return { campaign, ...session };
-    });
-  }
-
-  return sessions.map((s) => );
+  return sessions.map((s) => {
+    return {
+      ...(includeCampaign && { campaign: s.campaign.name }),
+      ...(userId && {
+        userRole: s.partyMembers.find((pm) => pm.userId === userId)?.role,
+      }),
+      id: s.id,
+      name: s.name,
+      date: s.date,
+    };
+  });
 };
 
 export const getSessionById = async (id: string) =>
@@ -81,8 +84,6 @@ export const getSessionById = async (id: string) =>
 
 export const deleteSessionById = async (id: string) =>
   prisma.session.delete({ where: { id } });
-
-export const getAllUsers = async () => await prisma.user.findMany();
 
 export const getUserById = async (id: string) =>
   await prisma.user.findUniqueOrThrow({ where: { id } });

@@ -77,7 +77,6 @@ export default {
       addSessionId,
       addSessionTime,
       includeCampaign,
-      addUserRoleInThisSession,
       userId,
     });
     if (!list) {

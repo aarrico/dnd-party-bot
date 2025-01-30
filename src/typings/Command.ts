@@ -4,8 +4,8 @@ import {
   CommandInteractionOptionResolver,
   GuildMember,
   PermissionResolvable,
-} from "discord.js";
-import { ExtendedClient } from "../structures/ExtendedClient";
+} from 'discord.js';
+import { ExtendedClient } from '../structures/ExtendedClient';
 
 export interface ExtendedInteraction extends CommandInteraction {
   member: GuildMember;

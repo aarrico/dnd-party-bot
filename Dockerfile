@@ -21,6 +21,11 @@ COPY --from=build /usr/src/app/package.json ./package.json
 COPY ./prisma ./prisma
 COPY .env .env
 
+# install Vecna font to image
+RUN apk add fontconfig
+COPY ./resources/fonts/*.ttf /usr/share/fonts/truetype
+RUN fc-cache -f -v
+
 RUN apk add openssl
 
 CMD npm run start:migrate:dev

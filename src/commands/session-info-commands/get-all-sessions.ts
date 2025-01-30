@@ -32,12 +32,12 @@ export default {
     ),
   async execute(interaction: ExtendedInteraction) {
     try {
-      const addSessionId = interaction.options.get(
+      const includeSessionId = interaction.options.get(
         BotCommandOptionInfo.SessionId_Name,
         true
       )?.value as boolean;
 
-      const addSessionTime = interaction.options.get(
+      const includeTime = interaction.options.get(
         BotCommandOptionInfo.SessionTime_Name,
         true
       )?.value as boolean;
@@ -47,19 +47,23 @@ export default {
         true
       )?.value as boolean;
 
-      const list = await listSessions({
-        addSessionId,
-        addSessionTime,
-        includeCampaign,
-      });
-      if (!list) {
+      const sessions = await listSessions(
+        {
+          includeSessionId,
+          includeTime,
+          includeCampaign,
+        },
+        true
+      );
+
+      if (!sessions || sessions instanceof Array) {
         throw new Error('There was an error building the list.');
       }
 
       const attachment = getTxtAttachmentBuilder(
         `${BotPaths.TempDir}${BotAttachmentFileNames.AllSessionInformation}`,
         BotAttachmentFileNames.AllSessionInformation,
-        list
+        sessions
       );
 
       await sendEphemeralReply(

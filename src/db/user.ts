@@ -1,5 +1,6 @@
 import { User } from '@prisma/client';
 import { prisma } from '../index';
+import { ListUsersOptions, ListUsersResult } from '../typings/user';
 
 export const upsertUserWithUsername = async (userData: User) =>
   await prisma.user.upsert({
@@ -33,4 +34,17 @@ export const getUserSessions = async ({
   }
 
   return user.sessions || [];
+};
+
+export const getAllUsers = async (
+  options: ListUsersOptions
+): Promise<ListUsersResult[]> => {
+  const { includeUserId, includeUserDMMessageId } = options;
+  return await prisma.user.findMany({
+    select: {
+      id: includeUserId,
+      channelId: includeUserDMMessageId,
+      username: true,
+    },
+  });
 };
