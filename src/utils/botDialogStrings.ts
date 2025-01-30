@@ -68,6 +68,7 @@ export enum BotCommandOptionInfo {
   UserId_Description = 'User ID of the session - found by right-clicking user.',
   SessionTime_Name = 'session-date-time',
   SessionTime_Description = 'Date/Time of session in DB',
+  CampaignName_Name = 'campaign-name',
   //CreateSession
   CreateSession_SessionName = 'session-name',
   CreateSession_SessionName_Description = 'Name of session',

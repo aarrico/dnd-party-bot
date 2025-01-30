@@ -1,5 +1,5 @@
 import { prisma } from '../index';
-import { Prisma, RoleType } from '@prisma/client';
+import { RoleType } from '@prisma/client';
 import { PartyMember } from '../models/party';
 
 export type Session = {
@@ -46,7 +46,35 @@ export const getParty = async (channelId: string): Promise<PartyMember[]> => {
   return session.partyMembers;
 };
 
-export const getSessions = async () => await prisma.session.findMany();
+export const getSessions = async ({
+  userId = '',
+  campaignId = '',
+  includeCampaign = false,
+}) => {
+  const sessions = await prisma.session.findMany({
+    where: {
+      ...(userId && { partyMembers: { some: { userId } } }),
+      ...(campaignId && { campaignId }),
+    },
+    include: {
+      ...(includeCampaign && {
+        campaign: {
+          select: {
+            name: true,
+          },
+        },
+      }),
+    },
+  });
+
+  if (includeCampaign) {
+    return sessions.map(({ campaign: { name: campaign }, ...session }) => {
+      return { campaign, ...session };
+    });
+  }
+
+  return sessions.map((s) => );
+};
 
 export const getSessionById = async (id: string) =>
   await prisma.session.findUniqueOrThrow({ where: { id } });
@@ -58,19 +86,6 @@ export const getAllUsers = async () => await prisma.user.findMany();
 
 export const getUserById = async (id: string) =>
   await prisma.user.findUniqueOrThrow({ where: { id } });
-
-export const getAllSessionsForUser = async (userId: string) => {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { sessions: { select: { session: true, role: true } } },
-  });
-
-  if (!user) {
-    throw new Error(`Cannot find ${userId}`);
-  }
-
-  return user.sessions || [];
-};
 
 export const updateSessionCampaignId = async (
   oldCampaignId: string,

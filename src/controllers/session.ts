@@ -6,6 +6,7 @@ import {
   getParty,
   getSession,
   getSessionById,
+  getSessions,
   updatePartyMemberRole,
   updateSession,
 } from '../db/session';
@@ -14,7 +15,12 @@ import { TextChannel } from 'discord.js';
 import { PartyMember, RoleSelectionStatus } from '../models/party';
 import { AvatarOptions, PartyMemberImgInfo } from '../models/discord';
 import { getActiveCampaign } from '../db/campaign';
-import { BotCommandOptionInfo, BotDialogs } from '../utils/botDialogStrings';
+import {
+  BotAttachmentFileNames,
+  BotCommandOptionInfo,
+  BotDialogs,
+  BotPaths,
+} from '../utils/botDialogStrings';
 import DateChecker from '../utils/dateChecker';
 import { createSessionMessage, sendEphemeralReply } from '../discord/message';
 import {
@@ -24,6 +30,7 @@ import {
 } from '../discord/channel';
 import { createSessionImage } from '../utils/sessionImage';
 import { ExtendedInteraction } from '../typings/Command';
+import { getPNGAttachmentBuilder } from '../utils/attachmentBuilders';
 
 export const initSession = async (interaction: ExtendedInteraction) => {
   const guild = interaction.guild;
@@ -159,8 +166,9 @@ export const modifySession = async (interaction: ExtendedInteraction) => {
     );
 
     const channel = await client.channels.fetch(sessionId);
-    if (channel?.isTextBased()) {
-      const message = await channel?.messages.fetch(existingSession.messageId);
+    if (channel && channel.isTextBased()) {
+      const messages = await channel.messages.fetchPinned();
+      const message = messages.at(0);
       message?.edit({
         content: BotDialogs.InteractionCreate_HereIsANewSessionMessage,
         files: [attachment],
@@ -241,4 +249,34 @@ export const getPartyInfoForImg = async (
       role: matchingUser.role,
     };
   });
+};
+
+export const listSessions = async ({
+  addSessionId = false,
+  addSessionTime = false,
+  includeCampaign = false,
+  addUserRoleInThisSession = false,
+  userId = '',
+}) => {
+  try {
+    const sessions = await getSessions({ userId, includeCampaign });
+    const list = [
+      [
+        `Session Name${addSessionId && '\tSession Channel ID'}${addSessionTime && '\tScheduled Date'}${includeCampaign && '\tCampaign Name'}`,
+      ],
+    ];
+
+    sessions.map((session) => {
+      const row = [session.name];
+      if (addSessionId) row.push(session.id);
+      if (addSessionTime) row.push(session.date.toUTCString());
+      //if (addUserRoleInThisSession) row.push(session);
+      if (includeCampaign) row.push(session.campaign);
+      list.push(row);
+    });
+
+    return list;
+  } catch (error) {
+    console.error(error);
+  }
 };

@@ -1,67 +1,60 @@
-import { Command } from "../../structures/Command";
-import { getSessions } from "../../db/session";
-import { ApplicationCommandOptionType } from "discord.js";
-import { getTxtAttachmentBuilder } from "../../utils/attachmentBuilders";
+import { SlashCommandBuilder } from 'discord.js';
 import {
   BotAttachmentFileNames,
   BotCommandInfo,
   BotCommandOptionInfo,
   BotDialogs,
   BotPaths,
-} from "../../utils/botDialogStrings";
+} from '../../utils/botDialogStrings';
+import { ExtendedInteraction } from '../../typings/Command';
+import { listSessions } from '../../controllers/session';
+import { getTxtAttachmentBuilder } from '../../utils/attachmentBuilders';
+import { sendEphemeralReply } from '../../discord/message';
 
-import {sendEphemeralReply} from "../../discord/message";
-
-export default new Command({
-  name: BotCommandInfo.GetAllSessions_Name,
-  description: BotCommandInfo.GetAllSessions_Description,
-  cooldown: 0,
-  options: [
-    {
-      name: BotCommandOptionInfo.SessionId_Name,
-      description: BotCommandOptionInfo.SessionId_Description,
-      type: ApplicationCommandOptionType.Boolean,
-    },
-    {
-      name: BotCommandOptionInfo.SessionTime_Name,
-      description:
-        BotCommandOptionInfo.SessionTime_Description,
-      type: ApplicationCommandOptionType.Boolean,
-    },
-    {
-      name: BotCommandOptionInfo.GetAllSessions_SessionMessageIDName,
-      description:
-        BotCommandOptionInfo.GetAllSessions_SessionMessageIDDescription,
-      type: ApplicationCommandOptionType.Boolean,
-    },
-  ],
-  callBack: async ({ interaction }) => {
+export default {
+  data: new SlashCommandBuilder()
+    .setName(BotCommandInfo.GetAllSessions_Name)
+    .setDescription(BotCommandInfo.GetAllSessions_Description)
+    .addBooleanOption((includeSessionId) =>
+      includeSessionId
+        .setName(BotCommandOptionInfo.SessionId_Name)
+        .setDescription('Include channel id of the session in the output.')
+    )
+    .addBooleanOption((includeTime) =>
+      includeTime
+        .setName(BotCommandOptionInfo.SessionTime_Name)
+        .setDescription('Include scheduled time in the output.')
+    )
+    .addBooleanOption((includeCampaign) =>
+      includeCampaign
+        .setName(BotCommandOptionInfo.CampaignName_Name)
+        .setDescription('Include campaign name in the output.')
+    ),
+  async execute(interaction: ExtendedInteraction) {
     try {
-      const addSessionID = interaction?.options?.get(
-        BotCommandOptionInfo.SessionId_Name
-      )?.value as boolean;
-      const addSessionDateTime = interaction?.options?.get(
-        BotCommandOptionInfo.SessionTime_Name
-      )?.value as boolean;
-      const addMessageID = interaction?.options?.get(
-        BotCommandOptionInfo.GetAllSessions_SessionMessageIDName
+      const addSessionId = interaction.options.get(
+        BotCommandOptionInfo.SessionId_Name,
+        true
       )?.value as boolean;
 
-      const sessions = await getSessions();
-      let list: string = "Session List:\nFormat:\n\nSession Name";
+      const addSessionTime = interaction.options.get(
+        BotCommandOptionInfo.SessionTime_Name,
+        true
+      )?.value as boolean;
 
-      if (addSessionID) list = list.concat(` : Session ID`);
-      if (addSessionDateTime) list = list.concat(` : Session Date`);
-      if (addMessageID) list = list.concat(` : Session Message ID`);
-      list = list.concat(`\n`);
+      const includeCampaign = interaction.options.get(
+        BotCommandOptionInfo.CampaignName_Name,
+        true
+      )?.value as boolean;
 
-      sessions.forEach((session) => {
-        list = list.concat(`${session.name}`);
-        if (addSessionID) list = list.concat(` : ${session.id}`);
-        if (addSessionDateTime) list = list.concat(` : ${session.date}`);
-        if (addMessageID) list = list.concat(` : ${session.messageId}`);
-        list = list.concat(`\n`);
+      const list = await listSessions({
+        addSessionId,
+        addSessionTime,
+        includeCampaign,
       });
+      if (!list) {
+        throw new Error('There was an error building the list.');
+      }
 
       const attachment = getTxtAttachmentBuilder(
         `${BotPaths.TempDir}${BotAttachmentFileNames.AllSessionInformation}`,
@@ -69,11 +62,13 @@ export default new Command({
         list
       );
 
-      sendEphemeralReply(BotDialogs.GetAllSessions_HereIsTheList, interaction, [
-        attachment,
-      ]);
+      await sendEphemeralReply(
+        BotDialogs.GetAllSessions_HereIsTheList,
+        interaction,
+        [attachment]
+      );
     } catch (error) {
-      sendEphemeralReply(`There was an error: ${error}`, interaction);
+      await sendEphemeralReply(`There was an error: ${error}`, interaction);
     }
   },
-});
+};
