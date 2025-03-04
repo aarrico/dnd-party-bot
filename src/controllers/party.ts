@@ -40,16 +40,16 @@ const formatAsString = (
   const header = [
     'Username',
     options.addUserRoleInThisSession && 'Role',
-    options.addUserID && 'User ID',
-    options.addUserDMMessageID && 'User DM Channel ID',
+    options.addUserId && 'User ID',
+    options.addUserDMMessageId && 'User DM Channel ID',
   ].filter(Boolean);
 
   const data = party.map((member) => {
     return [
       member.username,
       options.addUserRoleInThisSession && member.role,
-      options.addUserID && member.userId,
-      options.addUserDMMessageID && member.channelId,
+      options.addUserId && member.userId,
+      options.addUserDMMessageId && member.channelId,
     ].filter(Boolean);
   });
 

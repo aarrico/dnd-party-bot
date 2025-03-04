@@ -2,10 +2,13 @@ import { SlashCommandBuilder } from 'discord.js';
 import {
   BotCommandInfo,
   BotCommandOptionInfo,
+  BotDialogs,
 } from '../../utils/botDialogStrings';
 import { monthOptionChoicesArray } from '../../utils/genericInformation';
 import { ExtendedInteraction } from '../../typings/Command';
 import { initSession } from '../../controllers/session';
+import DateChecker from '../../utils/dateChecker';
+import { sendEphemeralReply } from '../../discord/message';
 
 export default {
   data: new SlashCommandBuilder()
@@ -45,6 +48,39 @@ export default {
         .setRequired(true)
     ),
   async execute(interaction: ExtendedInteraction) {
-    await initSession(interaction);
+    try {
+      const guild = interaction.guild;
+      if (!guild) {
+        throw new Error('Command must be run in a server!');
+      }
+
+      const sessionName = interaction.options.get(
+        BotCommandOptionInfo.CreateSession_SessionName
+      )?.value as string;
+
+      if (!sessionName) {
+        await interaction.reply(BotDialogs.CreateSessionInvalidSessionName);
+      }
+
+      const date = DateChecker(interaction);
+      if (!date) {
+        await sendEphemeralReply(
+          BotDialogs.CreateSessionInvalidDateEntered,
+          interaction
+        );
+        return;
+      }
+      await initSession(
+        guild.id,
+        sessionName,
+        date,
+        interaction.user.displayName,
+        interaction.user.id
+      );
+
+      await sendEphemeralReply(BotDialogs.CreateSessionOneMoment, interaction);
+    } catch (error) {
+      await sendEphemeralReply(`There was an error: ${error}`, interaction);
+    }
   },
 };

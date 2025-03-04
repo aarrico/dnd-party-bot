@@ -2,6 +2,7 @@ import { SlashCommandBuilder } from 'discord.js';
 import { BotCommandOptionInfo } from '../../utils/botDialogStrings';
 import { ExtendedInteraction } from '../../typings/Command';
 import { cancelSession } from '../../controllers/session';
+import { sendEphemeralReply } from '../../discord/message';
 
 export default {
   data: new SlashCommandBuilder()
@@ -20,6 +21,15 @@ export default {
         .setRequired(true)
     ),
   async execute(interaction: ExtendedInteraction) {
-    await cancelSession(interaction);
+    const sessionId = interaction.options.get(
+      BotCommandOptionInfo.SessionId_Name
+    )?.value as string;
+    const reason = interaction.options.get(
+      BotCommandOptionInfo.CancelSession_ReasonName
+    )?.value as string;
+
+    await cancelSession(sessionId, reason);
+
+    await sendEphemeralReply(`Session data has been deleted.`, interaction);
   },
 };

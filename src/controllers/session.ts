@@ -33,33 +33,17 @@ import {
 import DateChecker from '../utils/dateChecker';
 import { createSessionImage } from '../utils/sessionImage';
 
-export const initSession = async (interaction: ExtendedInteraction) => {
-  const guild = interaction.guild;
-  if (!guild) {
-    throw new Error('Command must be run in a server!');
-  }
-
-  const activeCampaign = await getActiveCampaign(guild.id);
-
-  const sessionName = interaction.options.get(
-    BotCommandOptionInfo.CreateSession_SessionName
-  )?.value as string;
-
-  if (!sessionName) {
-    await interaction.reply(BotDialogs.CreateSessionInvalidSessionName);
-  }
-
-  const date = DateChecker(interaction);
-  if (!date) {
-    await sendEphemeralReply(
-      BotDialogs.CreateSessionInvalidDateEntered,
-      interaction
-    );
-    return;
-  }
+export const initSession = async (
+  guildId: string,
+  sessionName: string,
+  date: Date,
+  username: string,
+  userId: string
+) => {
+  const activeCampaign = await getActiveCampaign(guildId);
 
   const newSessionId = await createChannel(
-    guild.id,
+    guildId,
     activeCampaign.id,
     sessionName
   );
@@ -71,54 +55,38 @@ export const initSession = async (interaction: ExtendedInteraction) => {
     campaignId: activeCampaign.id,
   };
 
-  const userData = {
-    username: interaction.user.displayName,
-    id: interaction.user.id,
-    sessionId: newSessionId,
-  };
+  // const userData = {
+  //   username,
+  //   id: userId,
+  //   sessionId: newSessionId,
+  // };
 
   await createSessionMessage(client, newSession);
 
   // do some db wizardry
-  await createSession(newSession, userData.id);
+  await createSession(newSession, userId);
   await createSessionImage(newSessionId);
 
   const message = `${
     BotDialogs.CreateSessionDMSessionTime
   }${date.toLocaleString()}`;
 
-  const user = client.users.cache.get(interaction.user.id);
+  const user = client.users.cache.get(userId);
   user?.send(message);
-
-  //send to DMs
-  await sendEphemeralReply(BotDialogs.CreateSessionOneMoment, interaction);
 };
 
-export const cancelSession = async (interaction: ExtendedInteraction) => {
-  try {
-    const sessionId = interaction.options.get(
-      BotCommandOptionInfo.SessionId_Name
-    )?.value as string;
-    const reason = interaction.options.get(
-      BotCommandOptionInfo.CancelSession_ReasonName
-    )?.value as string;
+export const cancelSession = async (sessionId: string, reason: string) => {
+  const session = await getSession(sessionId);
 
-    const session = await getSession(sessionId);
-
-    for (const partyMember of session.partyMembers) {
-      const user = await client.users.fetch(partyMember.user.channelId);
-      await user.send({
-        content: `🚨 Notice: ${session.name} on ${session.date} has been canceled!\n${reason}`,
-      });
-    }
-
-    await deleteChannel(session.id, reason);
-    await deleteSessionById(sessionId);
-
-    await sendEphemeralReply(`Session data has been deleted.`, interaction);
-  } catch (error) {
-    await sendEphemeralReply(`There was an error: ${error}`, interaction);
+  for (const partyMember of session.partyMembers) {
+    const user = await client.users.fetch(partyMember.user.channelId);
+    await user.send({
+      content: `🚨 Notice: ${session.name} on ${session.date} has been canceled!\n${reason}`,
+    });
   }
+
+  await deleteChannel(session.id, reason);
+  await deleteSessionById(sessionId);
 };
 
 export const modifySession = async (interaction: ExtendedInteraction) => {
