@@ -1,13 +1,28 @@
 import { getAllUsers } from '../db/user';
 import { ListUsersOptions, ListUsersResult } from '../typings/user';
 
-export const listUsers = async (
+// listUsers overloads for type safety
+export function listUsers(
   options: ListUsersOptions,
-  asString: boolean
-) => {
+  asString: true
+): Promise<string>;
+export function listUsers(
+  options: ListUsersOptions,
+  asString: false
+): Promise<ListUsersResult[]>;
+export function listUsers(
+  options: ListUsersOptions,
+  asString?: boolean
+): Promise<ListUsersResult[] | string>;
+
+// listUsers implementation
+export async function listUsers(
+  options: ListUsersOptions,
+  asString = false
+): Promise<ListUsersResult[] | string> {
   const users = await getAllUsers(options);
   return asString ? formatAsString(users, options) : users;
-};
+}
 
 const formatAsString = (
   users: ListUsersResult[],

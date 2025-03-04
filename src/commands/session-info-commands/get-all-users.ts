@@ -1,5 +1,5 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { getAllUsers } from '../../db/session';
+import { listUsers } from '../../controllers/users';
 import { getTxtAttachmentBuilder } from '../../utils/attachmentBuilders';
 import {
   BotAttachmentFileNames,
@@ -11,7 +11,6 @@ import {
 import { ExtendedInteraction } from '../../typings/Command';
 
 import { sendEphemeralReply } from '../../discord/message';
-import { formatAsString } from '../../controllers/users';
 
 export default {
   data: new SlashCommandBuilder()
@@ -42,7 +41,7 @@ export default {
         includeUserId,
         includeUserDMMessageId,
       };
-      const users = await getAllUsers(options, true);
+      const users = await listUsers(options, true);
 
       const attachment = getTxtAttachmentBuilder(
         `${BotPaths.TempDir}${BotAttachmentFileNames.AllUserInformation}`,
