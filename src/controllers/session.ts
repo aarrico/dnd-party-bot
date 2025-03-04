@@ -195,14 +195,10 @@ export const processRoleSelection = async (
   }
 
   const existingMember = party.find(
-    (member) => member.user.id === newPartyMember.user.id
+    (member) => member.user.id === newPartyMember.userId
   );
   if (!existingMember) {
-    await addUserToParty(
-      newPartyMember.user.id,
-      sessionId,
-      newPartyMember.role
-    );
+    await addUserToParty(newPartyMember.userId, sessionId, newPartyMember.role);
     return RoleSelectionStatus.ADDED_TO_PARTY;
   }
 
@@ -216,7 +212,7 @@ export const processRoleSelection = async (
   }
 
   await updatePartyMemberRole(
-    newPartyMember.user.id,
+    newPartyMember.userId,
     sessionId,
     newPartyMember.role
   );
@@ -238,7 +234,7 @@ export const getPartyInfoForImg = async (
   };
 
   return channel.members.map((member) => {
-    const matchingUser = party.find((pm) => pm.user.id === member.id);
+    const matchingUser = party.find((pm) => pm.userId === member.id);
     if (!matchingUser) {
       throw new Error('cannot find user for session');
     }

@@ -1,92 +1,84 @@
-import { ApplicationCommandOptionType } from "discord.js";
-import { Command } from "../../structures/Command";
-import {
-  getSessionById,
-  getPartyForSession,
-} from "../../db/session";
-import { getTxtAttachmentBuilder } from "../../utils/attachmentBuilders";
+import { ApplicationCommandOptionType, SlashCommandBuilder } from 'discord.js';
+import { Command } from '../../structures/Command';
+import { getSessionById } from '../../db/session';
+import { getTxtAttachmentBuilder } from '../../utils/attachmentBuilders';
 import {
   BotAttachmentFileNames,
   BotCommandInfo,
   BotCommandOptionInfo,
   BotDialogs,
   BotPaths,
-} from "../../utils/botDialogStrings";
+} from '../../utils/botDialogStrings';
 
-import {sendEphemeralReply} from "../../discord/message";
+import { sendEphemeralReply } from '../../discord/message';
+import { ExtendedInteraction } from '../../typings/Command';
+import { listPartyForSession } from '../../controllers/party';
 
-export default new Command({
-  name: BotCommandInfo.GetAllUsersInASession_Name,
-  description: BotCommandInfo.GetAllUsersInASession_Description,
-  cooldown: 0,
-  options: [
-    {
-      name: BotCommandOptionInfo.SessionId_Name,
-      description:
-        BotCommandOptionInfo.SessionId_Description,
-      type: ApplicationCommandOptionType.String,
-      required: true,
-    },
-    {
-      name: BotCommandOptionInfo.UserId_Name,
-      description: BotCommandOptionInfo.GetAllUsersInASession_UserIDDescription,
-      type: ApplicationCommandOptionType.Boolean,
-    },
-    {
-      name: BotCommandOptionInfo.GetAllUsersInASession_UserRoleName,
-      description:
-        BotCommandOptionInfo.GetAllUsersInASession_UserRoleDescription,
-      type: ApplicationCommandOptionType.Boolean,
-    },
-    {
-      name: BotCommandOptionInfo.GetAllUsersInASession_UserChannelIDName,
-      description:
-        BotCommandOptionInfo.GetAllUsersInASession_UserChannelIDDescription,
-      type: ApplicationCommandOptionType.Boolean,
-    },
-  ],
-  callBack: async ({ interaction }) => {
+export default {
+  data: new SlashCommandBuilder()
+    .setName(BotCommandInfo.GetAllUsersInASession_Name)
+    .setDescription(BotCommandInfo.GetAllUsersInASession_Description)
+    .addStringOption((id) =>
+      id
+        .setName(BotCommandOptionInfo.SessionId_Name)
+        .setDescription(BotCommandOptionInfo.SessionId_Description)
+        .setRequired(true)
+    )
+    .addBooleanOption((userId) =>
+      userId
+        .setName(BotCommandOptionInfo.UserId_Name)
+        .setDescription(
+          BotCommandOptionInfo.GetAllUsersInASession_UserIDDescription
+        )
+    )
+    .addBooleanOption((userRole) =>
+      userRole
+        .setName(BotCommandOptionInfo.GetAllUsersInASession_UserRoleName)
+        .setDescription(
+          BotCommandOptionInfo.GetAllUsersInASession_UserRoleDescription
+        )
+    )
+    .addBooleanOption((userDMMessageID) =>
+      userDMMessageID
+        .setName(BotCommandOptionInfo.GetAllUsersInASession_UserChannelIDName)
+        .setDescription(
+          BotCommandOptionInfo.GetAllUsersInASession_UserChannelIDDescription
+        )
+    ),
+  async execute(interaction: ExtendedInteraction) {
     try {
-      if (!interaction.member.permissions.has("Administrator")) {
-        interaction.reply("Only Admins can run this command!");
+      if (!interaction.member.permissions.has('Administrator')) {
+        interaction.reply('Only Admins can run this command!');
         return;
       }
-      const sessionID = interaction?.options?.get(
+      const sessionId = interaction?.options?.get(
         BotCommandOptionInfo.SessionId_Name
       )?.value as string;
 
-      const addUserID = interaction?.options?.get(
+      const addUserId = interaction?.options?.get(
         BotCommandOptionInfo.UserId_Name
       )?.value as boolean;
       const addUserRoleInThisSession = interaction?.options?.get(
         BotCommandOptionInfo.GetAllUsersInASession_UserRoleName
       )?.value as boolean;
-      const addUserDMMessageID = interaction?.options?.get(
+      const addUserDMMessageId = interaction?.options?.get(
         BotCommandOptionInfo.GetAllUsersInASession_UserChannelIDName
       )?.value as boolean;
 
-      let list: string = `User List for ${
-        (await getSessionById(sessionID)).name
-      }:\nFormat:\n\nUsername`;
-      if (addUserRoleInThisSession) list = list.concat(` : User Role`);
-      if (addUserID) list = list.concat(` : User ID`);
-      if (addUserDMMessageID) list = list.concat(` : User DM Message ID`);
-      list = list.concat(`\n`);
-
-      const party = await getPartyForSession(sessionID, true);
-      party.forEach((user) => {
-        list = list.concat(`${user.user.username}`);
-        if (addUserRoleInThisSession) list = list.concat(` : ${user.role}`);
-        if (addUserID) list = list.concat(` : ${user.user.id}`);
-        if (addUserDMMessageID)
-          list = list.concat(` : ${user.user.userChannelId}`);
-        list = list.concat(`\n`);
-      });
+      const party = await listPartyForSession(
+        sessionId,
+        {
+          addUserRoleInThisSession,
+          addUserId,
+          addUserDMMessageId,
+        },
+        true
+      );
 
       const attachment = getTxtAttachmentBuilder(
         `${BotPaths.TempDir}${BotAttachmentFileNames.AllUsersInSessionInformation}`,
         BotAttachmentFileNames.AllUsersInSessionInformation,
-        list
+        party
       );
 
       sendEphemeralReply(
@@ -98,4 +90,4 @@ export default new Command({
       sendEphemeralReply(`There was an error: ${error}`, interaction);
     }
   },
-});
+};

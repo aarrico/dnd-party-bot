@@ -22,11 +22,11 @@ export let roleButtons: ActionRowBuilder<ButtonBuilder>[];
   }
 })();
 
-
 // TODO - update db logic to use new schema
 // TODO - create methods to handle guild and campaign tables
 // TODO - remove role selection msg once session has started!
 // TODO - clean up utils dir
-// TODO - investigate typings and structures dirs
-// TODO - move resources out of src
 // TODO - refactor AttachmentBuilder
+// TODO - remove ExtendedInteraction objects as params in controllers
+// TODO - use new icons
+// TODO - clean up errors from adding PartyMember to typings

@@ -1,9 +1,15 @@
-import { User } from '@prisma/client';
-
 export interface PartyMember {
-  user: User;
+  userId: string;
+  username: string;
   role: string;
+  channelId?: string;
 }
+
+export type ListPartyForSessionOptions = {
+  addUserRoleInThisSession?: boolean;
+  addUserId?: boolean;
+  addUserDMMessageId?: boolean;
+};
 
 export enum RoleSelectionStatus {
   EXPIRED = 'session-expired',
