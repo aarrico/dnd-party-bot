@@ -22,15 +22,18 @@ import {
   getAddPartyMemberMsg,
 } from '../../utils/botDialogStrings';
 import { processRoleSelection } from '../../controllers/session';
-import { User } from '@prisma/client';
+import { PartyMember } from '../../typings/party';
 
 const partyMemberJoined = async (
-  user: User,
+  userId: string,
+  username: string,
   role: string,
   channelId: string
 ): Promise<string> => {
-  const newPartyMember = {
-    user,
+  const newPartyMember: PartyMember = {
+    userId,
+    username,
+    channelId,
     role,
   };
 
@@ -61,12 +64,13 @@ const getClickedRole = (
   throw new Error('something went wrong getting the button from discord');
 };
 
-const processCommand = async (interaction: CommandInteraction<CacheType>) => {
+const processCommand = async (
+  interaction: CommandInteraction<CacheType>
+): Promise<void> => {
   const command = client.commands.get(interaction.commandName);
   if (!command) {
-    return await interaction.reply(
-      BotDialogs.InteractionCreate_NonexistentCommand
-    );
+    await interaction.reply(BotDialogs.interactionCreateNonexistentCommand);
+    return;
   }
   command.callBack({
     args: interaction.options as CommandInteractionOptionResolver,
@@ -75,7 +79,9 @@ const processCommand = async (interaction: CommandInteraction<CacheType>) => {
   });
 };
 
-const processButton = async (interaction: ButtonInteraction<CacheType>) => {
+const processButton = async (
+  interaction: ButtonInteraction<CacheType>
+): Promise<void> => {
   const channel = interaction.channel;
   if (!channel || channel.type !== ChannelType.GuildText) {
     throw new Error('something went wrong getting the channel from discord');
@@ -92,10 +98,8 @@ const processButton = async (interaction: ButtonInteraction<CacheType>) => {
   );
 
   const result = await partyMemberJoined(
-    {
-      id: interaction.user.id,
-      username: interaction.user.displayName,
-    },
+    interaction.user.id,
+    interaction.user.displayName,
     buttonClicked.label || '',
     interaction.channelId
   );
@@ -109,7 +113,7 @@ const processButton = async (interaction: ButtonInteraction<CacheType>) => {
   );
 
   await message.edit({
-    content: BotDialogs.InteractionCreate_HereIsANewSessionMessage,
+    content: BotDialogs.interactionCreateNewSessionAnnouncement,
     files: [attachment],
   });
 };

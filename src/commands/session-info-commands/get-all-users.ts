@@ -49,7 +49,7 @@ export default {
         users
       );
 
-      sendEphemeralReply(BotDialogs.GetAllUsers_HereIsTheList, interaction, [
+      sendEphemeralReply(BotDialogs.users.listAllResult, interaction, [
         attachment,
       ]);
     } catch (error) {

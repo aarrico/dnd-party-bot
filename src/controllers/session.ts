@@ -1,15 +1,12 @@
 import { TextChannel } from 'discord.js';
 import { getActiveCampaign } from '../db/campaign';
 import {
-  addUserToParty,
   createSession,
-  deletePartyMember,
   deleteSessionById,
   getParty,
   getSession,
   getSessionById,
   getSessions,
-  updatePartyMemberRole,
   updateSession,
 } from '../db/session';
 import {
@@ -32,6 +29,8 @@ import {
 } from '../utils/botDialogStrings';
 import DateChecker from '../utils/dateChecker';
 import { createSessionImage } from '../utils/sessionImage';
+import { addUserToParty, updatePartyMemberRole } from '../db/user';
+import { deletePartyMember } from '../db/partyMember';
 
 export const initSession = async (
   guildId: string,
@@ -39,7 +38,7 @@ export const initSession = async (
   date: Date,
   username: string,
   userId: string
-) => {
+): Promise<string> => {
   const activeCampaign = await getActiveCampaign(guildId);
 
   const newSessionId = await createChannel(
@@ -67,19 +66,18 @@ export const initSession = async (
   await createSession(newSession, userId);
   await createSessionImage(newSessionId);
 
-  const message = `${
-    BotDialogs.CreateSessionDMSessionTime
-  }${date.toLocaleString()}`;
-
-  const user = client.users.cache.get(userId);
-  user?.send(message);
+  return BotDialogs.createSessionDMSessionTime(
+    activeCampaign.name,
+    sessionName,
+    date
+  );
 };
 
 export const cancelSession = async (sessionId: string, reason: string) => {
   const session = await getSession(sessionId);
 
   for (const partyMember of session.partyMembers) {
-    const user = await client.users.fetch(partyMember.user.channelId);
+    const user = await client.users.fetch(partyMember.channelId);
     await user.send({
       content: `🚨 Notice: ${session.name} on ${session.date} has been canceled!\n${reason}`,
     });
@@ -98,32 +96,23 @@ export const modifySession = async (interaction: ExtendedInteraction) => {
       ?.value as string;
     const newProposedDate = DateChecker(interaction);
 
-    const existingSession = await getSessionById(sessionId);
-    let updateData = {};
+    const session = await getSessionById(sessionId);
 
     if (newProposedDate) {
-      if (existingSession.date.getDate() !== newProposedDate.getDate()) {
-        updateData = { date: newProposedDate };
+      if (session.date.getDate() !== newProposedDate.getDate()) {
+        session.date = newProposedDate;
       }
     }
 
-    if (newSessionName && newSessionName !== existingSession.name) {
-      await renameChannel(existingSession.id, newSessionName);
-      updateData = { name: newSessionName, ...updateData };
+    if (newSessionName && newSessionName !== session.name) {
+      await renameChannel(session.id, newSessionName);
+      session.name = newSessionName;
     }
 
-    if (!updateData) {
-      await sendEphemeralReply(
-        'You have entered in data that would completely match the existing session data.',
-        interaction
-      );
-      return;
-    }
-
-    await updateSession(sessionId, updateData);
+    await updateSession(sessionId, session);
 
     await sendEphemeralReply(
-      '🎉 Session has been updated successfully.\n🤖 Generating new image...give me a few seconds!',
+      BotDialogs.sessions.updated(session.name),
       interaction
     );
 
@@ -139,7 +128,7 @@ export const modifySession = async (interaction: ExtendedInteraction) => {
       const messages = await channel.messages.fetchPinned();
       const message = messages.at(0);
       message?.edit({
-        content: BotDialogs.InteractionCreate_HereIsANewSessionMessage,
+        content: BotDialogs.interactionCreateNewSessionAnnouncement,
         files: [attachment],
       });
     }
@@ -163,7 +152,7 @@ export const processRoleSelection = async (
   }
 
   const existingMember = party.find(
-    (member) => member.user.id === newPartyMember.userId
+    (member) => member.userId === newPartyMember.userId
   );
   if (!existingMember) {
     await addUserToParty(newPartyMember.userId, sessionId, newPartyMember.role);
@@ -175,7 +164,7 @@ export const processRoleSelection = async (
   }
 
   if (newPartyMember.role === existingMember.role) {
-    await deletePartyMember(existingMember.user.id, sessionId);
+    await deletePartyMember(existingMember.userId, sessionId);
     return RoleSelectionStatus.REMOVED_FROM_PARTY;
   }
 
@@ -217,36 +206,41 @@ export const getPartyInfoForImg = async (
 };
 
 export const listSessions = async (
-  options: ListSessionsOptions,
-  asString: boolean
-) => {
+  options: ListSessionsOptions
+): Promise<ListSessionsResult[]> => {
+  let sessions: ListSessionsResult[] = [];
   try {
-    const sessions = await getSessions(options);
-
-    return asString ? formatAsString(sessions, options) : sessions;
+    sessions = await getSessions(options);
   } catch (error) {
     console.error(error);
   }
+
+  return sessions;
 };
 
-const formatAsString = (
+export const formatSessionsAsStr = (
   sessions: ListSessionsResult[],
   options: ListSessionsOptions,
   delimiter = ', '
-) => {
-  const { includeTime, includeCampaign, includeSessionId, userId } = options;
-  const header = [
-    `Session Name${includeSessionId && '\tSession Channel ID'}${includeTime && '\tScheduled Date'}${includeCampaign && '\tCampaign Name'}${userId && '\tUser Role'}`,
-  ];
+): string => {
+  const {
+    includeTime,
+    includeCampaign,
+    includeId,
+    includeRole = false,
+  } = options;
+  const header = `Session Name${includeId && '\tSession Channel ID'}]\
+    ${includeTime && '\tScheduled Date'}${includeCampaign && '\tCampaign Name'}\
+    ${includeRole && '\tUser Role'}`;
 
   const data = sessions.map((session) => {
     const row = [session.name];
-    if (includeSessionId) row.push(session.id);
+    if (includeId) row.push(session.id);
     if (includeTime) row.push(session.date.toUTCString());
-    if (session.campaign) row.push(session.campaign);
-    if (session.userRole) row.push(session.userRole);
+    if (includeCampaign && session.campaign) row.push(session.campaign);
+    if (includeRole && session.userRole) row.push(session.userRole);
     return row;
   });
 
-  return [header, ...data].map((row) => row.join(delimiter)).join('\n');
+  return [[header], ...data].map((row) => row.join(delimiter)).join('\n');
 };

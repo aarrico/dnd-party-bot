@@ -8,7 +8,9 @@ import {
 import { ExtendedClient } from '../structures/ExtendedClient';
 import { roleButtons } from '../index';
 import { ExtendedInteraction } from '../typings/Command';
-import { Session } from '../db/session';
+
+import { Session } from '../typings/session';
+import { BotDialogs } from '../utils/botDialogStrings';
 
 export const createSessionMessage = async (
   client: ExtendedClient,
@@ -27,7 +29,7 @@ export const createSessionMessage = async (
     // content: `🎉 New session - ${session.name} has been scheduled for ${session.date}! Choose a role below 🧙`,
 
     const sentMessage = await channel.send({
-      content: `🎉 A session - ${session.name} has been scheduled for ${session.date}!\n🤖 Please wait a moment while I get things ready!`,
+      content: BotDialogs.sessions.scheduled(session.name, session.date),
       //files: [attachment],
       components: roleButtons,
     });

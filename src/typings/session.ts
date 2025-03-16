@@ -1,9 +1,23 @@
+import { PartyMember } from './party';
+
+export type Session = {
+  id: string;
+  name: string;
+  date: Date;
+  campaignId: string;
+};
+
+export interface SessionWithRole extends Session {
+  role: string;
+}
+
 export interface ListSessionsOptions {
-  includeSessionId: boolean;
+  includeId: boolean;
   includeTime: boolean;
   includeCampaign: boolean;
   userId?: string;
   campaignId?: string;
+  includeRole?: boolean;
 }
 
 export interface ListSessionsResult {
@@ -12,4 +26,19 @@ export interface ListSessionsResult {
   date: Date;
   userRole?: string;
   campaign?: string;
+}
+
+export interface SessionWithParty extends Session {
+  partyMembers: PartyMember[];
+}
+
+export interface SessionWithPartyPrismaResult {
+  id: string;
+  name: string;
+  date: Date;
+  campaignId: string;
+  partyMembers: Array<{
+    user: { id: string; username: string; channelId: string };
+    role: string;
+  }>;
 }

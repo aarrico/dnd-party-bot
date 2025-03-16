@@ -30,3 +30,4 @@ export let roleButtons: ActionRowBuilder<ButtonBuilder>[];
 // TODO - remove ExtendedInteraction objects as params in controllers
 // TODO - use new icons
 // TODO - clean up errors from adding PartyMember to typings
+// TODO - why need username in initSession?

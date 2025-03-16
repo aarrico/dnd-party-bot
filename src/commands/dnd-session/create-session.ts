@@ -9,6 +9,7 @@ import { ExtendedInteraction } from '../../typings/Command';
 import { initSession } from '../../controllers/session';
 import DateChecker from '../../utils/dateChecker';
 import { sendEphemeralReply } from '../../discord/message';
+import { client } from '../../index';
 
 export default {
   data: new SlashCommandBuilder()
@@ -59,18 +60,21 @@ export default {
       )?.value as string;
 
       if (!sessionName) {
-        await interaction.reply(BotDialogs.CreateSessionInvalidSessionName);
+        await interaction.reply(BotDialogs.createSessionInvalidSessionName);
       }
 
       const date = DateChecker(interaction);
       if (!date) {
         await sendEphemeralReply(
-          BotDialogs.CreateSessionInvalidDateEntered,
+          BotDialogs.createSessionInvalidDateEntered,
           interaction
         );
         return;
       }
-      await initSession(
+
+      await sendEphemeralReply(BotDialogs.createSessionOneMoment, interaction);
+
+      const message = await initSession(
         guild.id,
         sessionName,
         date,
@@ -78,7 +82,8 @@ export default {
         interaction.user.id
       );
 
-      await sendEphemeralReply(BotDialogs.CreateSessionOneMoment, interaction);
+      const user = client.users.cache.get(interaction.user.id);
+      user?.send(message);
     } catch (error) {
       await sendEphemeralReply(`There was an error: ${error}`, interaction);
     }

@@ -9,7 +9,9 @@ import {
 import { ExtendedInteraction } from '../../typings/Command';
 import { getTxtAttachmentBuilder } from '../../utils/attachmentBuilders';
 import { sendEphemeralReply } from '../../discord/message';
-import { listSessions } from '../../controllers/session';
+import { formatSessionsAsStr } from '../../controllers/session';
+import { ListSessionsOptions } from '../../typings/session';
+import { getSessionsForUser } from '../../db/user';
 
 export default {
   data: new SlashCommandBuilder()
@@ -45,15 +47,15 @@ export default {
     .addBooleanOption((includeCampaign) =>
       includeCampaign
         .setName(BotCommandOptionInfo.CampaignName_Name)
-        .setDescription('Include campaign name in the output.')
+        .setDescription(BotCommandOptionInfo.Campaign_Description)
     ),
   async execute(interaction: ExtendedInteraction) {
-    const addSessionId = interaction.options.get(
+    const includeId = interaction.options.get(
       BotCommandOptionInfo.SessionId_Name,
       true
     )?.value as boolean;
 
-    const addSessionTime = interaction.options.get(
+    const includeTime = interaction.options.get(
       BotCommandOptionInfo.SessionTime_Name,
       true
     )?.value as boolean;
@@ -63,7 +65,7 @@ export default {
       true
     )?.value as boolean;
 
-    const addUserRoleInThisSession = interaction.options.get(
+    const includeRole = interaction.options.get(
       BotCommandOptionInfo.GetAllUserSessions_UserRoleName,
       true
     )?.value as boolean;
@@ -73,24 +75,27 @@ export default {
       true
     )?.value as string;
 
-    const list = await listSessions({
-      addSessionId,
-      addSessionTime,
+    const options: ListSessionsOptions = {
+      includeId,
+      includeTime,
       includeCampaign,
       userId,
-    });
-    if (!list) {
+      includeRole,
+    };
+
+    const data = await getSessionsForUser(userId);
+    if (!data) {
       throw new Error('There was an error building the list.');
     }
 
     const attachment = getTxtAttachmentBuilder(
       `${BotPaths.TempDir}${BotAttachmentFileNames.AllSessionInformation}`,
       BotAttachmentFileNames.AllSessionInformation,
-      list
+      formatSessionsAsStr(data.sessions, options)
     );
 
     await sendEphemeralReply(
-      BotDialogs.GetAllSessions_HereIsTheList,
+      BotDialogs.sessions.forUserResult(data.username),
       interaction,
       [attachment]
     );

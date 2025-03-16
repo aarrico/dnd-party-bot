@@ -1,40 +1,93 @@
-import { RoleSelectionStatus } from '../models/party';
-import { PartyMember } from '../models/party';
+import { PartyMember, RoleSelectionStatus } from '../typings/party';
+import path from 'path';
 
-export enum BotDialogs {
-  //CreateSession
-  CreateSessionInvalidSessionName = 'Your session name is invalid.',
-  CreateSessionDMSessionTime = 'Hey there, I have your session scheduled for: ',
-  CreateSessionOneMoment = 'One Moment while I create your session. You will recieve a message via Direct Message when complete!',
-  CreateSessionInvalidDateEntered = 'The date you entered is invalid. This could be due to the following reasons:\n- You entered a date that doesnt exist.\n- You entered a day that has already passed.',
-  //GetAllUserSessions
-  GetAllUserSessions_HereIsTheList = 'Here is the list of Sessions on file this user has signed up for:',
-  //GetAllSessions
-  GetAllSessions_HereIsTheList = 'Here is the list of Sessions you currently have on file.',
-  //GetAllUsersInASession
-  GetAllUsersInASession_HereIsTheList = 'Here is the list of Users in this session.',
-  //GetAllUsers
-  GetAllUsers_HereIsTheList = 'Here is the list of Users you currently have on file.',
-  //InteractionCreate responses
-  InteractionCreate_NonexistentCommand = 'You have used a nonexistent command!',
-  InteractionCreate_HereIsANewSessionMessage = 'Hello everyone, we have a new session for people to join!',
-  //RoleChosenMessageContent in InteractionCreate
-  RoleChosenMessageContent_WelcomeToTheParty1 = 'Welcome to the Party',
-  RoleChosenMessageContent_WelcomeToTheParty2 = 'You have been added as a',
-  RoleChosenMessageContent_Farewell1 = 'Farewell,',
-  RoleChosenMessageContent_Farewell2 = 'You have been removed from the session! To rejoin, click a role button!',
-  RoleChosenMessageContent_RoleSwap1 = 'Deciding to change the game,',
-  RoleChosenMessageContent_RoleSwap2 = 'You have been changed to a',
-  RoleChosenMessageContent_PartyFull = 'Unfortunately, this party is full and no new users can be added at present!',
-  RoleChosenMessageContent_DMCantSwap = 'You cannot change roles as you are the Dungeon Master!',
-  RoleChosenMessageContent_NoActionTaken = 'No Action was taken. Something went wrong',
-}
+export const BotDialogs = {
+  // CreateSession
+  createSessionInvalidSessionName: 'Your session name is invalid.',
+  createSessionDMSessionTime: (
+    campaign: string,
+    sessionName: string,
+    date: Date
+  ) =>
+    `🤖 New session ${sessionName} for ${campaign} scheduled for ${date.toLocaleString()}`,
+  createSessionOneMoment:
+    '🤖 One Moment while I create your session. You will receive a message via Direct Message when complete!',
+  createSessionInvalidDateEntered:
+    "🤖 The date you entered is invalid. This could be due to the following reasons:\n- You entered a date that doesn't exist.\n- You entered a day that has already passed.",
+
+  sessions: {
+    listAllResult: '🤖🎉 Report for all scheduled sessions is ready!',
+    forUserResult: (username: string) =>
+      `🤖🎉 Report for all sessions ${username} has signed up for is ready!`,
+    allUsersResult: (session: string) =>
+      `🤖🎉 Report for all users in session ${session} is ready!`,
+    updated: (
+      name: string
+    ) => `🤖🎉 Session ${name} has been updated successfully.\n \
+    🤖🖌️ Generating new image...give me a few seconds!`,
+    scheduled: (
+      name: string,
+      date: Date
+    ) => `🤖🗓️ Session ${name} has been scheduled for ${date.toLocaleString()}!\n \
+    🤖⚙️ Please wait a moment while I get things ready!`,
+  },
+
+  users: {
+    listAllResult:
+      '🤖🎉 Report for all users that have participated in any campaign is ready!',
+  },
+
+  // InteractionCreate responses
+  interactionCreateNonexistentCommand:
+    '🤖 You have used a nonexistent command!',
+  interactionCreateNewSessionAnnouncement:
+    '🤖 Hello everyone, we have a new session for people to join!',
+
+  roleChosenMessageContent: {
+    welcomeToParty: (username: string, role: string) =>
+      `🤖 Welcome to the Party ${username}. You have been added as a ${role}!`,
+    farewell: (username: string) =>
+      `🤖 Farewell, ${username}! You have been removed from the session! To rejoin, click a role button!`,
+    roleSwap: (username: string, role: string) =>
+      `🤖 Deciding to change the game, ${username}? You have been changed to a ${role}!`,
+    partyFull:
+      '🤖 Unfortunately, this party is full and no new users can be added at present!',
+    dmCantSwap: '🤖 You cannot change roles as you are the Dungeon Master!',
+    noActionTaken: '🤖 No Action was taken. Something went wrong',
+  },
+} as const;
+
+export const getAddPartyMemberMsg = (
+  status: RoleSelectionStatus,
+  member: PartyMember
+) => {
+  switch (status) {
+    case RoleSelectionStatus.ADDED_TO_PARTY:
+      return BotDialogs.roleChosenMessageContent.welcomeToParty(
+        member.username,
+        member.role
+      );
+    case RoleSelectionStatus.REMOVED_FROM_PARTY:
+      return BotDialogs.roleChosenMessageContent.farewell(member.username);
+    case RoleSelectionStatus.ROLE_CHANGED:
+      return BotDialogs.roleChosenMessageContent.roleSwap(
+        member.username,
+        member.role
+      );
+    case RoleSelectionStatus.PARTY_FULL:
+      return BotDialogs.roleChosenMessageContent.partyFull;
+    case RoleSelectionStatus.INVALID:
+      return BotDialogs.roleChosenMessageContent.dmCantSwap;
+    default:
+      return BotDialogs.roleChosenMessageContent.noActionTaken;
+  }
+};
 
 //potential resolve path here instead.
-export enum BotPaths {
-  TempDir = './src/resources/temp/',
-  SessionBackdrop = './src/resources/images/TW_ui_menu_backplate.png',
-}
+export const BotPaths = {
+  TempDir: path.join(process.cwd(), 'tmp'),
+  SessionBackdrop: path.join(process.cwd(), 'resources/images/backdrop.png'),
+};
 
 export enum BotAttachmentFileNames {
   SessionsUserHasSignedUpFor = 'SessionsUserHasSignedUpFor.txt',
@@ -103,24 +156,5 @@ export enum BotCommandOptionInfo {
   CancelSession_Description = 'Deletes a session from a campaign, including its associated channel.',
   CancelSession_ReasonName = 'reason',
   CancelSession_ReasonDescription = 'Message to party members about the cancellation of the session.',
+  Campaign_Description = 'Include campaign name in the output.',
 }
-
-export const getAddPartyMemberMsg = (
-  status: RoleSelectionStatus,
-  member: PartyMember
-) => {
-  switch (status) {
-    case RoleSelectionStatus.ADDED_TO_PARTY:
-      return `${BotDialogs.RoleChosenMessageContent_WelcomeToTheParty1} ${member.user.username}. ${BotDialogs.RoleChosenMessageContent_WelcomeToTheParty2} ${member.role}!`;
-    case RoleSelectionStatus.REMOVED_FROM_PARTY:
-      return `${BotDialogs.RoleChosenMessageContent_Farewell1} ${member.user.username}! ${BotDialogs.RoleChosenMessageContent_Farewell2}`;
-    case RoleSelectionStatus.ROLE_CHANGED:
-      return `${BotDialogs.RoleChosenMessageContent_RoleSwap1} ${member.user.username}? ${BotDialogs.RoleChosenMessageContent_RoleSwap2} ${member.role}!`;
-    case RoleSelectionStatus.PARTY_FULL:
-      return BotDialogs.RoleChosenMessageContent_PartyFull;
-    case RoleSelectionStatus.INVALID:
-      return BotDialogs.RoleChosenMessageContent_DMCantSwap;
-    default:
-      return BotDialogs.RoleChosenMessageContent_NoActionTaken;
-  }
-};

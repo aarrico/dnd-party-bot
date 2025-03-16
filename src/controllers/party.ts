@@ -1,42 +1,19 @@
 import { getSessionById } from '../db/session';
-import { ListPartyForSessionOptions, PartyMember } from '../typings/party';
-import { getPartyForSession } from '../db/partyMember';
-
-export function listPartyForSession(
-  sessionId: string,
-  options: ListPartyForSessionOptions,
-  asString: true
-): Promise<string>;
-export function listPartyForSession(
-  sessionId: string,
-  options: ListPartyForSessionOptions,
-  asString: false
-): Promise<PartyMember[]>;
-export function listPartyForSession(
-  sessionId: string,
-  options: ListPartyForSessionOptions,
-  asString?: boolean
-): Promise<string | PartyMember[]>;
+import { ListPartyForSessionOptions } from '../typings/party';
+import { SessionWithParty } from '../typings/session';
 
 export async function listPartyForSession(
-  sessionId: string,
-  options: ListPartyForSessionOptions,
-  asString = false
-): Promise<string | PartyMember[]> {
-  const { name: sessionName } = await getSessionById(sessionId);
-
-  const party = await getPartyForSession(sessionId, true);
-
-  return asString ? formatAsString(party, sessionName, options) : party;
+  sessionId: string
+): Promise<SessionWithParty> {
+  return await getSessionById(sessionId, true);
 }
 
-const formatAsString = (
-  party: PartyMember[],
-  sessionName: string,
+export const formatSessionPartyAsStr = (
+  session: SessionWithParty,
   options: ListPartyForSessionOptions,
   delimiter = ', '
 ): string => {
-  const title = `User List for ${sessionName}\n`;
+  const title = `User List for ${session.name}\n`;
   const header = [
     'Username',
     options.addUserRoleInThisSession && 'Role',
@@ -44,7 +21,7 @@ const formatAsString = (
     options.addUserDMMessageId && 'User DM Channel ID',
   ].filter(Boolean);
 
-  const data = party.map((member) => {
+  const data = session.partyMembers.map((member) => {
     return [
       member.username,
       options.addUserRoleInThisSession && member.role,

@@ -2,7 +2,7 @@ export interface PartyMember {
   userId: string;
   username: string;
   role: string;
-  channelId?: string;
+  channelId: string;
 }
 
 export type ListPartyForSessionOptions = {

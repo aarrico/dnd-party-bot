@@ -7,9 +7,10 @@ import {
   BotPaths,
 } from '../../utils/botDialogStrings';
 import { ExtendedInteraction } from '../../typings/Command';
-import { listSessions } from '../../controllers/session';
+import { formatSessionsAsStr, listSessions } from '../../controllers/session';
 import { getTxtAttachmentBuilder } from '../../utils/attachmentBuilders';
 import { sendEphemeralReply } from '../../discord/message';
+import { ListSessionsOptions } from '../../typings/session';
 
 export default {
   data: new SlashCommandBuilder()
@@ -47,30 +48,27 @@ export default {
         true
       )?.value as boolean;
 
-      const sessions = await listSessions(
-        {
-          includeSessionId,
-          includeTime,
-          includeCampaign,
-        },
-        true
-      );
+      const options: ListSessionsOptions = {
+        includeId: includeSessionId,
+        includeTime,
+        includeCampaign,
+      };
 
-      if (!sessions || sessions instanceof Array) {
+      const sessions = await listSessions(options);
+
+      if (!sessions) {
         throw new Error('There was an error building the list.');
       }
 
       const attachment = getTxtAttachmentBuilder(
         `${BotPaths.TempDir}${BotAttachmentFileNames.AllSessionInformation}`,
         BotAttachmentFileNames.AllSessionInformation,
-        sessions
+        formatSessionsAsStr(sessions, options)
       );
 
-      await sendEphemeralReply(
-        BotDialogs.GetAllSessions_HereIsTheList,
-        interaction,
-        [attachment]
-      );
+      await sendEphemeralReply(BotDialogs.sessions.listAllResult, interaction, [
+        attachment,
+      ]);
     } catch (error) {
       await sendEphemeralReply(`There was an error: ${error}`, interaction);
     }

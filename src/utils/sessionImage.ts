@@ -1,9 +1,10 @@
 import sharp, { OverlayOptions } from 'sharp';
 
-import { getSessionById, Session } from '../db/session';
+import { getSessionById } from '../db/session';
 import { getRoleImage, getRoleName, roles } from './role';
 import { BotAttachmentFileNames, BotPaths } from './botDialogStrings';
 import { getPartyInfoForImg } from '../controllers/session';
+import { Session } from '../typings/session';
 
 const coords = {
   dm: { width: 350, height: 350, x: 1185, y: 390 },

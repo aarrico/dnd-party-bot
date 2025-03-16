@@ -1,23 +1,10 @@
 import { prisma } from '../index';
-import { PartyMember } from '../typings/party';
 
-export async function getPartyForSession(
-  sessionId: string,
-  includeUserDetails: boolean = false
-): Promise<PartyMember[]> {
-  const party = await prisma.partyMember.findMany({
-    where: {
-      sessionId: sessionId,
-    },
-    include: {
-      user: includeUserDetails,
-    },
+export const deletePartyMember = async (
+  userId: string,
+  sessionId: string
+): Promise<void> => {
+  await prisma.partyMember.delete({
+    where: { party_member_id: { sessionId, userId } },
   });
-
-  return party.map((member) => ({
-    userId: member.userId,
-    username: member.user.username,
-    role: member.role,
-    channelId: member.user.channelId,
-  }));
-}
+};

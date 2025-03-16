@@ -1,6 +1,5 @@
-import { ApplicationCommandOptionType, SlashCommandBuilder } from 'discord.js';
-import { Command } from '../../structures/Command';
-import { getSessionById } from '../../db/session';
+import { SlashCommandBuilder } from 'discord.js';
+
 import { getTxtAttachmentBuilder } from '../../utils/attachmentBuilders';
 import {
   BotAttachmentFileNames,
@@ -12,7 +11,10 @@ import {
 
 import { sendEphemeralReply } from '../../discord/message';
 import { ExtendedInteraction } from '../../typings/Command';
-import { listPartyForSession } from '../../controllers/party';
+import {
+  formatSessionPartyAsStr,
+  listPartyForSession,
+} from '../../controllers/party';
 
 export default {
   data: new SlashCommandBuilder()
@@ -65,24 +67,20 @@ export default {
         BotCommandOptionInfo.GetAllUsersInASession_UserChannelIDName
       )?.value as boolean;
 
-      const party = await listPartyForSession(
-        sessionId,
-        {
-          addUserRoleInThisSession,
-          addUserId,
-          addUserDMMessageId,
-        },
-        true
-      );
+      const session = await listPartyForSession(sessionId);
 
       const attachment = getTxtAttachmentBuilder(
         `${BotPaths.TempDir}${BotAttachmentFileNames.AllUsersInSessionInformation}`,
         BotAttachmentFileNames.AllUsersInSessionInformation,
-        party
+        formatSessionPartyAsStr(session, {
+          addUserRoleInThisSession,
+          addUserId,
+          addUserDMMessageId,
+        })
       );
 
       sendEphemeralReply(
-        BotDialogs.GetAllUsersInASession_HereIsTheList,
+        BotDialogs.sessions.allUsersResult(session.name),
         interaction,
         [attachment]
       );
