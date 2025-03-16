@@ -122,6 +122,8 @@ export enum BotCommandOptionInfo {
   SessionTime_Name = 'session-date-time',
   SessionTime_Description = 'Date/Time of session in DB',
   CampaignName_Name = 'campaign-name',
+  CampaignId_Name = 'campaign-id',
+  CampaignId_Description = 'Campaign ID of the session - found by right-clicking campaign channel. Defaults to active campaign.',
   //CreateSession
   CreateSession_SessionName = 'session-name',
   CreateSession_SessionName_Description = 'Name of session',

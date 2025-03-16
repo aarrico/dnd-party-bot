@@ -15,6 +15,12 @@ export default {
   data: new SlashCommandBuilder()
     .setName(BotCommandInfo.CreateSessionName)
     .setDescription(BotCommandInfo.CreateSessionDescription)
+    .addStringOption((campaignId) =>
+      campaignId
+        .setName(BotCommandOptionInfo.CampaignId_Name)
+        .setDescription(BotCommandOptionInfo.CampaignId_Description)
+        .setRequired(true)
+    )
     .addStringOption((name) =>
       name
         .setName(BotCommandOptionInfo.CreateSession_SessionName)

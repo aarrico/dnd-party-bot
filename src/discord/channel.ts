@@ -1,11 +1,11 @@
-import { ChannelType } from 'discord.js';
+import { ChannelType, TextChannel } from 'discord.js';
 import { client } from '../index';
 
 export const createChannel = async (
   guildId: string,
   campaignId: string,
   channelName: string
-) => {
+): Promise<TextChannel> => {
   const guild = await client.guilds.fetch(guildId);
   const campaign = await guild.channels.fetch(campaignId);
 
@@ -19,7 +19,7 @@ export const createChannel = async (
     parent: campaign.id,
   });
 
-  return session.id;
+  return session;
 };
 
 export const deleteChannel = async (

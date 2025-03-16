@@ -11,16 +11,28 @@ import { ExtendedInteraction } from '../typings/Command';
 
 import { Session } from '../typings/session';
 import { BotDialogs } from '../utils/botDialogStrings';
+import { createChannel } from './channel';
 
 export const createSessionMessage = async (
   client: ExtendedClient,
   session: Session
 ) => {
   try {
-    const channel = client.channels.cache.get(session.campaignId);
-    if (!channel || channel.type !== ChannelType.GuildText) {
-      throw new Error(`Couldn't find text channel ${session.campaignId}`);
+    const campaignChannel = client.channels.cache.get(session.campaignId);
+    if (
+      !campaignChannel ||
+      campaignChannel.type !== ChannelType.GuildCategory
+    ) {
+      throw new Error(
+        `Couldn't find channel for campaign: ${session.campaignId}`
+      );
     }
+
+    const sessionChannel = await createChannel(
+      campaignChannel.guildId,
+      session.campaignId,
+      session.name
+    );
 
     // const attachment = getPNGAttachmentBuilder(
     //   `${BotPaths.TempDir}${BotAttachmentFileNames.CurrentSession}`,
@@ -28,7 +40,7 @@ export const createSessionMessage = async (
     // );
     // content: `🎉 New session - ${session.name} has been scheduled for ${session.date}! Choose a role below 🧙`,
 
-    const sentMessage = await channel.send({
+    const sentMessage = await sessionChannel.send({
       content: BotDialogs.sessions.scheduled(session.name, session.date),
       //files: [attachment],
       components: roleButtons,
