@@ -1,8 +1,8 @@
-import { monthOptionChoicesArray } from '../../utils/genericInformation';
-import { BotCommandOptionInfo } from '../../utils/botDialogStrings';
-import { ExtendedInteraction } from '../../typings/Command';
-import { modifySession } from '../../controllers/session';
 import { SlashCommandBuilder } from 'discord.js';
+import { monthOptionChoicesArray } from '../../utils/genericInformation.js';
+import { BotCommandOptionInfo } from '../../utils/botDialogStrings.js';
+import { ExtendedInteraction } from '../../models/Command.js';
+import { modifySession } from '../../controllers/session.js';
 
 export default {
   data: new SlashCommandBuilder()

@@ -1,16 +1,15 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { listUsers } from '../../controllers/users';
-import { getTxtAttachmentBuilder } from '../../utils/attachmentBuilders';
 import {
   BotAttachmentFileNames,
   BotCommandInfo,
   BotCommandOptionInfo,
   BotDialogs,
   BotPaths,
-} from '../../utils/botDialogStrings';
-import { ExtendedInteraction } from '../../typings/Command';
-
-import { sendEphemeralReply } from '../../discord/message';
+} from '../../utils/botDialogStrings.js';
+import { getTxtAttachmentBuilder } from '../../utils/attachmentBuilders.js';
+import { ExtendedInteraction } from '../../models/Command.js';
+import { sendEphemeralReply } from '../../discord/message.js';
+import { listUsers } from '../../controllers/users';
 
 export default {
   data: new SlashCommandBuilder()
@@ -30,12 +29,8 @@ export default {
     ),
   async execute(interaction: ExtendedInteraction) {
     try {
-      const includeUserId = interaction?.options?.get(
-        BotCommandOptionInfo.UserId_Name
-      )?.value as boolean;
-      const includeUserDMMessageId = interaction?.options?.get(
-        BotCommandOptionInfo.GetAllUsers_UserChannelIDName
-      )?.value as boolean;
+      const includeUserId = interaction.options.getBoolean(BotCommandOptionInfo.UserId_Name) ?? false;
+      const includeUserDMMessageId = interaction.options.getBoolean(BotCommandOptionInfo.GetAllUsers_UserChannelIDName) ?? false;
 
       const options = {
         includeUserId,
@@ -49,11 +44,11 @@ export default {
         users
       );
 
-      sendEphemeralReply(BotDialogs.users.listAllResult, interaction, [
+      void sendEphemeralReply(BotDialogs.users.listAllResult, interaction, [
         attachment,
       ]);
     } catch (error) {
-      sendEphemeralReply(`There was an error: ${error}`, interaction);
+      void sendEphemeralReply(`There was an error: ${error}`, interaction);
     }
   },
 };

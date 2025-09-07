@@ -1,5 +1,5 @@
 import { getAllUsers } from '../db/user';
-import { ListUsersOptions, ListUsersResult } from '../typings/user';
+import { ListUsersOptions, ListUsersResult } from '../models/user'; // listUsers overloads for type safety
 
 // listUsers overloads for type safety
 export function listUsers(

@@ -1,6 +1,6 @@
 import { getSessionById } from '../db/session';
-import { ListPartyForSessionOptions } from '../typings/party';
-import { SessionWithParty } from '../typings/session';
+import { ListPartyForSessionOptions } from '../models/party';
+import { SessionWithParty } from '../models/session';
 
 export async function listPartyForSession(
   sessionId: string

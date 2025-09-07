@@ -1,10 +1,25 @@
-import { User } from '@prisma/client';
+import { User, RoleType } from '@prisma/client';
 import { prisma } from '../index';
 import {
   ListUsersOptions,
   ListUsersResult,
   ListUserWithSessionsResult,
-} from '../typings/user';
+} from '../models/user';
+import { client } from '../index';
+
+export const upsertUser = async (userId: string, username: string, channelId: string) => {
+  return await prisma.user.upsert({
+  where: { id: userId },
+  create: {
+    id: userId,
+    username: username,
+    channelId: channelId,
+  },
+  update: {
+    username: username,
+  },
+});
+}
 
 export const upsertUserWithUsername = async (userData: User) =>
   await prisma.user.upsert({
@@ -29,32 +44,43 @@ export const getAllUsers = async (
 export const updatePartyMemberRole = async (
   userId: string,
   sessionId: string,
-  role: string
-): Promise<User> => {
-  return await prisma.user.update({
-    where: { id: userId },
-    data: {
-      sessions: {
-        update: {
-          where: { party_member_id: { sessionId, userId } },
-          data: { role },
-        },
-      },
-    },
+  roleId: RoleType
+): Promise<void> => {
+  await prisma.partyMember.update({
+    where: { party_member_id: { sessionId, userId } },
+    data: { roleId },
   });
 };
 
 export const addUserToParty = async (
   userId: string,
   sessionId: string,
-  role: string
+  roleId: RoleType,
+  username?: string
 ): Promise<void> => {
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      sessions: {
-        create: { sessionId, role },
+  // Ensure the user exists in the database before adding to party
+  if (username) {
+    const user = await client.users.fetch(userId);
+    const dmChannel = await user.createDM();
+    
+    await prisma.user.upsert({
+      where: { id: userId },
+      create: {
+        id: userId,
+        username: username,
+        channelId: dmChannel.id,
       },
+      update: {
+        username: username,
+      },
+    });
+  }
+
+  await prisma.partyMember.create({
+    data: {
+      userId,
+      sessionId,
+      roleId,
     },
   });
 };
@@ -88,7 +114,7 @@ export const getSessionsForUser = async (
     id: data.id,
     username: data.username,
     sessions: data.sessions.map(
-      ({ session: { campaign, ...session }, role: userRole }) => {
+      ({ session: { campaign, ...session }, roleId: userRole }) => {
         return {
           ...session,
           userRole,

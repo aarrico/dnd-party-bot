@@ -33,7 +33,7 @@ export const deleteChannel = async (
 };
 
 export const renameChannel = async (channelId: string, name: string) => {
-  const channel = await client.channels.fetch(channelId as string);
+  const channel = await client.channels.fetch(channelId);
   if (channel && channel.type === ChannelType.GuildText) {
     await channel.edit({ name: name.replace(' ', '-') });
   }

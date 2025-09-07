@@ -1,4 +1,4 @@
-import { PartyMember, RoleSelectionStatus } from '../typings/party';
+import { PartyMember, RoleSelectionStatus } from '../models/party.js';
 import path from 'path';
 
 export const BotDialogs = {

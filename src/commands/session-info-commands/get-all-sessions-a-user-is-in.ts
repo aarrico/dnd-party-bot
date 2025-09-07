@@ -5,13 +5,13 @@ import {
   BotCommandOptionInfo,
   BotDialogs,
   BotPaths,
-} from '../../utils/botDialogStrings';
-import { ExtendedInteraction } from '../../typings/Command';
-import { getTxtAttachmentBuilder } from '../../utils/attachmentBuilders';
-import { sendEphemeralReply } from '../../discord/message';
+} from '../../utils/botDialogStrings.js';
+import { getTxtAttachmentBuilder } from '../../utils/attachmentBuilders.js';
+import { ExtendedInteraction } from '../../models/Command.js';
+import { sendEphemeralReply } from '../../discord/message.js';
+import { ListSessionsOptions } from '../../models/session.js';
+import { getSessionsForUser } from '../../db/user.js';
 import { formatSessionsAsStr } from '../../controllers/session';
-import { ListSessionsOptions } from '../../typings/session';
-import { getSessionsForUser } from '../../db/user';
 
 export default {
   data: new SlashCommandBuilder()
@@ -50,37 +50,18 @@ export default {
         .setDescription(BotCommandOptionInfo.Campaign_Description)
     ),
   async execute(interaction: ExtendedInteraction) {
-    const includeId = interaction.options.get(
-      BotCommandOptionInfo.SessionId_Name,
-      true
-    )?.value as boolean;
-
-    const includeTime = interaction.options.get(
-      BotCommandOptionInfo.SessionTime_Name,
-      true
-    )?.value as boolean;
-
-    const includeCampaign = interaction.options.get(
-      BotCommandOptionInfo.CampaignName_Name,
-      true
-    )?.value as boolean;
-
-    const includeRole = interaction.options.get(
-      BotCommandOptionInfo.GetAllUserSessions_UserRoleName,
-      true
-    )?.value as boolean;
-
-    const userId = interaction.options.get(
-      BotCommandOptionInfo.UserId_Name,
-      true
-    )?.value as string;
+    const includeSessionId = interaction.options.getBoolean(BotCommandOptionInfo.SessionId_Name) ?? false;
+    const includeTime = interaction.options.getBoolean(BotCommandOptionInfo.SessionTime_Name) ?? false;
+    const includeCampaign = interaction.options.getBoolean(BotCommandOptionInfo.CampaignName_Name) ?? false;
+    const includeUserRole = interaction.options.getBoolean(BotCommandOptionInfo.GetAllUserSessions_UserRoleName) ?? false;
+    const userId = interaction.options.getString(BotCommandOptionInfo.UserId_Name, true);
 
     const options: ListSessionsOptions = {
-      includeId,
+      includeId: true,
       includeTime,
       includeCampaign,
+      includeUserRole,
       userId,
-      includeRole,
     };
 
     const data = await getSessionsForUser(userId);

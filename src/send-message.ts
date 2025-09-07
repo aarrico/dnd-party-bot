@@ -1,12 +1,12 @@
 import {
-  Client,
-  IntentsBitField,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
   Channel,
   ChannelType,
-} from "discord.js";
+  Client,
+  IntentsBitField,
+} from 'discord.js';
 
 const client = new Client({
   intents: [
@@ -19,23 +19,23 @@ const client = new Client({
 
 const roles = [
   {
-    id: "1213618163963658320",
-    label: "DungeonMaster",
+    id: '1213618163963658320',
+    label: 'DungeonMaster',
   },
   {
-    id: "1220538253405327531",
-    label: "PartyMember",
+    id: '1220538253405327531',
+    label: 'PartyMember',
   },
   {
-    id: "1220538355909922877",
-    label: "NPC",
+    id: '1220538355909922877',
+    label: 'NPC',
   },
 ];
 
-client.on("ready", async () => {
+client.on('ready', async () => {
   try {
     const channel: Channel = (await client?.channels?.cache?.get(
-      "1213617829996134521"
+      '1213617829996134521'
     )) as Channel;
     if (!channel || channel.type !== ChannelType.GuildText) return;
 
@@ -49,7 +49,7 @@ client.on("ready", async () => {
       );
     });
     await channel.send({
-      content: "Claim or remove a role",
+      content: 'Claim or remove a role',
       components: [row],
     });
     process.exit();
@@ -58,4 +58,4 @@ client.on("ready", async () => {
   }
 });
 
-client.login(process.env.TOKEN);
+client.login(process.env.DISCORD_TOKEN);

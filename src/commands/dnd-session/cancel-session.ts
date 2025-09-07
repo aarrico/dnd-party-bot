@@ -1,8 +1,8 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { BotCommandOptionInfo } from '../../utils/botDialogStrings';
-import { ExtendedInteraction } from '../../typings/Command';
-import { cancelSession } from '../../controllers/session';
-import { sendEphemeralReply } from '../../discord/message';
+import { BotCommandOptionInfo } from '../../utils/botDialogStrings.js';
+import { ExtendedInteraction } from '../../models/Command.js';
+import { cancelSession } from '../../controllers/session.js';
+import { sendEphemeralReply } from '../../discord/message.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -21,12 +21,8 @@ export default {
         .setRequired(true)
     ),
   async execute(interaction: ExtendedInteraction) {
-    const sessionId = interaction.options.get(
-      BotCommandOptionInfo.SessionId_Name
-    )?.value as string;
-    const reason = interaction.options.get(
-      BotCommandOptionInfo.CancelSession_ReasonName
-    )?.value as string;
+    const sessionId = interaction.options.getString(BotCommandOptionInfo.SessionId_Name, true);
+    const reason = interaction.options.getString(BotCommandOptionInfo.CancelSession_ReasonName, true);
 
     await cancelSession(sessionId, reason);
 

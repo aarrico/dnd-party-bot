@@ -1,65 +1,65 @@
-import { REST, Routes, ApplicationCommandOptionType } from "discord.js";
+import { ApplicationCommandOptionType, REST, Routes } from 'discord.js';
 
 const commands = [
   {
-    name: "hey",
-    description: "Replies with hey!",
+    name: 'hey',
+    description: 'Replies with hey!',
   },
   {
-    name: "ping",
-    description: "Replies with pong!",
+    name: 'ping',
+    description: 'Replies with pong!',
   },
   {
-    name: "add",
-    description: "adds two numbers!",
+    name: 'add',
+    description: 'adds two numbers!',
     options: [
       {
-        name: "first-number",
-        description: "The first number",
+        name: 'first-number',
+        description: 'The first number',
         type: ApplicationCommandOptionType.Number,
         choices: [
           {
-            name: "one",
+            name: 'one',
             value: 1,
           },
           {
-            name: "two",
+            name: 'two',
             value: 2,
           },
           {
-            name: "three",
+            name: 'three',
             value: 3,
           },
         ],
         required: true,
       },
       {
-        name: "second-number",
-        description: "The second number",
+        name: 'second-number',
+        description: 'The second number',
         type: ApplicationCommandOptionType.Number,
         required: true,
       },
     ],
   },
   {
-    name: "embed",
-    description: "creates an embed",
+    name: 'embed',
+    description: 'creates an embed',
   },
 ];
 
-const rest = new REST({ version: "10" }).setToken(process.env.TOKEN as string);
+const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN as string);
 
 (async () => {
   try {
-    console.log("registering slash commands...");
+    console.log('registering slash commands...');
     await rest.put(
       Routes.applicationGuildCommands(
-        process.env.CLIENT_ID as string,
+        process.env.DISCORD_CLIENT_ID as string,
         process.env.GUILD_ID as string
       ),
       { body: commands }
     );
-    console.log("Slash commands registered successfully...");
+    console.log('Slash commands registered successfully...');
   } catch (error) {
     console.log(`there was an error: ${error}`);
   }

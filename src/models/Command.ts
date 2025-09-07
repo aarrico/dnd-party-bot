@@ -1,13 +1,14 @@
 import {
   ChatInputApplicationCommandData,
-  CommandInteraction,
+  ChatInputCommandInteraction,
   CommandInteractionOptionResolver,
   GuildMember,
   PermissionResolvable,
+  SlashCommandBuilder,
 } from 'discord.js';
-import { ExtendedClient } from '../structures/ExtendedClient';
+import { ExtendedClient } from '../structures/ExtendedClient.js';
 
-export interface ExtendedInteraction extends CommandInteraction {
+export interface ExtendedInteraction extends ChatInputCommandInteraction {
   member: GuildMember;
 }
 
@@ -24,3 +25,9 @@ export type CommandType = {
   cooldown: number;
   callBack: RunFunction;
 } & ChatInputApplicationCommandData;
+
+// New interface that matches the actual command structure
+export interface DiscordCommand {
+  data: SlashCommandBuilder;
+  execute: (interaction: ExtendedInteraction) => Promise<void>;
+}

@@ -1,5 +1,5 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { ExtendedInteraction } from '../../typings/Command';
+import { ExtendedInteraction } from '../../models/Command.js';
 
 export default {
   data: new SlashCommandBuilder()

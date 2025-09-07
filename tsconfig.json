@@ -1,20 +1,5 @@
 {
-    "extends": "@tsconfig/node22/tsconfig.json",
-    "rootDir": "src",
-    "compilerOptions": {
-      "outDir": "dist",
-      "sourceMap": true,
-      "resolveJsonModule": true
-      // "allowImportingTsExtensions": true,
-      // "emitDeclarationOnly": true,
-      // "declaration": true
-    },
-    "include": ["src/**/*", "prisma/seed.ts"],
-    "exclude": ["node_modules"],
-    "ts-node": {
-      "esm":true
-    },
-    "types": [
-      "node"
-    ]
+  "extends": "./config/tsconfig.json",
+  "include": ["src/**/*", "prisma/seed.ts"],
+  "exclude": ["node_modules", "dist", "resources", ".idea", "config", "docker", "scripts"]
 }

@@ -1,7 +1,9 @@
+import { RoleType } from '@prisma/client';
+
 export interface PartyMember {
   userId: string;
   username: string;
-  role: string;
+  role: RoleType;
   channelId: string;
 }
 

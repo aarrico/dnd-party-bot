@@ -1,18 +1,20 @@
-import { prisma } from '../index';
-import { RoleType } from '@prisma/client';
-import { PartyMember } from '../typings/party';
+import { prisma } from '../index.js';
+import { PartyMember } from '../models/party.js';
 import {
   ListSessionsOptions,
   ListSessionsResult,
   Session,
   SessionWithParty,
-} from '../typings/session';
+} from '../models/session.js';
+import { RoleType } from '@prisma/client';
+import { client } from '../index.js';
 
 export const createSession = async (
   newSession: Session,
   userId: string
 ): Promise<void> => {
   const { campaignId, ...session } = newSession;
+  
   await prisma.session.create({
     data: {
       ...session,
@@ -20,7 +22,7 @@ export const createSession = async (
       partyMembers: {
         create: {
           user: { connect: { id: userId } },
-          role: RoleType.GAME_MASTER,
+          role: { connect: { id: RoleType.GAME_MASTER } },
         },
       },
     },
@@ -51,7 +53,7 @@ export const getSession = async (
       userId: member.user.id,
       username: member.user.username,
       channelId: member.user.channelId,
-      role: member.role,
+      role: member.role.id,
     })),
   };
 };
@@ -70,14 +72,19 @@ export const getParty = async (channelId: string): Promise<PartyMember[]> => {
     userId: partyMember.user.id,
     username: partyMember.user.username,
     channelId: partyMember.user.channelId,
-    role: partyMember.role,
+    role: partyMember.role.id,
   }));
 };
 
 export const getSessions = async (
   options: ListSessionsOptions
 ): Promise<ListSessionsResult[]> => {
-  const { userId = '', campaignId = '', includeCampaign = false } = options;
+  const {
+    userId = '',
+    campaignId = '',
+    includeCampaign = false,
+    includeUserRole = false,
+  } = options;
   const sessions = await prisma.session.findMany({
     where: {
       ...(userId && { partyMembers: { some: { userId } } }),
@@ -98,8 +105,8 @@ export const getSessions = async (
   return sessions.map((s) => {
     return {
       ...(includeCampaign && { campaign: s.campaign.name }),
-      ...(userId && {
-        userRole: s.partyMembers.find((pm) => pm.userId === userId)?.role,
+      ...(includeUserRole && {
+        userRole: s.partyMembers.find((pm) => pm.userId === userId)?.roleId,
       }),
       id: s.id,
       name: s.name,
@@ -135,6 +142,7 @@ export async function getSessionById(
       partyMembers: {
         include: {
           user: true,
+          role: true,
         },
       },
     },
@@ -149,7 +157,7 @@ export async function getSessionById(
       userId: member.user.id,
       username: member.user.username,
       channelId: member.user.channelId,
-      role: member.role,
+      role: member.role.id,
     })),
   };
 }
@@ -161,7 +169,7 @@ export const updateSession = async (
   sessionId: string,
   data: { name?: string; date?: Date; campaignId?: string }
 ): Promise<void> => {
-  prisma.session.update({
+  await prisma.session.update({
     where: { id: sessionId },
     data: {
       ...(data.name && { name: data.name }),

@@ -7,14 +7,11 @@ export type Session = {
   campaignId: string;
 };
 
-export interface SessionWithRole extends Session {
-  role: string;
-}
-
 export interface ListSessionsOptions {
   includeId: boolean;
   includeTime: boolean;
   includeCampaign: boolean;
+  includeUserRole: boolean;
   userId?: string;
   campaignId?: string;
   includeRole?: boolean;

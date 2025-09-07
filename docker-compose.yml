@@ -1,43 +1,31 @@
+# Production Docker Compose Configuration
+# 
+# This is a convenience file that references the actual configuration
+# For the real configuration, see: docker/docker-compose.prod.yml
+#
+# Usage:
+#   docker compose up              # Start production environment
+#   npm run start                  # Alternative using npm script
+#
+# For development:
+#   docker compose -f docker/docker-compose.dev.yml up
+#   npm run dev:docker             # Alternative using npm script
+
 services:
+  # Import from actual production configuration
   api:
-    container_name: api
-    restart: always
-    build: .
-    ports:
-      - ${PORT}:${PORT}
-    expose:
-      - ${PORT}
-    depends_on:
-      db:
-        condition: service_healthy
-    volumes:
-      - .:/usr/src/app
-      - postgres-data:/app/postgres-data
-    environment:
-        DB_PORT: ${DB_PORT}
-        DB_USER: ${DB_USER}
-        DB_NAME: ${DB_NAME}
-        DB_PASSWORD: ${DB_PASSWORD}
+    extends:
+      file: docker/docker-compose.prod.yml
+      service: api
 
   db:
-    container_name: postgres
-    restart: always
-    image: postgres
-    ports:
-      - ${DB_PORT}:${DB_PORT}
-    expose:
-      - ${DB_PORT}
-    healthcheck:
-      test: [ "CMD-SHELL", "sh -c 'pg_isready -U ${DB_USER} -d ${DB_NAME}'" ]
-      interval: 10s
-      timeout: 3s
-      retries: 3
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    extends:
+      file: docker/docker-compose.prod.yml
+      service: db
+
+networks:
+  app-network:
+    driver: bridge
 
 volumes:
   postgres-data:

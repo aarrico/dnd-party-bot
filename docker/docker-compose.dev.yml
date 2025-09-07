@@ -1,0 +1,60 @@
+services:
+  api-dev:
+    container_name: api-dev
+    restart: unless-stopped
+    build: 
+      context: ..
+      dockerfile: docker/Dockerfile.dev
+    ports:
+      - ${PORT:-3000}:${PORT:-3000}
+      - 9229:9229  # Debug port
+    network_mode: host
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      # Mount source code for hot reloading
+      - ../src:/usr/src/app/src:ro
+      - ../prisma:/usr/src/app/prisma:ro
+      - ../config/tsconfig.json:/usr/src/app/tsconfig.json:ro
+      - ../package.json:/usr/src/app/package.json:ro
+      # Use named volumes for node_modules to avoid conflicts
+      - node_modules_dev:/usr/src/app/node_modules
+      - postgres-data:/app/postgres-data
+    environment:
+      NODE_ENV: development
+      DB_HOST: localhost
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_NAME: ${DB_NAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      PORT: ${PORT:-3000}
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@localhost:${DB_PORT}/${DB_NAME}
+      DISCORD_TOKEN: ${DISCORD_TOKEN}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
+      GUILD_ID: ${GUILD_ID}
+
+  db:
+    container_name: postgres
+    restart: unless-stopped
+    image: postgres:18rc1-alpine
+    ports:
+      - ${DB_PORT}:${DB_PORT}
+    network_mode: host
+    healthcheck:
+      test: [ "CMD-SHELL", "sh -c 'pg_isready -U ${DB_USER} -d ${DB_NAME}'" ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+
+volumes:
+  postgres-data:
+    name: postgres-data
+  node_modules_dev:
+    name: node_modules_dev

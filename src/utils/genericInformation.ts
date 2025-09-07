@@ -1,50 +1,50 @@
 export const monthOptionChoicesArray = [
   {
-    name: "January",
+    name: 'January',
     value: 0,
   },
   {
-    name: "February",
+    name: 'February',
     value: 1,
   },
   {
-    name: "March",
+    name: 'March',
     value: 2,
   },
   {
-    name: "April",
+    name: 'April',
     value: 3,
   },
   {
-    name: "May",
+    name: 'May',
     value: 4,
   },
   {
-    name: "June",
+    name: 'June',
     value: 5,
   },
   {
-    name: "July",
+    name: 'July',
     value: 6,
   },
   {
-    name: "August",
+    name: 'August',
     value: 7,
   },
   {
-    name: "September",
+    name: 'September',
     value: 8,
   },
   {
-    name: "October",
+    name: 'October',
     value: 9,
   },
   {
-    name: "November",
+    name: 'November',
     value: 10,
   },
   {
-    name: "December",
+    name: 'December',
     value: 11,
   },
 ];

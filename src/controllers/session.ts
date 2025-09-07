@@ -1,5 +1,3 @@
-import { TextChannel } from 'discord.js';
-import { getActiveCampaign } from '../db/campaign';
 import {
   createSession,
   deleteSessionById,
@@ -8,66 +6,60 @@ import {
   getSessionById,
   getSessions,
   updateSession,
-} from '../db/session';
+} from '../db/session.js';
 import {
-  createChannel,
-  deleteChannel,
-  renameChannel,
-} from '../discord/channel';
-import { createSessionMessage, sendEphemeralReply } from '../discord/message';
-import { client } from '../index';
-import { ExtendedInteraction } from '../typings/Command';
-import { AvatarOptions, PartyMemberImgInfo } from '../typings/discord';
-import { PartyMember, RoleSelectionStatus } from '../typings/party';
-import { ListSessionsOptions, ListSessionsResult } from '../typings/session';
-import { getPNGAttachmentBuilder } from '../utils/attachmentBuilders';
-import {
-  BotAttachmentFileNames,
-  BotCommandOptionInfo,
-  BotDialogs,
-  BotPaths,
-} from '../utils/botDialogStrings';
-import DateChecker from '../utils/dateChecker';
-import { createSessionImage } from '../utils/sessionImage';
-import { addUserToParty, updatePartyMemberRole } from '../db/user';
+  createSessionMessage,
+  sendEphemeralReply,
+} from '../discord/message.js';
+import { client } from '../index.js';
+import { ExtendedInteraction } from '../models/Command.js';
+import { AvatarOptions, PartyMemberImgInfo } from '../models/discord.js';
+import { PartyMember, RoleSelectionStatus } from '../models/party.js';
+import { ListSessionsOptions, ListSessionsResult } from '../models/session.js';
+import { BotCommandOptionInfo, BotDialogs } from '../utils/botDialogStrings.js';
+import DateChecker from '../utils/dateChecker.js';
+import { addUserToParty, updatePartyMemberRole, upsertUser } from '../db/user';
 import { deletePartyMember } from '../db/partyMember';
+import { TextChannel } from 'discord.js';
+import { createChannel, deleteChannel, renameChannel } from '../discord/channel';
+import { RoleType } from '@prisma/client';
+import { findCampaign } from './campaign.js';
 
 export const initSession = async (
   guildId: string,
   sessionName: string,
   date: Date,
   username: string,
-  userId: string
+  userId: string,
+  campaignOption: string,
+  newCampaignName?: string
 ): Promise<string> => {
-  const activeCampaign = await getActiveCampaign(guildId);
 
-  const newSessionId = await createChannel(
-    guildId,
-    activeCampaign.id,
+  const campaign = await findCampaign(guildId, campaignOption, newCampaignName);
+
+  const sessionChannel = await createChannel(
+    campaign.guildId,
+    campaign.id,
     sessionName
   );
 
   const newSession = {
-    id: newSessionId,
+    id: sessionChannel.id,
     name: sessionName,
-    date: date,
-    campaignId: activeCampaign.id,
+    date,
+    campaignId: campaign.id,
   };
-
-  // const userData = {
-  //   username,
-  //   id: userId,
-  //   sessionId: newSessionId,
-  // };
 
   await createSessionMessage(client, newSession);
 
-  // do some db wizardry
+  const user = await client.users.fetch(userId);
+  const dmChannel = await user.createDM();
+  await upsertUser(userId, username, dmChannel.id);
+  
   await createSession(newSession, userId);
-  await createSessionImage(newSessionId);
 
   return BotDialogs.createSessionDMSessionTime(
-    activeCampaign.name,
+    campaign.name,
     sessionName,
     date
   );
@@ -115,25 +107,12 @@ export const modifySession = async (interaction: ExtendedInteraction) => {
       BotDialogs.sessions.updated(session.name),
       interaction
     );
-
-    await createSessionImage(sessionId);
-
-    const attachment = getPNGAttachmentBuilder(
-      `${BotPaths.TempDir}${BotAttachmentFileNames.CurrentSession}`,
-      BotAttachmentFileNames.CurrentSession
-    );
-
-    const channel = await client.channels.fetch(sessionId);
-    if (channel && channel.isTextBased()) {
-      const messages = await channel.messages.fetchPinned();
-      const message = messages.at(0);
-      message?.edit({
-        content: BotDialogs.interactionCreateNewSessionAnnouncement,
-        files: [attachment],
-      });
-    }
   } catch (error) {
-    await sendEphemeralReply(`There was an error: ${error}`, interaction);
+    console.error('Error modifying session:', error);
+    await sendEphemeralReply(
+      'An error occurred while modifying the session.',
+      interaction
+    );
   }
 };
 
@@ -154,16 +133,17 @@ export const processRoleSelection = async (
   const existingMember = party.find(
     (member) => member.userId === newPartyMember.userId
   );
-  if (!existingMember) {
-    await addUserToParty(newPartyMember.userId, sessionId, newPartyMember.role);
-    return RoleSelectionStatus.ADDED_TO_PARTY;
-  }
 
-  if (newPartyMember.role === 'game-master') {
+  if (newPartyMember.role === RoleType.GAME_MASTER) {
     return RoleSelectionStatus.INVALID;
   }
 
-  if (newPartyMember.role === existingMember.role) {
+  if (!existingMember) {
+    await addUserToParty(newPartyMember.userId, sessionId, newPartyMember.role, newPartyMember.username);
+    return RoleSelectionStatus.ADDED_TO_PARTY;
+  }
+
+  if (existingMember.role === newPartyMember.role) {
     await deletePartyMember(existingMember.userId, sessionId);
     return RoleSelectionStatus.REMOVED_FROM_PARTY;
   }

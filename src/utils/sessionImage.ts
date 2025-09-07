@@ -1,32 +1,36 @@
 import sharp, { OverlayOptions } from 'sharp';
-
-import { getSessionById } from '../db/session';
-import { getRoleImage, getRoleName, roles } from './role';
-import { BotAttachmentFileNames, BotPaths } from './botDialogStrings';
-import { getPartyInfoForImg } from '../controllers/session';
-import { Session } from '../typings/session';
+import { getSessionById } from '../db/session.js';
+import { BotAttachmentFileNames, BotPaths } from './botDialogStrings.js';
+import { getPartyInfoForImg } from '../controllers/session.js';
+import {
+  getRoleByString,
+  getRoleImage,
+  RoleType,
+} from '../models/role.js';
+import { Session } from '../models/session.js';
 
 const coords = {
-  dm: { width: 350, height: 350, x: 1185, y: 390 },
   member: { width: 300, height: 300, x: [365, 795, 1225, 1655, 2085], y: 1700 },
+  dm: { width: 300, height: 300, x: 1225, y: 400 }, // Added missing dm coordinates
   sessionName: { x: 585, y: 940 },
   date: { x: 1035, y: 1140 },
   role: { yImg: 1300, yName: 2150, width: 300, height: 300 },
 };
 
 export const createSessionImage = async (channelId: string): Promise<void> => {
-  const [users, session] = await Promise.all([
-    getPartyInfoForImg(channelId),
-    getSessionById(channelId),
-  ]);
+  const users = await getPartyInfoForImg(channelId);
+  const session = await getSessionById(channelId);
 
-  const sessionOverlays = await placeSessionInfo(session);
+  // Find the game master using our new role system
+  const dm = users.find((member) => {
+    const roleData = getRoleByString(member.role);
+    return roleData.id === RoleType.GAME_MASTER;
+  });
 
-  const dm = users.find((member) => member.role === roles.DM);
   if (!dm) {
-    console.error(`No Dungeon Master found for session ${session.name}`);
     throw new Error('no dungeon master');
   }
+
   const dmOverlay = await placeUserAvatar(
     dm.userAvatarURL,
     coords.dm.width,
@@ -35,23 +39,28 @@ export const createSessionImage = async (channelId: string): Promise<void> => {
     coords.dm.y
   );
 
-  const partyMembers = users.filter((member) => member.role !== roles.DM);
-  const partyOverlays = (
-    await Promise.all(
-      partyMembers.flatMap((member, index) => [
-        placeUserAvatar(
-          member.userAvatarURL,
-          coords.member.width,
-          coords.member.height,
-          coords.member.x[index],
-          coords.member.y
-        ),
-        placeRole(member.role, index),
-      ])
-    )
-  ).flat();
+  // Filter out the game master from party members
+  const partyMembers = users.filter((member) => {
+    const roleData = getRoleByString(member.role);
+    return roleData.id !== RoleType.GAME_MASTER;
+  });
 
-  await sharp(BotPaths.SessionBackdrop)
+  const partyOverlays: OverlayOptions[] = [];
+  for (const [index, member] of partyMembers.entries()) {
+    const avatarOverlay = await placeUserAvatar(
+      member.userAvatarURL,
+      coords.member.width,
+      coords.member.height,
+      coords.member.x[index],
+      coords.member.y
+    );
+    const roleOverlays = await placeRole(member.role, index);
+    partyOverlays.push(avatarOverlay, ...roleOverlays);
+  }
+
+  const sessionOverlays = await placeSessionInfo(session);
+
+  await sharp('../../resources/images/backdrop.png')
     .composite([...sessionOverlays, dmOverlay, ...partyOverlays])
     .toFile(BotPaths.TempDir + BotAttachmentFileNames.CurrentSession);
 };
@@ -101,14 +110,15 @@ const placeRole = async (
   role: string,
   slot: number
 ): Promise<OverlayOptions[]> => {
-  const roleImage = await sharp(getRoleImage(role))
+  const roleData = getRoleByString(role);
+  const roleImage = await sharp(getRoleImage(roleData))
     .resize(coords.role.width, coords.role.height)
     .toBuffer();
 
   return [
     { input: roleImage, left: coords.member.x[slot], top: coords.role.yImg },
     {
-      input: await createTextOverlay(getRoleName(role)),
+      input: await createTextOverlay(roleData.displayName),
       left: coords.member.x[slot],
       top: coords.role.yName,
     },
@@ -118,7 +128,7 @@ const placeRole = async (
 const createTextOverlay = async (text: string): Promise<Buffer> => {
   // Create text overlay using SVG
   const svg = `
-    <svg width="500" height="100">
+    <svg width="400" height="100">
       <text
         x="0"
         y="50"

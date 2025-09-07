@@ -55,7 +55,7 @@ model Campaign {
 // discord channel with channel type GUILD_TEXT
 model Session {
   id         String   @id // discord channel id
-  campaignId String   @unique @map("campaign_id")
+  campaignId String   @map("campaign_id")
   campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   name       String
   date       DateTime
@@ -91,21 +91,24 @@ model GuildMember {
 }
 
 model PartyMember {
-  sessionId String  @map("session_id")
-  session   Session @relation(fields: [sessionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  userId    String  @map("user_id")
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  role      String
+  sessionId String   @map("session_id")
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  roleId    RoleType @map("role_id")
+  role      Role     @relation(fields: [roleId], references: [id])
 
   @@id(fields: [sessionId, userId], name: "party_member_id")
   @@map("party_member")
 }
 
 model Role {
-  id      String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name    String
-  type    RoleType
-  emojiId String   @map("emoji_id")
+  id          RoleType      @id
+  emojiId     String        @map("emoji_id")
+  displayName String        @default("") @map("display_name")
+  imagePath   String        @default("") @map("image_path")
+  description String?       @map("description")
+  PartyMember PartyMember[]
 
   @@map("role")
 }

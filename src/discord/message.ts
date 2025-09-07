@@ -1,17 +1,12 @@
-import {
-  AttachmentBuilder,
-  ButtonInteraction,
-  ChannelType,
-  MessagePayload,
-  TextChannel,
-} from 'discord.js';
-import { ExtendedClient } from '../structures/ExtendedClient';
-import { roleButtons } from '../index';
-import { ExtendedInteraction } from '../typings/Command';
+import { AttachmentBuilder, ButtonInteraction, ChannelType, MessageFlags, MessagePayload, TextChannel } from 'discord.js';
+import { ExtendedClient } from '../structures/ExtendedClient.js';
+import { roleButtons } from '../index.js';
+import { ExtendedInteraction } from '../models/Command.js';
 
-import { Session } from '../typings/session';
-import { BotDialogs } from '../utils/botDialogStrings';
+import { Session } from '../models/session.js';
+import { BotAttachmentFileNames, BotDialogs, BotPaths } from '../utils/botDialogStrings';
 import { createChannel } from './channel';
+import { getPNGAttachmentBuilder } from '../utils/attachmentBuilders.js';
 
 export const createSessionMessage = async (
   client: ExtendedClient,
@@ -34,15 +29,14 @@ export const createSessionMessage = async (
       session.name
     );
 
-    // const attachment = getPNGAttachmentBuilder(
-    //   `${BotPaths.TempDir}${BotAttachmentFileNames.CurrentSession}`,
-    //   BotAttachmentFileNames.CurrentSession
-    // );
-    // content: `🎉 New session - ${session.name} has been scheduled for ${session.date}! Choose a role below 🧙`,
+    const attachment = getPNGAttachmentBuilder(
+      `${BotPaths.TempDir}${BotAttachmentFileNames.CurrentSession}`,
+      BotAttachmentFileNames.CurrentSession
+    );
 
     const sentMessage = await sessionChannel.send({
       content: BotDialogs.sessions.scheduled(session.name, session.date),
-      //files: [attachment],
+      files: [attachment],
       components: roleButtons,
     });
 
@@ -64,21 +58,46 @@ export const sendChannelDisappearingMessage = async (
     return;
   }
 
-  setTimeout(async () => {
-    await msg.delete();
+  setTimeout(() => {
+    void msg.delete();
   }, 1000 * duration);
 };
 
-export const sendEphemeralReply = (
+export const sendEphemeralReply = async (
   messageContent: string,
   interaction: ExtendedInteraction,
   files?: AttachmentBuilder[]
-) =>
-  interaction.reply({
-    content: messageContent,
-    files: files ? [...files] : undefined,
-    ephemeral: true,
-  });
+) => {
+  try {
+    if (interaction.replied || interaction.deferred) {
+      // If already replied or deferred, use followUp
+      return await interaction.followUp({
+        content: messageContent,
+        files: files ? [...files] : undefined,
+        flags: MessageFlags.Ephemeral
+      });
+    } else {
+      // If not replied yet, use reply
+      return await interaction.reply({
+        content: messageContent,
+        files: files ? [...files] : undefined,
+        flags: MessageFlags.Ephemeral
+      });
+    }
+  } catch (error) {
+    console.error('Error in sendEphemeralReply:', error);
+    // If all else fails, try editReply
+    try {
+      return await interaction.editReply({
+        content: messageContent,
+        files: files ? [...files] : undefined
+      });
+    } catch (editError) {
+      console.error('Error in editReply fallback:', editError);
+      throw editError;
+    }
+  }
+};
 
 export const sendMessageReplyDisappearingMessage = async (
   interaction: ButtonInteraction,
@@ -87,14 +106,14 @@ export const sendMessageReplyDisappearingMessage = async (
 ) => {
   const msg = await interaction.reply({
     content,
-    ephemeral: true,
+    flags: MessageFlags.Ephemeral
   });
 
   if (duration === -1) {
     return;
   }
 
-  setTimeout(async () => {
-    await msg.delete();
+  setTimeout(() => {
+    void msg.delete();
   }, 1000 * duration);
 };

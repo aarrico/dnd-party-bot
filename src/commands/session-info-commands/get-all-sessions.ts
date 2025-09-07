@@ -6,11 +6,14 @@ import {
   BotDialogs,
   BotPaths,
 } from '../../utils/botDialogStrings';
-import { ExtendedInteraction } from '../../typings/Command';
-import { formatSessionsAsStr, listSessions } from '../../controllers/session';
-import { getTxtAttachmentBuilder } from '../../utils/attachmentBuilders';
-import { sendEphemeralReply } from '../../discord/message';
-import { ListSessionsOptions } from '../../typings/session';
+import { ExtendedInteraction } from '../../models/Command.js';
+import {
+  formatSessionsAsStr,
+  listSessions,
+} from '../../controllers/session.js';
+import { getTxtAttachmentBuilder } from '../../utils/attachmentBuilders.js';
+import { sendEphemeralReply } from '../../discord/message.js';
+import { ListSessionsOptions } from '../../models/session';
 
 export default {
   data: new SlashCommandBuilder()
@@ -33,23 +36,13 @@ export default {
     ),
   async execute(interaction: ExtendedInteraction) {
     try {
-      const includeSessionId = interaction.options.get(
-        BotCommandOptionInfo.SessionId_Name,
-        true
-      )?.value as boolean;
-
-      const includeTime = interaction.options.get(
-        BotCommandOptionInfo.SessionTime_Name,
-        true
-      )?.value as boolean;
-
-      const includeCampaign = interaction.options.get(
-        BotCommandOptionInfo.CampaignName_Name,
-        true
-      )?.value as boolean;
+      const includeId = interaction.options.getBoolean(BotCommandOptionInfo.SessionId_Name) ?? false;
+      const includeTime = interaction.options.getBoolean(BotCommandOptionInfo.SessionTime_Name) ?? false;
+      const includeCampaign = interaction.options.getBoolean(BotCommandOptionInfo.CampaignName_Name) ?? false;
 
       const options: ListSessionsOptions = {
-        includeId: includeSessionId,
+        includeId,
+        includeUserRole: false,
         includeTime,
         includeCampaign,
       };

@@ -1,4 +1,4 @@
-import { Event } from '../../structures/Event';
+import { Event } from '../../structures/Event.js';
 import { Events } from 'discord.js';
 
 export default new Event(Events.ClientReady, () => {

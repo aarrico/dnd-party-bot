@@ -1,28 +1,27 @@
 import {
-  ActionRow,
-  ButtonComponent,
   ButtonInteraction,
   CacheType,
   ChannelType,
+  ChatInputCommandInteraction,
   CommandInteraction,
   CommandInteractionOptionResolver,
-  ComponentType,
-  MessageActionRowComponent,
+  Events,
 } from 'discord.js';
-import { client } from '../..';
-import { Event } from '../../structures/Event';
-import { ExtendedInteraction } from '../../typings/Command';
-import { sendMessageReplyDisappearingMessage } from '../../discord/message';
-import { createSessionImage } from '../../utils/sessionImage';
-import { getPNGAttachmentBuilder } from '../../utils/attachmentBuilders';
+import { client } from '../../index.js';
+import { Event } from '../../structures/Event.js';
+import { ExtendedInteraction } from '../../models/Command.js';
+import { sendMessageReplyDisappearingMessage } from '../../discord/message.js';
+import { createSessionImage } from '../../utils/sessionImage.js';
+import { getPNGAttachmentBuilder } from '../../utils/attachmentBuilders.js';
 import {
   BotAttachmentFileNames,
   BotDialogs,
   BotPaths,
   getAddPartyMemberMsg,
-} from '../../utils/botDialogStrings';
-import { processRoleSelection } from '../../controllers/session';
-import { PartyMember } from '../../typings/party';
+} from '../../utils/botDialogStrings.js';
+import { processRoleSelection } from '../../controllers/session.js';
+import { PartyMember } from '../../models/party';
+import { getRoleByString } from '../../models/role.js';
 
 const partyMemberJoined = async (
   userId: string,
@@ -30,11 +29,12 @@ const partyMemberJoined = async (
   role: string,
   channelId: string
 ): Promise<string> => {
+  const roleType = getRoleByString(role);
   const newPartyMember: PartyMember = {
     userId,
     username,
     channelId,
-    role,
+    role: roleType.id,
   };
 
   const roleSelectionStatus = await processRoleSelection(
@@ -45,38 +45,15 @@ const partyMemberJoined = async (
   return getAddPartyMemberMsg(roleSelectionStatus, newPartyMember);
 };
 
-const getClickedRole = (
-  components: ActionRow<MessageActionRowComponent>[],
-  buttonId: string
-): ButtonComponent => {
-  for (const component of components) {
-    for (const sub of component.components) {
-      if (
-        sub.type === ComponentType.Button &&
-        sub.customId === buttonId &&
-        sub.label
-      ) {
-        return sub;
-      }
-    }
-  }
-
-  throw new Error('something went wrong getting the button from discord');
-};
-
 const processCommand = async (
-  interaction: CommandInteraction<CacheType>
+  interaction: ChatInputCommandInteraction<CacheType>
 ): Promise<void> => {
   const command = client.commands.get(interaction.commandName);
   if (!command) {
     await interaction.reply(BotDialogs.interactionCreateNonexistentCommand);
     return;
   }
-  command.callBack({
-    args: interaction.options as CommandInteractionOptionResolver,
-    client,
-    interaction: interaction as ExtendedInteraction,
-  });
+  await command.execute(interaction as ExtendedInteraction);
 };
 
 const processButton = async (
@@ -92,15 +69,10 @@ const processButton = async (
     throw new Error('something went wrong getting the message from discord');
   }
 
-  const buttonClicked = getClickedRole(
-    interaction.message.components,
-    interaction.customId
-  );
-
   const result = await partyMemberJoined(
     interaction.user.id,
     interaction.user.displayName,
-    buttonClicked.label || '',
+    interaction.customId,
     interaction.channelId
   );
 
@@ -118,8 +90,8 @@ const processButton = async (
   });
 };
 
-export default new Event('interactionCreate', async (interaction) => {
-  if (interaction.isCommand()) {
+export default new Event(Events.InteractionCreate, async (interaction) => {
+  if (interaction.isCommand() && interaction.isChatInputCommand()) {
     await processCommand(interaction);
   } else if (interaction.isButton()) {
     await processButton(interaction);
