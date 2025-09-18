@@ -1,5 +1,4 @@
 import sharp, { OverlayOptions } from 'sharp';
-import { getSessionById } from '../db/session.js';
 import { BotAttachmentFileNames, BotPaths } from './botDialogStrings.js';
 import { getPartyInfoForImg } from '../controllers/session.js';
 import {
@@ -8,6 +7,9 @@ import {
   RoleType,
 } from '../models/role.js';
 import { Session } from '../models/session.js';
+import fs from 'fs';
+import path from 'path';
+import { getSessionById } from '../db/session.js';
 
 const coords = {
   member: { width: 300, height: 300, x: [365, 795, 1225, 1655, 2085], y: 1700 },
@@ -17,18 +19,21 @@ const coords = {
   role: { yImg: 1300, yName: 2150, width: 300, height: 300 },
 };
 
-export const createSessionImage = async (channelId: string): Promise<void> => {
-  const users = await getPartyInfoForImg(channelId);
-  const session = await getSessionById(channelId);
+export const createSessionImage = async (sessionId: string): Promise<void> => {
+  // Ensure temp directory exists
+  if (!fs.existsSync(BotPaths.TempDir)) {
+    fs.mkdirSync(BotPaths.TempDir, { recursive: true });
+  }
 
-  // Find the game master using our new role system
+  const users = await getPartyInfoForImg(sessionId);
+
   const dm = users.find((member) => {
     const roleData = getRoleByString(member.role);
     return roleData.id === RoleType.GAME_MASTER;
   });
 
   if (!dm) {
-    throw new Error('no dungeon master');
+    throw new Error('game master cannot change roles');
   }
 
   const dmOverlay = await placeUserAvatar(
@@ -58,24 +63,33 @@ export const createSessionImage = async (channelId: string): Promise<void> => {
     partyOverlays.push(avatarOverlay, ...roleOverlays);
   }
 
-  const sessionOverlays = await placeSessionInfo(session);
+  const session = await getSessionById(sessionId);
+  if (!session) {
+    throw new Error('Session not found');
+  }
+  const sessionName = session.name;
+  const sessionDate = session.date;
 
-  await sharp('../../resources/images/backdrop.png')
+  const sessionOverlays = await placeSessionInfo(sessionName, sessionDate);
+
+  const outputPath = path.join(BotPaths.TempDir, BotAttachmentFileNames.CurrentSession);
+  await sharp(BotPaths.SessionBackdrop)
     .composite([...sessionOverlays, dmOverlay, ...partyOverlays])
-    .toFile(BotPaths.TempDir + BotAttachmentFileNames.CurrentSession);
+    .toFile(outputPath);
 };
 
 const placeSessionInfo = async (
-  session: Session
+  sessionName: string,
+  sessionDate: Date
 ): Promise<OverlayOptions[]> => {
   return [
     {
-      input: await createTextOverlay(session.name),
+      input: await createTextOverlay(sessionName),
       left: coords.sessionName.x,
       top: coords.sessionName.y,
     },
     {
-      input: await createTextOverlay(session.date.toUTCString()),
+      input: await createTextOverlay(sessionDate.toUTCString()),
       left: coords.date.x,
       top: coords.date.y,
     },

@@ -50,13 +50,20 @@ export const initSession = async (
     campaignId: campaign.id,
   };
 
-  await createSessionMessage(client, newSession);
-
   const user = await client.users.fetch(userId);
   const dmChannel = await user.createDM();
   await upsertUser(userId, username, dmChannel.id);
-  
+
+
+  await sessionChannel.permissionOverwrites.edit(userId, {
+    ViewChannel: true, 
+    SendMessages: true
+  });
+
+
   await createSession(newSession, userId);
+
+  await createSessionMessage(newSession);  
 
   return BotDialogs.createSessionDMSessionTime(
     campaign.name,
@@ -170,19 +177,21 @@ export const getPartyInfoForImg = async (
     forceStatic: true,
   };
 
-  return channel.members.map((member) => {
-    const matchingUser = party.find((pm) => pm.userId === member.id);
-    if (!matchingUser) {
-      throw new Error('cannot find user for session');
-    }
+  return channel.members
+    .map((member) => {
+      const matchingUser = party.find((pm) => pm.userId === member.id);
+      if (!matchingUser) {
+        return null;
+      }
 
-    return {
-      userId: member.id,
-      username: member.displayName,
-      userAvatarURL: member.displayAvatarURL(avatarOptions),
-      role: matchingUser.role,
-    };
-  });
+      return {
+        userId: member.id,
+        username: member.displayName,
+        userAvatarURL: member.displayAvatarURL(avatarOptions),
+        role: matchingUser.role,
+      };
+    })
+    .filter((member): member is NonNullable<typeof member> => member !== null);
 };
 
 export const listSessions = async (

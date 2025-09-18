@@ -77,7 +77,7 @@ const processButton = async (
   );
 
   await sendMessageReplyDisappearingMessage(interaction, result);
-  await createSessionImage(interaction.message.id);
+  await createSessionImage(channel.id);
 
   const attachment = getPNGAttachmentBuilder(
     `${BotPaths.TempDir}${BotAttachmentFileNames.CurrentSession}`,

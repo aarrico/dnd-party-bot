@@ -28,8 +28,7 @@ export const BotDialogs = {
     scheduled: (
       name: string,
       date: Date
-    ) => `🤖🗓️ Session ${name} has been scheduled for ${date.toLocaleString()}!\n \
-    🤖⚙️ Please wait a moment while I get things ready!`,
+    ) => `🤖🗓️ Session ${name} has been scheduled for ${date.toLocaleString()}!\n`,
   },
 
   users: {

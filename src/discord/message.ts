@@ -1,15 +1,16 @@
 import { AttachmentBuilder, ButtonInteraction, ChannelType, MessageFlags, MessagePayload, TextChannel } from 'discord.js';
 import { ExtendedClient } from '../structures/ExtendedClient.js';
-import { roleButtons } from '../index.js';
+import { client, roleButtons } from '../index.js';
 import { ExtendedInteraction } from '../models/Command.js';
 
 import { Session } from '../models/session.js';
 import { BotAttachmentFileNames, BotDialogs, BotPaths } from '../utils/botDialogStrings';
 import { createChannel } from './channel';
 import { getPNGAttachmentBuilder } from '../utils/attachmentBuilders.js';
+import { createSessionImage } from '../utils/sessionImage.js';
+import { inspect } from 'util';
 
 export const createSessionMessage = async (
-  client: ExtendedClient,
   session: Session
 ) => {
   try {
@@ -23,18 +24,19 @@ export const createSessionMessage = async (
       );
     }
 
-    const sessionChannel = await createChannel(
-      campaignChannel.guildId,
-      session.campaignId,
-      session.name
-    );
+    await createSessionImage(session.id);
 
     const attachment = getPNGAttachmentBuilder(
-      `${BotPaths.TempDir}${BotAttachmentFileNames.CurrentSession}`,
+      `${BotPaths.TempDir}/${BotAttachmentFileNames.CurrentSession}`,
       BotAttachmentFileNames.CurrentSession
     );
 
-    const sentMessage = await sessionChannel.send({
+    const channel = await client.channels.fetch(session.id);
+    if (!channel || !(channel instanceof TextChannel)) {
+      throw new Error(`Channel not found or inaccessible: ${session.id}`);
+    }
+
+    const sentMessage = await channel.send({
       content: BotDialogs.sessions.scheduled(session.name, session.date),
       files: [attachment],
       components: roleButtons,
@@ -42,7 +44,7 @@ export const createSessionMessage = async (
 
     return sentMessage.id;
   } catch (error) {
-    return `error caught: ${error}`;
+    console.error(`Error creating session channel:`, inspect(error, { depth: null, colors: true }));
   }
 };
 

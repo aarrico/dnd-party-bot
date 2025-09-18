@@ -1,6 +1,7 @@
 import { Role } from '@prisma/client';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { RoleType } from '../models/role.js';
+import { client } from '../index.js';
 
 export const createActionRowOfButtons = (
   roles: Role[]
@@ -13,12 +14,18 @@ export const createActionRowOfButtons = (
     const row = new ActionRowBuilder<ButtonBuilder>();
 
     rolesForRow.forEach((role) => {
-      row.components.push(
-        new ButtonBuilder()
-          .setCustomId(role.id)
-          .setStyle(ButtonStyle.Secondary)
-          .setEmoji(`<:${role.displayName}:${role.emojiId}>`)
-      );
+      const button = new ButtonBuilder()
+        .setCustomId(role.id)
+        .setStyle(ButtonStyle.Secondary)
+        .setLabel(role.displayName);
+
+        const emoji = client.emojis.cache.find(e => e.name === role.emojiId);
+      
+      if (emoji) {
+        button.setEmoji(emoji);
+      }
+
+      row.components.push(button);
     });
 
     rows.push(row);

@@ -59,16 +59,16 @@ export const getSession = async (
 };
 
 export const getParty = async (channelId: string): Promise<PartyMember[]> => {
-  const session = await prisma.session.findFirst({
-    where: { id: channelId },
-    select: { partyMembers: { select: { user: true, role: true } } },
+  const partyMembers = await prisma.partyMember.findMany({
+    where: { sessionId: channelId },
+    include: { user: true, role: true },
   });
 
-  if (!session) {
+  if (!partyMembers || partyMembers.length === 0) {
     throw new Error(`Cannot find party for ${channelId}`);
   }
 
-  return session.partyMembers.map((partyMember) => ({
+  return partyMembers.map((partyMember) => ({
     userId: partyMember.user.id,
     username: partyMember.user.username,
     channelId: partyMember.user.channelId,

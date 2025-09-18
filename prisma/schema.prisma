@@ -48,7 +48,6 @@ model Campaign {
 
   sessions Session[]
 
-  @@unique([guildId, active], name: "one_active_campaign_per_guild", map: "one_active_campaign_per_guild_index")
   @@map("campaign")
 }
 
