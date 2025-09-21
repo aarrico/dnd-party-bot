@@ -154,6 +154,7 @@ export async function getSessionById(
     date: session.date,
     campaignId: session.campaignId,
     partyMessageId: session.partyMessageId,
+    status: session.status as 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED',
     partyMembers: session.partyMembers.map((member) => ({
       userId: member.user.id,
       username: member.user.username,

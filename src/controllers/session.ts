@@ -1,6 +1,5 @@
 import {
   createSession,
-  deleteSessionById,
   getParty,
   getSession,
   getSessionById,
@@ -21,8 +20,9 @@ import DateChecker from '../utils/dateChecker.js';
 import { addUserToParty, updatePartyMemberRole, upsertUser } from '../db/user';
 import { deletePartyMember } from '../db/partyMember';
 import { Guild } from 'discord.js';
-import { createChannel, deleteChannel, renameChannel } from '../discord/channel';
+import { createChannel, renameChannel } from '../discord/channel';
 import { RoleType } from '@prisma/client';
+import { sessionScheduler } from '../services/sessionScheduler.js';
 import { CreateSessionData } from '../models/session.js';
 
 export const initSession = async (
@@ -38,7 +38,6 @@ export const initSession = async (
     sessionName
   );
 
-  // Create initial session data for sending the message
   const newSession: CreateSessionData = {
     id: sessionChannel.id,
     name: sessionChannel.name,
@@ -58,13 +57,13 @@ export const initSession = async (
 
   const session = await createSession(newSession, userId);
 
-  // Convert the Prisma session to our Session model format
   const sessionForMessage: Session = {
     id: session.id,
     name: session.name,
     date: session.date,
     campaignId: session.campaignId,
     partyMessageId: session.partyMessageId ?? '',
+    status: session.status as 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED',
   };
 
   const partyMessageId = await sendNewSessionMessage(sessionForMessage, sessionChannel);
@@ -72,6 +71,9 @@ export const initSession = async (
 
   const updatedSession = await updateSession(session.id, { partyMessageId });
   console.log(`Updated session with partyMessageId: ${updatedSession.partyMessageId}`);
+
+  sessionScheduler.scheduleSessionTasks(session.id, session.date);
+  console.log(`Scheduled tasks for session ${session.id} at ${session.date.toISOString()}`);
 
   return BotDialogs.createSessionDMSessionTime(
     campaign,
@@ -83,14 +85,17 @@ export const cancelSession = async (sessionId: string, reason: string) => {
   const session = await getSession(sessionId);
 
   for (const partyMember of session.partyMembers) {
-    const user = await client.users.fetch(partyMember.channelId);
+    const user = await client.users.fetch(partyMember.userId);
     await user.send({
-      content: `🚨 Notice: ${session.name} on ${session.date.toDateString()} has been canceled!\n${reason}`,
+      content: reason,
     });
   }
 
-  await deleteChannel(session.id, reason);
-  await deleteSessionById(sessionId);
+  sessionScheduler.cancelSessionTasks(sessionId);
+  console.log(`Canceled scheduled tasks for manually canceled session ${sessionId}`);
+
+  //await deleteChannel(session.id, reason);
+  await updateSession(sessionId, { status: 'CANCELED' });
 };
 
 export const modifySession = async (interaction: ExtendedInteraction) => {
@@ -103,10 +108,12 @@ export const modifySession = async (interaction: ExtendedInteraction) => {
     const newProposedDate = DateChecker(interaction);
 
     const session = await getSessionById(sessionId);
+    let dateChanged = false;
 
     if (newProposedDate) {
-      if (session.date.getDate() !== newProposedDate.getDate()) {
+      if (session.date.getTime() !== newProposedDate.getTime()) {
         session.date = newProposedDate;
+        dateChanged = true;
       }
     }
 
@@ -116,6 +123,11 @@ export const modifySession = async (interaction: ExtendedInteraction) => {
     }
 
     await updateSession(sessionId, session);
+
+    if (dateChanged) {
+      sessionScheduler.scheduleSessionTasks(sessionId, session.date);
+      console.log(`Rescheduled tasks for session ${sessionId} to new date: ${session.date.toISOString()}`);
+    }
 
     await sendEphemeralReply(
       BotDialogs.sessions.updated(session.name),
@@ -134,7 +146,13 @@ export const processRoleSelection = async (
   newPartyMember: PartyMember,
   sessionId: string
 ): Promise<RoleSelectionStatus> => {
-  const { date, partyMembers: party } = await getSession(sessionId);
+  const session = await getSession(sessionId);
+  const { date, partyMembers: party, status } = session;
+
+  // Check if session allows role selection (only SCHEDULED sessions)
+  if (status && status !== 'SCHEDULED') {
+    return RoleSelectionStatus.LOCKED;
+  }
 
   if (date < new Date()) {
     return RoleSelectionStatus.EXPIRED;
@@ -179,7 +197,6 @@ export const getPartyInfoForImg = async (
     forceStatic: true,
   };
 
-  // Fetch avatar URLs for each party member
   const partyWithAvatars = await Promise.all(
     party.map(async (member) => {
       try {
@@ -192,7 +209,6 @@ export const getPartyInfoForImg = async (
         };
       } catch (error) {
         console.warn(`Could not fetch avatar for user ${member.userId}:`, error);
-        // Return a default avatar or placeholder if user fetch fails
         return {
           userId: member.userId,
           username: member.username,

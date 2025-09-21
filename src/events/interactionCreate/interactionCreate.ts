@@ -8,7 +8,7 @@ import {
 import { client } from '../../index.js';
 import { Event } from '../../structures/Event.js';
 import { ExtendedInteraction } from '../../models/Command.js';
-import { sendMessageReplyDisappearingMessage } from '../../discord/message.js';
+import { sendMessageReplyDisappearingMessage, getRoleButtonsForSession } from '../../discord/message.js';
 import { createSessionImage } from '../../utils/sessionImage.js';
 import { getImgAttachmentBuilder } from '../../utils/attachmentBuilders.js';
 import {
@@ -105,12 +105,14 @@ const processButton = async (
     await message.edit({
       content: BotDialogs.sessions.scheduled(session.name, session.date),
       files: [attachment],
+      components: getRoleButtonsForSession(session.status),
     });
   } catch (error) {
     console.error('Failed to update session image:', error);
     // Still update the message even if image creation fails
     await message.edit({
       content: BotDialogs.sessions.scheduled(session.name, session.date),
+      components: getRoleButtonsForSession(session.status),
     });
   }
 };

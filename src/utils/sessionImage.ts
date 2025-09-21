@@ -81,11 +81,15 @@ export const createSessionImage = async (sessionId: string): Promise<void> => {
 
   const sessionOverlays = await placeSessionInfo(session);
 
+  // Add status border overlay
+  const status = (session.status || 'SCHEDULED') as 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED';
+  const borderOverlay = await createStatusBorder(status);
+
   const path = await import('path');
   const outputPath = path.join(BotPaths.TempDir, BotAttachmentFileNames.CurrentSession);
 
   await sharp(BotPaths.SessionBackdrop)
-    .composite([...sessionOverlays, dmOverlay, ...partyOverlays])
+    .composite([borderOverlay, ...sessionOverlays, dmOverlay, ...partyOverlays])
     .toFile(outputPath);
 
   // Verify the file was created
@@ -278,25 +282,69 @@ const calculateOptimalFontSize = (text: string, maxWidth: number, maxHeight: num
     return totalWidth;
   };
 
-  // Calculate width needed for this font size
   let estimatedWidth = estimateTextWidth(text, fontSize);
 
-  // If text is too wide, scale down the font size
   if (estimatedWidth > maxWidth) {
     fontSize = Math.floor((maxWidth / estimatedWidth) * fontSize);
-    // Recalculate with new font size
     estimatedWidth = estimateTextWidth(text, fontSize);
   }
 
-  // Ensure minimum readable size
   const minFontSize = 16;
   fontSize = Math.max(fontSize, minFontSize);
 
-  // Ensure it doesn't exceed height constraint
   fontSize = Math.min(fontSize, Math.floor(maxHeight * 0.9));
 
-  // Final width check with adjusted font size
-  const finalWidth = estimateTextWidth(text, fontSize);
 
   return fontSize;
+};
+
+/**
+ * Create a colored border overlay based on session status
+ */
+const createStatusBorder = async (status: 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED'): Promise<OverlayOptions> => {
+  // Define colors for each status
+  const statusColors = {
+    SCHEDULED: '#00FF00', // Green
+    ACTIVE: '#FFD700',    // Gold
+    COMPLETED: '#0080FF', // Blue
+    CANCELED: '#FF0000'   // Red
+  };
+
+  const color = statusColors[status];
+  const borderWidth = 20; // Width of the border
+
+  // Get the actual backdrop dimensions
+  const imageWidth = 2717;
+  const imageHeight = 2746;
+
+  // Create SVG border (frame around the image)
+  const borderSvg = `
+    <svg width="${imageWidth}" height="${imageHeight}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <style>
+          .border-frame {
+            fill: none;
+            stroke: ${color};
+            stroke-width: ${borderWidth};
+            opacity: 0.8;
+          }
+        </style>
+      </defs>
+      <rect 
+        x="${borderWidth / 2}" 
+        y="${borderWidth / 2}" 
+        width="${imageWidth - borderWidth}" 
+        height="${imageHeight - borderWidth}" 
+        class="border-frame"
+      />
+    </svg>
+  `;
+
+  const borderBuffer = await sharp(Buffer.from(borderSvg)).png().toBuffer();
+
+  return {
+    input: borderBuffer,
+    left: 0,
+    top: 0
+  };
 };

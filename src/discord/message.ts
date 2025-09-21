@@ -1,11 +1,20 @@
-import { AttachmentBuilder, ButtonInteraction, ChannelType, MessageFlags, MessagePayload, TextChannel } from 'discord.js';
+import { AttachmentBuilder, ButtonInteraction, ChannelType, MessageFlags, MessagePayload, TextChannel, ActionRowBuilder, ButtonBuilder } from 'discord.js';
 import { roleButtons } from '../index.js';
 import { ExtendedInteraction } from '../models/Command.js';
+import { SessionStatus } from '@prisma/client';
 
 import { Session } from '../models/session.js';
 import { BotAttachmentFileNames, BotDialogs, BotPaths } from '../utils/botDialogStrings';
 import { getImgAttachmentBuilder } from '../utils/attachmentBuilders.js';
 import { createSessionImage } from '../utils/sessionImage.js';
+
+/**
+ * Get role buttons for session based on status
+ * Only sessions with SCHEDULED status allow role selection
+ */
+export const getRoleButtonsForSession = (sessionStatus?: SessionStatus | 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED'): ActionRowBuilder<ButtonBuilder>[] => {
+  return sessionStatus === SessionStatus.SCHEDULED ? roleButtons : [];
+};
 
 export const sendNewSessionMessage = async (
   session: Session,
@@ -38,7 +47,7 @@ export const sendNewSessionMessage = async (
     const sentMessage = await channel.send({
       content: BotDialogs.sessions.scheduled(session.name, session.date),
       files: [attachment],
-      components: roleButtons,
+      components: getRoleButtonsForSession(session.status),
     });
 
     console.log(`Message sent successfully with ID: ${sentMessage.id}`);
@@ -51,7 +60,7 @@ export const sendNewSessionMessage = async (
       console.log(`Sending fallback message without image to channel: ${channel.id}`);
       const sentMessage = await channel.send({
         content: BotDialogs.sessions.scheduled(session.name, session.date),
-        components: roleButtons,
+        components: getRoleButtonsForSession(session.status),
       });
 
       console.log(`Fallback message sent successfully with ID: ${sentMessage.id}`);
