@@ -6,6 +6,7 @@ export type Session = {
   date: Date;
   campaignId: string;
   partyMessageId: string;
+  status?: 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED';
 };
 
 export interface CreateSessionData {
@@ -14,6 +15,7 @@ export interface CreateSessionData {
   date: Date;
   campaignId: string;
   partyMessageId: string;
+  status?: 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED';
 }
 
 export interface ListSessionsOptions {

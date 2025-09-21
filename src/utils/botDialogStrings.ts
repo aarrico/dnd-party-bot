@@ -15,7 +15,7 @@ export const BotDialogs = {
   createSessionOneMoment:
     '🤖 One Moment while I create your session. You will receive a message via Direct Message when complete!',
   createSessionInvalidDateEntered:
-    "🤖 The date you entered is invalid. This could be due to the following reasons:\n- You entered a date that doesn't exist.\n- You entered a day that has already passed.",
+    "🤖 The date or time you entered is invalid. This could be due to the following reasons:\n- You entered a date that doesn't exist.\n- You entered a day that has already passed.\n- Time format should be 12-hour format (e.g., '7:30 PM', '11:00 AM').",
   createSessionSuccess: (sessionName: string, date: Date, channelId: string) =>
     `✅ **${sessionName}** session has been created!\n📅 Scheduled for: ${date.toDateString()}\n🎲 Join the session: <#${channelId}>`,
   createSessionSuccessFallback: (sessionName: string, date: Date, channelName: string) =>
@@ -58,6 +58,7 @@ export const BotDialogs = {
     partyFull:
       '🤖 Unfortunately, this party is full and no new users can be added at present!',
     dmCantSwap: '🤖 You cannot change roles as you are the Game Master!',
+    sessionLocked: '🔒 This session is locked and no longer accepting role changes.',
     noActionTaken: '🤖 No Action was taken. Something went wrong',
   },
 } as const;
@@ -83,6 +84,8 @@ export const getAddPartyMemberMsg = (
       return BotDialogs.roleChosenMessageContent.partyFull;
     case RoleSelectionStatus.INVALID:
       return BotDialogs.roleChosenMessageContent.dmCantSwap;
+    case RoleSelectionStatus.LOCKED:
+      return BotDialogs.roleChosenMessageContent.sessionLocked;
     default:
       return BotDialogs.roleChosenMessageContent.noActionTaken;
   }
@@ -139,7 +142,7 @@ export enum BotCommandOptionInfo {
   CreateSession_YearName = 'year',
   CreateSession_YearDescription = 'Year of session',
   CreateSession_TimeName = 'time',
-  CreateSession_TimeDescription = 'Time using 24 hour HH:MM format',
+  CreateSession_TimeDescription = 'Time in 12-hour format (e.g., 7:30 PM, 11:00 AM) - Pacific Time',
   //GetAllUserSessions
   GetAllUserSessions_UserIDDescription = 'User ID that you are finding the sessions for.',
   GetAllUserSessions_SessionIDDescription = 'UUID of session in DB(unique identifier)',

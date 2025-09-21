@@ -8,6 +8,7 @@ datasource db {
 }
 
 enum SessionStatus {
+  SCHEDULED
   ACTIVE
   COMPLETED
   CANCELED
@@ -38,14 +39,15 @@ model Campaign {
 
 // discord channel with channel type GUILD_TEXT
 model Session {
-  id             String   @id // discord channel id
-  campaignId     String   @map("campaign_id")
-  campaign       Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  id             String        @id // discord channel id
+  campaignId     String        @map("campaign_id")
+  campaign       Campaign      @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   name           String
   date           DateTime
-  partyMessageId String   @map("party_message_id")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  status         SessionStatus @default(SCHEDULED)
+  partyMessageId String        @map("party_message_id")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
 
   partyMembers PartyMember[]
 
