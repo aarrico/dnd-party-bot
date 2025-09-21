@@ -36,6 +36,14 @@ const partyMemberJoined = async (
     role: roleType.id,
   };
 
+  const channel = await client.channels.fetch(channelId);
+  if (channel && channel.type === ChannelType.GuildText) {
+    await channel.permissionOverwrites.edit(userId, {
+      ViewChannel: true,
+      SendMessages: true
+    });
+  }
+
   const roleSelectionStatus = await processRoleSelection(
     newPartyMember,
     channelId

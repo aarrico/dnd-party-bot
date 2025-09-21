@@ -51,6 +51,11 @@ export const initSession = async (
   const dmChannel = await user.createDM();
   await upsertUser(userId, username, dmChannel.id);
 
+  await sessionChannel.permissionOverwrites.edit(userId, {
+    ViewChannel: true,
+    SendMessages: true
+  });
+
   const session = await createSession(newSession, userId);
 
   // Convert the Prisma session to our Session model format
