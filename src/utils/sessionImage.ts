@@ -298,11 +298,5 @@ const calculateOptimalFontSize = (text: string, maxWidth: number, maxHeight: num
   // Final width check with adjusted font size
   const finalWidth = estimateTextWidth(text, fontSize);
 
-  console.log(`Text: "${text}" (${text.length} chars)`);
-  console.log(`  Max dimensions: ${maxWidth}x${maxHeight}`);
-  console.log(`  Calculated font size: ${fontSize}`);
-  console.log(`  Estimated text width: ${Math.round(finalWidth)}`);
-  console.log(`  Width utilization: ${Math.round((finalWidth / maxWidth) * 100)}%`);
-
   return fontSize;
 };
