@@ -5,7 +5,16 @@ export type Session = {
   name: string;
   date: Date;
   campaignId: string;
+  partyMessageId: string;
 };
+
+export interface CreateSessionData {
+  id: string;
+  name: string;
+  date: Date;
+  campaignId: string;
+  partyMessageId: string;
+}
 
 export interface ListSessionsOptions {
   includeId: boolean;
@@ -34,8 +43,8 @@ export interface SessionWithPartyPrismaResult {
   name: string;
   date: Date;
   campaignId: string;
-  partyMembers: Array<{
+  partyMembers: {
     user: { id: string; username: string; channelId: string };
     role: string;
-  }>;
+  }[];
 }

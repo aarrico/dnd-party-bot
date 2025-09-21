@@ -11,14 +11,14 @@ export const client = new ExtendedClient();
 export const prisma = new PrismaClient();
 export let roleButtons: ActionRowBuilder<ButtonBuilder>[];
 
-(async () => {
+await (async () => {
   try {
     const roles = await getRoles();
     setRoleCache(roles);
     roleButtons = createActionRowOfButtons(roles);
 
-    client.once(Events.ClientReady, async (readyClient) => {
-      await client.start();
+    client.once(Events.ClientReady, (readyClient) => {
+      void client.start();
       console.log(`Ready! Logged in as ${readyClient.user.tag}`);
     });
 

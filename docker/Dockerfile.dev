@@ -12,6 +12,9 @@ RUN apk add fontconfig openssl
 COPY resources/fonts/*.ttf /usr/share/fonts/truetype/
 RUN fc-cache -f -v
 
+# Copy resources directory for images
+COPY resources ./resources
+
 # Copy source code (this will be mounted as volume in dev)
 COPY . .
 

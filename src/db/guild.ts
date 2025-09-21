@@ -1,8 +1,8 @@
-import { Guild } from '@prisma/client';
+import { Campaign } from '@prisma/client';
 import { prisma } from '../index.js';
 
-export const upsertGuild = async (guildData: { id: string; name: string }): Promise<Guild> => {
-  return await prisma.guild.upsert({
+export const upsertGuild = async (guildData: { id: string; name: string }): Promise<Campaign> => {
+  return await prisma.campaign.upsert({
     where: { id: guildData.id },
     create: {
       id: guildData.id,
@@ -15,20 +15,20 @@ export const upsertGuild = async (guildData: { id: string; name: string }): Prom
   });
 };
 
-export const getGuildById = async (guildId: string): Promise<Guild | null> => {
-  return await prisma.guild.findUnique({
+export const getGuildById = async (guildId: string): Promise<Campaign | null> => {
+  return await prisma.campaign.findUnique({
     where: { id: guildId },
   });
 };
 
-export const getAllGuilds = async (): Promise<Guild[]> => {
-  return await prisma.guild.findMany({
+export const getAllGuilds = async (): Promise<Campaign[]> => {
+  return await prisma.campaign.findMany({
     orderBy: { name: 'asc' },
   });
 };
 
-export const syncGuildsFromDiscord = async (discordGuilds: { id: string; name: string }[]): Promise<Guild[]> => {
-  const syncedGuilds: Guild[] = [];
+export const syncGuildsFromDiscord = async (discordGuilds: { id: string; name: string }[]): Promise<Campaign[]> => {
+  const syncedGuilds: Campaign[] = [];
   
   for (const discordGuild of discordGuilds) {
     try {

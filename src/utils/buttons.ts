@@ -2,6 +2,17 @@ import { Role } from '@prisma/client';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { RoleType } from '../models/role.js';
 
+// Map role types to appropriate Unicode emojis
+const roleEmojiMap: Record<RoleType, string> = {
+  [RoleType.TANK]: '🛡️',       // Shield
+  [RoleType.SUPPORT]: '💚',     // Green heart
+  [RoleType.RANGE_DPS]: '🏹',   // Bow and arrow
+  [RoleType.MELEE_DPS]: '⚔️',   // Crossed swords
+  [RoleType.FACE]: '🎭',        // Theater masks
+  [RoleType.CONTROL]: '🧙‍♂️',     // Mage
+  [RoleType.GAME_MASTER]: '👑', // Crown (shouldn't be used in selectable buttons)
+};
+
 export const createActionRowOfButtons = (
   roles: Role[]
 ): ActionRowBuilder<ButtonBuilder>[] => {
@@ -13,11 +24,14 @@ export const createActionRowOfButtons = (
     const row = new ActionRowBuilder<ButtonBuilder>();
 
     rolesForRow.forEach((role) => {
+      const emoji = roleEmojiMap[role.id] || '❓';
+
       row.components.push(
         new ButtonBuilder()
           .setCustomId(role.id)
           .setStyle(ButtonStyle.Secondary)
-          .setEmoji(`<:${role.displayName}:${role.emojiId}>`)
+          .setEmoji(emoji)
+          .setLabel(role.displayName)
       );
     });
 

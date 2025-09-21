@@ -39,6 +39,9 @@ COPY --chown=partybot:nodejs prisma ./prisma
 COPY resources/fonts/*.ttf /usr/share/fonts/truetype/
 RUN fc-cache -f -v
 
+# Copy resources directory for images
+COPY --chown=partybot:nodejs resources ./resources
+
 # Switch to non-root user
 USER partybot
 

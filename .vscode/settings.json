@@ -1,8 +1,11 @@
 {
-    "files.autoSave": "afterDelay",
-    "editor.defaultFormatter": "vscode.typescript-language-features",
-    "editor.fontFamily": "'Source Code Pro', Consolas, 'Courier New', monospace",
-    "editor.tabSize": 2,
-    "editor.formatOnPaste": true,
-    "editor.fontSize": 14
+  "files.autoSave": "afterDelay",
+  "editor.defaultFormatter": "vscode.typescript-language-features",
+  "editor.fontFamily": "'Source Code Pro', Consolas, 'Courier New', monospace",
+  "editor.tabSize": 2,
+  "editor.formatOnPaste": true,
+  "editor.fontSize": 14,
+  "[prisma]": {
+    "editor.defaultFormatter": "Prisma.prisma"
+  }
 }

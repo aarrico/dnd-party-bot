@@ -3,19 +3,18 @@ import { PartyMember } from '../models/party.js';
 import {
   ListSessionsOptions,
   ListSessionsResult,
-  Session,
   SessionWithParty,
+  CreateSessionData,
 } from '../models/session.js';
-import { RoleType } from '@prisma/client';
-import { client } from '../index.js';
+import { RoleType, Session } from '@prisma/client';
 
 export const createSession = async (
-  newSession: Session,
-  userId: string
-): Promise<void> => {
-  const { campaignId, ...session } = newSession;
-  
-  await prisma.session.create({
+  sessionData: CreateSessionData,
+  userId: string,
+): Promise<Session> => {
+  const { campaignId, ...session } = sessionData;
+
+  return await prisma.session.create({
     data: {
       ...session,
       campaign: { connect: { id: campaignId } },
@@ -49,6 +48,7 @@ export const getSession = async (
     name: session.name,
     date: session.date,
     campaignId: session.campaignId,
+    partyMessageId: session.partyMessageId,
     partyMembers: session.partyMembers.map((member) => ({
       userId: member.user.id,
       username: member.user.username,
@@ -58,14 +58,14 @@ export const getSession = async (
   };
 };
 
-export const getParty = async (channelId: string): Promise<PartyMember[]> => {
+export const getParty = async (sessionId: string): Promise<PartyMember[]> => {
   const session = await prisma.session.findFirst({
-    where: { id: channelId },
+    where: { id: sessionId },
     select: { partyMembers: { select: { user: true, role: true } } },
   });
 
   if (!session) {
-    throw new Error(`Cannot find party for ${channelId}`);
+    throw new Error(`Cannot find party for ${sessionId}`);
   }
 
   return session.partyMembers.map((partyMember) => ({
@@ -153,6 +153,7 @@ export async function getSessionById(
     name: session.name,
     date: session.date,
     campaignId: session.campaignId,
+    partyMessageId: session.partyMessageId,
     partyMembers: session.partyMembers.map((member) => ({
       userId: member.user.id,
       username: member.user.username,
@@ -167,9 +168,9 @@ export const deleteSessionById = async (id: string): Promise<Session> =>
 
 export const updateSession = async (
   sessionId: string,
-  data: { name?: string; date?: Date; campaignId?: string }
-): Promise<void> => {
-  await prisma.session.update({
+  data: Partial<CreateSessionData>,
+): Promise<Session> => {
+  return await prisma.session.update({
     where: { id: sessionId },
     data: {
       ...(data.name && { name: data.name }),
@@ -183,6 +184,7 @@ export const updateSession = async (
           },
         },
       }),
+      ...(data.partyMessageId !== undefined && { partyMessageId: data.partyMessageId }),
     },
   });
 };

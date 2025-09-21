@@ -23,44 +23,29 @@ enum RoleType {
   CONTROL
 }
 
-model Guild {
-  id        String   @id
-  name      String
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  campaigns Campaign[]
-  members   GuildMember[]
-
-  @@map("guild")
-}
-
-// discord channel with channel type GUILD_CATEGORY
+// Discord Server/Guild
 model Campaign {
-  id        String   @id // discord channel id
+  id        String   @id // discord id
   name      String   @unique
-  active    Boolean  @default(false)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  guildId String @map("guild_id")
-  guild   Guild  @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  sessions      Session[]
+  factionMember Faction[]
 
-  sessions Session[]
-
-  @@unique([guildId, active], name: "one_active_campaign_per_guild", map: "one_active_campaign_per_guild_index")
   @@map("campaign")
 }
 
 // discord channel with channel type GUILD_TEXT
 model Session {
-  id         String   @id // discord channel id
-  campaignId String   @map("campaign_id")
-  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  name       String
-  date       DateTime
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  id             String   @id // discord channel id
+  campaignId     String   @map("campaign_id")
+  campaign       Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  name           String
+  date           DateTime
+  partyMessageId String   @map("party_message_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   partyMembers PartyMember[]
 
@@ -73,21 +58,21 @@ model User {
   username  String @unique
 
   sessions PartyMember[]
-  guilds   GuildMember[]
+  guilds   Faction[]
 
   @@map("user")
 }
 
-model GuildMember {
-  guildId String @map("guild_id")
-  guild   Guild  @relation(fields: [guildId], references: [id], onDelete: Cascade)
-  userId  String @map("user_id")
-  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+model Faction {
+  campaignId String   @map("campaign_id")
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now()) @map("created_at")
 
-  @@id([guildId, userId], name: "guild_member_id")
-  @@map("guild_member")
+  @@id([campaignId, userId], name: "campaign_member_id")
+  @@map("campaign_member")
 }
 
 model PartyMember {

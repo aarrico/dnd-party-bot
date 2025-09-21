@@ -8,60 +8,69 @@ import {
   updateSession,
 } from '../db/session.js';
 import {
-  createSessionMessage,
+  sendNewSessionMessage,
   sendEphemeralReply,
 } from '../discord/message.js';
 import { client } from '../index.js';
 import { ExtendedInteraction } from '../models/Command.js';
 import { AvatarOptions, PartyMemberImgInfo } from '../models/discord.js';
 import { PartyMember, RoleSelectionStatus } from '../models/party.js';
-import { ListSessionsOptions, ListSessionsResult } from '../models/session.js';
+import { ListSessionsOptions, ListSessionsResult, Session } from '../models/session.js';
 import { BotCommandOptionInfo, BotDialogs } from '../utils/botDialogStrings.js';
 import DateChecker from '../utils/dateChecker.js';
 import { addUserToParty, updatePartyMemberRole, upsertUser } from '../db/user';
 import { deletePartyMember } from '../db/partyMember';
-import { TextChannel } from 'discord.js';
+import { Guild } from 'discord.js';
 import { createChannel, deleteChannel, renameChannel } from '../discord/channel';
 import { RoleType } from '@prisma/client';
-import { findCampaign } from './campaign.js';
+import { CreateSessionData } from '../models/session.js';
 
 export const initSession = async (
-  guildId: string,
+  campaign: Guild,
   sessionName: string,
   date: Date,
   username: string,
   userId: string,
-  campaignOption: string,
-  newCampaignName?: string
 ): Promise<string> => {
 
-  const campaign = await findCampaign(guildId, campaignOption, newCampaignName);
-
   const sessionChannel = await createChannel(
-    campaign.guildId,
-    campaign.id,
+    campaign,
     sessionName
   );
 
-  const newSession = {
+  // Create initial session data for sending the message
+  const newSession: CreateSessionData = {
     id: sessionChannel.id,
-    name: sessionName,
+    name: sessionChannel.name,
     date,
     campaignId: campaign.id,
+    partyMessageId: '',
   };
-
-  await createSessionMessage(client, newSession);
 
   const user = await client.users.fetch(userId);
   const dmChannel = await user.createDM();
   await upsertUser(userId, username, dmChannel.id);
-  
-  await createSession(newSession, userId);
+
+  const session = await createSession(newSession, userId);
+
+  // Convert the Prisma session to our Session model format
+  const sessionForMessage: Session = {
+    id: session.id,
+    name: session.name,
+    date: session.date,
+    campaignId: session.campaignId,
+    partyMessageId: session.partyMessageId ?? '',
+  };
+
+  const partyMessageId = await sendNewSessionMessage(sessionForMessage, sessionChannel);
+  console.log(`Received partyMessageId from sendNewSessionMessage: ${partyMessageId}`);
+
+  const updatedSession = await updateSession(session.id, { partyMessageId });
+  console.log(`Updated session with partyMessageId: ${updatedSession.partyMessageId}`);
 
   return BotDialogs.createSessionDMSessionTime(
-    campaign.name,
-    sessionName,
-    date
+    campaign,
+    updatedSession,
   );
 };
 
@@ -71,7 +80,7 @@ export const cancelSession = async (sessionId: string, reason: string) => {
   for (const partyMember of session.partyMembers) {
     const user = await client.users.fetch(partyMember.channelId);
     await user.send({
-      content: `🚨 Notice: ${session.name} on ${session.date} has been canceled!\n${reason}`,
+      content: `🚨 Notice: ${session.name} on ${session.date.toDateString()} has been canceled!\n${reason}`,
     });
   }
 
@@ -157,32 +166,39 @@ export const processRoleSelection = async (
 };
 
 export const getPartyInfoForImg = async (
-  channelId: string
+  sessionId: string
 ): Promise<PartyMemberImgInfo[]> => {
-  const channel = await client.channels.fetch(channelId);
-  if (!channel || !(channel instanceof TextChannel)) {
-    throw new Error('cannot find channel for session');
-  }
-
-  const party = await getParty(channelId);
+  const party = await getParty(sessionId);
   const avatarOptions: AvatarOptions = {
     extension: 'png',
     forceStatic: true,
   };
 
-  return channel.members.map((member) => {
-    const matchingUser = party.find((pm) => pm.userId === member.id);
-    if (!matchingUser) {
-      throw new Error('cannot find user for session');
-    }
+  // Fetch avatar URLs for each party member
+  const partyWithAvatars = await Promise.all(
+    party.map(async (member) => {
+      try {
+        const user = await client.users.fetch(member.userId);
+        return {
+          userId: member.userId,
+          username: member.username,
+          userAvatarURL: user.displayAvatarURL(avatarOptions),
+          role: member.role,
+        };
+      } catch (error) {
+        console.warn(`Could not fetch avatar for user ${member.userId}:`, error);
+        // Return a default avatar or placeholder if user fetch fails
+        return {
+          userId: member.userId,
+          username: member.username,
+          userAvatarURL: `https://cdn.discordapp.com/embed/avatars/${member.userId.slice(-1)}.png`,
+          role: member.role,
+        };
+      }
+    })
+  );
 
-    return {
-      userId: member.id,
-      username: member.displayName,
-      userAvatarURL: member.displayAvatarURL(avatarOptions),
-      role: matchingUser.role,
-    };
-  });
+  return partyWithAvatars;
 };
 
 export const listSessions = async (

@@ -3,8 +3,6 @@ import {
   CacheType,
   ChannelType,
   ChatInputCommandInteraction,
-  CommandInteraction,
-  CommandInteractionOptionResolver,
   Events,
 } from 'discord.js';
 import { client } from '../../index.js';
@@ -12,7 +10,7 @@ import { Event } from '../../structures/Event.js';
 import { ExtendedInteraction } from '../../models/Command.js';
 import { sendMessageReplyDisappearingMessage } from '../../discord/message.js';
 import { createSessionImage } from '../../utils/sessionImage.js';
-import { getPNGAttachmentBuilder } from '../../utils/attachmentBuilders.js';
+import { getImgAttachmentBuilder } from '../../utils/attachmentBuilders.js';
 import {
   BotAttachmentFileNames,
   BotDialogs,
@@ -22,6 +20,7 @@ import {
 import { processRoleSelection } from '../../controllers/session.js';
 import { PartyMember } from '../../models/party';
 import { getRoleByString } from '../../models/role.js';
+import { getSessionById } from '../../db/session.js';
 
 const partyMemberJoined = async (
   userId: string,
@@ -59,14 +58,23 @@ const processCommand = async (
 const processButton = async (
   interaction: ButtonInteraction<CacheType>
 ): Promise<void> => {
-  const channel = interaction.channel;
-  if (!channel || channel.type !== ChannelType.GuildText) {
+  const session = await getSessionById(interaction.channelId);
+  if (!session) {
+    throw new Error('something went wrong getting the session from the db');
+  }
+
+  if (!interaction.channel || interaction.channel.type !== ChannelType.GuildText) {
     throw new Error('something went wrong getting the channel from discord');
   }
 
-  const message = channel.messages.cache.get(interaction.message.id);
-  if (!message) {
-    throw new Error('something went wrong getting the message from discord');
+  // Fetch the message directly instead of relying on cache
+  let message;
+  try {
+    message = await interaction.channel.messages.fetch(session.partyMessageId);
+    console.log(`Fetched message ${message.content} successfully.`);
+  } catch (error) {
+    console.error(`Failed to fetch message ${session.partyMessageId}:`, error);
+    throw new Error('Could not find the session message to update');
   }
 
   const result = await partyMemberJoined(
@@ -77,17 +85,26 @@ const processButton = async (
   );
 
   await sendMessageReplyDisappearingMessage(interaction, result);
-  await createSessionImage(interaction.message.id);
 
-  const attachment = getPNGAttachmentBuilder(
-    `${BotPaths.TempDir}${BotAttachmentFileNames.CurrentSession}`,
-    BotAttachmentFileNames.CurrentSession
-  );
+  try {
+    await createSessionImage(session.id);
 
-  await message.edit({
-    content: BotDialogs.interactionCreateNewSessionAnnouncement,
-    files: [attachment],
-  });
+    const attachment = getImgAttachmentBuilder(
+      `${BotPaths.TempDir}/${BotAttachmentFileNames.CurrentSession}`,
+      BotAttachmentFileNames.CurrentSession
+    );
+
+    await message.edit({
+      content: BotDialogs.sessions.scheduled(session.name, session.date),
+      files: [attachment],
+    });
+  } catch (error) {
+    console.error('Failed to update session image:', error);
+    // Still update the message even if image creation fails
+    await message.edit({
+      content: BotDialogs.sessions.scheduled(session.name, session.date),
+    });
+  }
 };
 
 export default new Event(Events.InteractionCreate, async (interaction) => {

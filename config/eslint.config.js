@@ -13,13 +13,14 @@ export default [
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
-    ...tseslint.configs.recommendedTypeChecked,
+  ...tseslint.configs.recommendedTypeChecked,
   {
     files: ['**/*.ts'],
     languageOptions: {
       parser: tseslint.parser,
       parserOptions: {
-        project: true,
+        project: '../tsconfig.json',
+        tsconfigRootDir: import.meta.dirname,
       }
     },
     rules: {

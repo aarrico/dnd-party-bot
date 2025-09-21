@@ -1,8 +1,9 @@
+import { ExtendedInteraction } from '../models/Command';
 import { BotCommandOptionInfo } from './botDialogStrings';
 
 const monthMaxDayCounts = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
-export default function DateChecker(interaction: any) {
+export default function DateChecker(interaction: ExtendedInteraction) {
   const month = interaction.options.getInteger(BotCommandOptionInfo.CreateSession_MonthName, true);
   const day = interaction.options.getInteger(BotCommandOptionInfo.CreateSession_DayName, true);
   const year = interaction.options.getInteger(BotCommandOptionInfo.CreateSession_YearName, true);

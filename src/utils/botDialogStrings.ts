@@ -1,19 +1,26 @@
+import { Session } from '@prisma/client';
 import { PartyMember, RoleSelectionStatus } from '../models/party.js';
 import path from 'path';
+import { Guild } from 'discord.js';
+
 
 export const BotDialogs = {
   // CreateSession
   createSessionInvalidSessionName: 'Your session name is invalid.',
   createSessionDMSessionTime: (
-    campaign: string,
-    sessionName: string,
-    date: Date
+    campaign: Guild,
+    session: Session,
   ) =>
-    `🤖 New session ${sessionName} for ${campaign} scheduled for ${date.toLocaleString()}`,
+    `🤖 New session [${session.name}](https://discord.com/channels/${campaign.id}/${session.id}/${session.partyMessageId}) for ${campaign.name} scheduled for ${session.date.toLocaleString()}`,
   createSessionOneMoment:
     '🤖 One Moment while I create your session. You will receive a message via Direct Message when complete!',
   createSessionInvalidDateEntered:
     "🤖 The date you entered is invalid. This could be due to the following reasons:\n- You entered a date that doesn't exist.\n- You entered a day that has already passed.",
+  createSessionSuccess: (sessionName: string, date: Date, channelId: string) =>
+    `✅ **${sessionName}** session has been created!\n📅 Scheduled for: ${date.toDateString()}\n🎲 Join the session: <#${channelId}>`,
+  createSessionSuccessFallback: (sessionName: string, date: Date, channelName: string) =>
+    `✅ **${sessionName}** session has been created!\n📅 Scheduled for: ${date.toDateString()}\n🎲 Join the session: #${channelName}`,
+  createSessionError: '❌ There was an error creating the session. Please try again.',
 
   sessions: {
     listAllResult: '🤖🎉 Report for all scheduled sessions is ready!',
@@ -23,13 +30,11 @@ export const BotDialogs = {
       `🤖🎉 Report for all users in session ${session} is ready!`,
     updated: (
       name: string
-    ) => `🤖🎉 Session ${name} has been updated successfully.\n \
-    🤖🖌️ Generating new image...give me a few seconds!`,
+    ) => `🎉 Session ${name} has been updated successfully.\n🖌️ Generating new image...give me a few seconds!`,
     scheduled: (
       name: string,
       date: Date
-    ) => `🤖🗓️ Session ${name} has been scheduled for ${date.toLocaleString()}!\n \
-    🤖⚙️ Please wait a moment while I get things ready!`,
+    ) => `🗓️ Session ${name} has been scheduled for ${date.toLocaleString()}!`,
   },
 
   users: {
@@ -52,7 +57,7 @@ export const BotDialogs = {
       `🤖 Deciding to change the game, ${username}? You have been changed to a ${role}!`,
     partyFull:
       '🤖 Unfortunately, this party is full and no new users can be added at present!',
-    dmCantSwap: '🤖 You cannot change roles as you are the Dungeon Master!',
+    dmCantSwap: '🤖 You cannot change roles as you are the Game Master!',
     noActionTaken: '🤖 No Action was taken. Something went wrong',
   },
 } as const;

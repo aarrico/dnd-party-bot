@@ -3,13 +3,12 @@ import {
   ClientEvents,
   ClientOptions,
   Collection,
-  Events,
   GatewayIntentBits,
   REST,
   Routes,
 } from 'discord.js';
 import { Event } from './Event.js';
-import { CommandType, DiscordCommand } from '../models/Command.js';
+import { DiscordCommand } from '../models/Command.js';
 import path from 'path';
 import { getAllFiles, getAllFolders } from '../utils/getAllFiles.js';
 import * as fs from 'node:fs';
@@ -43,13 +42,13 @@ export class ExtendedClient extends Client {
     try {
       console.log('Syncing guilds from Discord...');
       const discordGuilds = await this.guilds.fetch();
-      const guildData = discordGuilds.map(guild => ({
+      const campaigns = discordGuilds.map(guild => ({
         id: guild.id,
         name: guild.name
       }));
 
-      await syncGuildsFromDiscord(guildData);
-      console.log(`Successfully synced ${guildData.length} guild(s) to database`);
+      await syncGuildsFromDiscord(campaigns);
+      console.log(`Successfully synced ${campaigns.length} guild(s) to database`);
     } catch (error) {
       console.error('Failed to sync guilds from Discord:', error);
     }

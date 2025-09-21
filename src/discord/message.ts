@@ -1,48 +1,65 @@
 import { AttachmentBuilder, ButtonInteraction, ChannelType, MessageFlags, MessagePayload, TextChannel } from 'discord.js';
-import { ExtendedClient } from '../structures/ExtendedClient.js';
 import { roleButtons } from '../index.js';
 import { ExtendedInteraction } from '../models/Command.js';
 
 import { Session } from '../models/session.js';
 import { BotAttachmentFileNames, BotDialogs, BotPaths } from '../utils/botDialogStrings';
-import { createChannel } from './channel';
-import { getPNGAttachmentBuilder } from '../utils/attachmentBuilders.js';
+import { getImgAttachmentBuilder } from '../utils/attachmentBuilders.js';
+import { createSessionImage } from '../utils/sessionImage.js';
 
-export const createSessionMessage = async (
-  client: ExtendedClient,
-  session: Session
+export const sendNewSessionMessage = async (
+  session: Session,
+  channel: TextChannel,
 ) => {
+  console.log(`Sending new session message for session: ${session.id}`);
+
   try {
-    const campaignChannel = client.channels.cache.get(session.campaignId);
-    if (
-      !campaignChannel ||
-      campaignChannel.type !== ChannelType.GuildCategory
-    ) {
-      throw new Error(
-        `Couldn't find channel for campaign: ${session.campaignId}`
-      );
+    console.log(`Creating session image...`);
+    await createSessionImage(session.id);
+
+    const imagePath = `${BotPaths.TempDir}/${BotAttachmentFileNames.CurrentSession}`;
+    console.log(`Attempting to attach image from: ${imagePath}`);
+
+    // Check if the file exists before trying to attach it
+    const fs = await import('fs');
+    if (!fs.existsSync(imagePath)) {
+      throw new Error(`Image file not found at: ${imagePath}`);
     }
 
-    const sessionChannel = await createChannel(
-      campaignChannel.guildId,
-      session.campaignId,
-      session.name
-    );
+    const stats = fs.statSync(imagePath);
+    console.log(`Image file found. Size: ${stats.size} bytes`);
 
-    const attachment = getPNGAttachmentBuilder(
-      `${BotPaths.TempDir}${BotAttachmentFileNames.CurrentSession}`,
+    const attachment = getImgAttachmentBuilder(
+      imagePath,
       BotAttachmentFileNames.CurrentSession
     );
 
-    const sentMessage = await sessionChannel.send({
+    console.log(`Sending message with image to channel: ${channel.id}`);
+    const sentMessage = await channel.send({
       content: BotDialogs.sessions.scheduled(session.name, session.date),
       files: [attachment],
       components: roleButtons,
     });
 
+    console.log(`Message sent successfully with ID: ${sentMessage.id}`);
     return sentMessage.id;
   } catch (error) {
-    return `error caught: ${error}`;
+    console.error(`Error creating session image, falling back to message without image:`, error);
+
+    // Fallback: send message without image
+    try {
+      console.log(`Sending fallback message without image to channel: ${channel.id}`);
+      const sentMessage = await channel.send({
+        content: BotDialogs.sessions.scheduled(session.name, session.date),
+        components: roleButtons,
+      });
+
+      console.log(`Fallback message sent successfully with ID: ${sentMessage.id}`);
+      return sentMessage.id;
+    } catch (fallbackError) {
+      console.error(`Failed to send fallback message:`, fallbackError);
+      throw fallbackError;
+    }
   }
 };
 

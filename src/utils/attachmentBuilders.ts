@@ -1,28 +1,35 @@
 import { AttachmentBuilder } from 'discord.js';
 import { writeFileSync } from 'fs';
+import path from 'path';
 import { getAbsolutePath } from './getAbsolutePath';
 
 export function getTxtAttachmentBuilder(
-  pathSTR: string,
+  pathStr: string,
   attachmentName: string,
   attachmentContents: string
 ) {
-  writeFileSync(pathSTR, attachmentContents, {
+  writeFileSync(pathStr, attachmentContents, {
     flag: 'w',
   });
 
-  return getAttachmentBuilder(pathSTR, attachmentName);
+  return getAttachmentBuilder(pathStr, attachmentName);
 }
 
-export function getPNGAttachmentBuilder(
-  pathSTR: string,
+export function getImgAttachmentBuilder(
+  pathStr: string,
   attachmentName: string
 ) {
-  return getAttachmentBuilder(pathSTR, attachmentName);
+  return getAttachmentBuilder(pathStr, attachmentName);
 }
 
-function getAttachmentBuilder(pathSTR: string, attachmentName: string) {
-  return new AttachmentBuilder(getAbsolutePath(pathSTR), {
+function getAttachmentBuilder(pathStr: string, attachmentName: string) {
+  // If the path is already absolute, use it directly
+  // Otherwise, resolve it using getAbsolutePath
+  const finalPath = path.isAbsolute(pathStr) ? pathStr : getAbsolutePath(pathStr);
+
+  console.log(`Creating attachment builder with path: ${finalPath}`);
+
+  return new AttachmentBuilder(finalPath, {
     name: attachmentName,
   });
 }
