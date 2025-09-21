@@ -12,8 +12,8 @@ import { Session } from '../models/session.js';
 const coords = {
   member: { width: 300, height: 300, x: [365, 795, 1225, 1655, 2085], y: 1700 },
   dm: { width: 300, height: 300, x: 1225, y: 400 }, // Added missing dm coordinates
-  sessionName: { x: 585, y: 940 },
-  date: { x: 1035, y: 1140 },
+  sessionName: { x: 585, y: 940, maxWidth: 1200, maxHeight: 120, visualCenterX: 1350 }, // Visual center of the name area
+  date: { x: 1035, y: 1140, maxWidth: 1000, maxHeight: 100, visualCenterX: 1435 }, // Visual center of the date area
   role: { yImg: 1300, yName: 2150, width: 300, height: 300 },
 };
 
@@ -100,18 +100,51 @@ export const createSessionImage = async (sessionId: string): Promise<void> => {
 const placeSessionInfo = async (
   session: Session
 ): Promise<OverlayOptions[]> => {
+  // Calculate centered positions for the text overlays
+  const sessionNameOverlay = await createTextOverlay(
+    session.name,
+    coords.sessionName.maxWidth,
+    coords.sessionName.maxHeight,
+    true
+  );
+
+  // Format date in Pacific timezone
+  const pacificDate = new Date(session.date).toLocaleString('en-US', {
+    timeZone: 'America/Los_Angeles',
+    weekday: 'short',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZoneName: 'short'
+  });
+
+  const dateOverlay = await createTextOverlay(
+    pacificDate,
+    coords.date.maxWidth,
+    coords.date.maxHeight,
+    true
+  );
+
   return [
     {
-      input: await createTextOverlay(session.name),
-      left: coords.sessionName.x,
+      input: sessionNameOverlay,
+      left: coords.sessionName.visualCenterX - Math.floor(await getImageWidth(sessionNameOverlay) / 2),
       top: coords.sessionName.y,
     },
     {
-      input: await createTextOverlay(session.date.toUTCString()),
-      left: coords.date.x,
+      input: dateOverlay,
+      left: coords.date.visualCenterX - Math.floor(await getImageWidth(dateOverlay) / 2),
       top: coords.date.y,
     },
   ];
+};
+
+// Helper function to get image width from buffer
+const getImageWidth = async (imageBuffer: Buffer): Promise<number> => {
+  const metadata = await sharp(imageBuffer).metadata();
+  return metadata.width || 0;
 };
 
 const placeUserAvatar = async (
@@ -150,26 +183,126 @@ const placeRole = async (
   return [
     { input: roleImage, left: coords.member.x[slot], top: coords.role.yImg },
     {
-      input: await createTextOverlay(roleData.displayName),
-      left: coords.member.x[slot],
+      input: await createTextOverlay(
+        roleData.displayName,
+        coords.role.width,
+        80,
+        true // Center the role name
+      ),
+      left: coords.member.x[slot], // Role containers are already centered since they align with the avatars
       top: coords.role.yName,
     },
   ];
 };
 
-const createTextOverlay = async (text: string): Promise<Buffer> => {
-  // Create text overlay using SVG
+const createTextOverlay = async (text: string, maxWidth?: number, maxHeight?: number, centered: boolean = false): Promise<Buffer> => {
+  const fontSize = maxWidth && maxHeight ?
+    calculateOptimalFontSize(text, maxWidth, maxHeight) :
+    100;
+
+  // If centering, create a smaller container based on estimated text width
+  let svgWidth, textX, textAnchor;
+
+  if (centered) {
+    // Estimate actual text width for a more precise container
+    const estimatedTextWidth = estimateTextWidth(text, fontSize);
+    svgWidth = Math.min(estimatedTextWidth * 1.1, maxWidth || 400); // Add 10% padding
+    textX = svgWidth / 2;
+    textAnchor = "middle";
+  } else {
+    svgWidth = maxWidth || 400;
+    textX = 0;
+    textAnchor = "start";
+  }
+
+  const svgHeight = maxHeight || 100;
+
   const svg = `
-    <svg width="400" height="100">
+    <svg width="${svgWidth}" height="${svgHeight}">
       <text
-        x="0"
-        y="50"
+        x="${textX}"
+        y="${fontSize * 0.8}"
         font-family="Vecna"
-        font-size="40"
+        font-size="${fontSize}"
         fill="white"
+        text-anchor="${textAnchor}"
       >${text}</text>
     </svg>
   `;
 
   return await sharp(Buffer.from(svg)).png().toBuffer();
+};
+
+// Helper function to estimate text width (extracted from calculateOptimalFontSize)
+const estimateTextWidth = (text: string, fontSize: number): number => {
+  let totalWidth = 0;
+  for (const char of text) {
+    if (/[A-Z]/.test(char)) {
+      totalWidth += fontSize * 0.7; // Capital letters are wider
+    } else if (/[a-z]/.test(char)) {
+      totalWidth += fontSize * 0.5; // Lowercase letters
+    } else if (/[0-9]/.test(char)) {
+      totalWidth += fontSize * 0.6; // Numbers
+    } else if (/[\s]/.test(char)) {
+      totalWidth += fontSize * 0.3; // Spaces
+    } else {
+      totalWidth += fontSize * 0.4; // Other characters (punctuation, etc.)
+    }
+  }
+  return totalWidth;
+};/**
+ * Calculates the optimal font size to fit text within given dimensions
+ * Uses an approximation based on typical font characteristics
+ */
+const calculateOptimalFontSize = (text: string, maxWidth: number, maxHeight: number): number => {
+  // Start with maximum possible font size based on height
+  let fontSize = Math.floor(maxHeight * 0.8); // Leave some padding
+
+  // Character width estimation for different types of characters
+  // This accounts for the fact that some characters are wider than others
+  const estimateTextWidth = (text: string, fontSize: number): number => {
+    let totalWidth = 0;
+    for (const char of text) {
+      if (/[A-Z]/.test(char)) {
+        totalWidth += fontSize * 0.7; // Capital letters are wider
+      } else if (/[a-z]/.test(char)) {
+        totalWidth += fontSize * 0.5; // Lowercase letters
+      } else if (/[0-9]/.test(char)) {
+        totalWidth += fontSize * 0.6; // Numbers
+      } else if (/[\s]/.test(char)) {
+        totalWidth += fontSize * 0.3; // Spaces
+      } else {
+        totalWidth += fontSize * 0.4; // Other characters (punctuation, etc.)
+      }
+    }
+    return totalWidth;
+  };
+
+  // Calculate width needed for this font size
+  let estimatedWidth = estimateTextWidth(text, fontSize);
+
+  // If text is too wide, scale down the font size
+  if (estimatedWidth > maxWidth) {
+    fontSize = Math.floor((maxWidth / estimatedWidth) * fontSize);
+    // Recalculate with new font size
+    estimatedWidth = estimateTextWidth(text, fontSize);
+  }
+
+  // Ensure minimum readable size
+  const minFontSize = 16;
+  fontSize = Math.max(fontSize, minFontSize);
+
+  // Ensure it doesn't exceed height constraint
+  fontSize = Math.min(fontSize, Math.floor(maxHeight * 0.9));
+
+  // Final width check with adjusted font size
+  const finalWidth = estimateTextWidth(text, fontSize);
+
+  console.log(`Text: "${text}" (${text.length} chars)`);
+  console.log(`  Max dimensions: ${maxWidth}x${maxHeight}`);
+  console.log(`  Calculated font size: ${fontSize}`);
+  console.log(`  Estimated text width: ${Math.round(finalWidth)}`);
+  console.log(`  Width utilization: ${Math.round((finalWidth / maxWidth) * 100)}%`);
+
+  return fontSize;
 };
