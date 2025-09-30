@@ -20,4 +20,5 @@ export enum RoleSelectionStatus {
   REMOVED_FROM_PARTY = 'removed-from-party',
   ROLE_CHANGED = 'party-member-role-changed',
   INVALID = 'game-master-cannot-be-changed',
+  LOCKED = 'session-locked',
 }

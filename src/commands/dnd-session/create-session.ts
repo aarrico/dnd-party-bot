@@ -8,8 +8,7 @@ import { monthOptionChoicesArray } from '../../utils/genericInformation.js';
 import { ExtendedInteraction } from '../../models/Command.js';
 import { initSession } from '../../controllers/session.js';
 import DateChecker from '../../utils/dateChecker';
-import { sendEphemeralReply } from '../../discord/message';
-import { client } from '../../index';
+import { notifyGuild, sendEphemeralReply } from '../../discord/message';
 import { inspect } from 'util';
 
 export default {
@@ -97,9 +96,7 @@ export default {
           : BotDialogs.createSessionSuccessFallback(sessionName, date, normalizedChannelName)
       });
 
-      // Also send DM to the creator
-      const user = client.users.cache.get(interaction.user.id);
-      await user?.send(dmMessage);
+     await notifyGuild(campaign.id, dmMessage);
     } catch (error) {
       // Public error message since we want transparency about session creation failures
       if (interaction.deferred) {

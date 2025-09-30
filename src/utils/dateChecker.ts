@@ -3,6 +3,7 @@ import { BotCommandOptionInfo } from './botDialogStrings';
 
 const monthMaxDayCounts = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
+
 export default function DateChecker(interaction: ExtendedInteraction) {
   const month = interaction.options.getInteger(BotCommandOptionInfo.CreateSession_MonthName, true);
   const day = interaction.options.getInteger(BotCommandOptionInfo.CreateSession_DayName, true);
@@ -19,9 +20,8 @@ export default function DateChecker(interaction: ExtendedInteraction) {
   )
     return undefined;
 
-  const sessionDate = new Date(
-    new Date(year, month, day, hour, mins).toUTCString()
-  );
+  const sessionDate = new Date(Date.UTC(year, month, day, hour, mins));
+
   return isDateAfterCurrentDate(sessionDate) ? sessionDate : undefined;
 }
 

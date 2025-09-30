@@ -58,6 +58,7 @@ export const BotDialogs = {
     partyFull:
       '🤖 Unfortunately, this party is full and no new users can be added at present!',
     dmCantSwap: '🤖 You cannot change roles as you are the Game Master!',
+    sessionLocked: '🔒 This session is locked and no longer accepting role changes.',
     noActionTaken: '🤖 No Action was taken. Something went wrong',
   },
 } as const;
@@ -83,6 +84,8 @@ export const getAddPartyMemberMsg = (
       return BotDialogs.roleChosenMessageContent.partyFull;
     case RoleSelectionStatus.INVALID:
       return BotDialogs.roleChosenMessageContent.dmCantSwap;
+    case RoleSelectionStatus.LOCKED:
+      return BotDialogs.roleChosenMessageContent.sessionLocked;
     default:
       return BotDialogs.roleChosenMessageContent.noActionTaken;
   }
