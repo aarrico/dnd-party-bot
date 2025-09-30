@@ -186,6 +186,7 @@ export const updateSession = async (
         },
       }),
       ...(data.partyMessageId !== undefined && { partyMessageId: data.partyMessageId }),
+      ...(data.status && { status: data.status }),
     },
   });
 };

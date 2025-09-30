@@ -9,21 +9,25 @@ import {
 import {
   sendNewSessionMessage,
   sendEphemeralReply,
+  notifyGuild,
+  getRoleButtonsForSession,
 } from '../discord/message.js';
 import { client } from '../index.js';
 import { ExtendedInteraction } from '../models/Command.js';
 import { AvatarOptions, PartyMemberImgInfo } from '../models/discord.js';
 import { PartyMember, RoleSelectionStatus } from '../models/party.js';
 import { ListSessionsOptions, ListSessionsResult, Session } from '../models/session.js';
-import { BotCommandOptionInfo, BotDialogs } from '../utils/botDialogStrings.js';
+import { BotCommandOptionInfo, BotDialogs, BotAttachmentFileNames, BotPaths } from '../utils/botDialogStrings.js';
+import { getImgAttachmentBuilder } from '../utils/attachmentBuilders.js';
 import DateChecker from '../utils/dateChecker.js';
 import { addUserToParty, updatePartyMemberRole, upsertUser } from '../db/user';
 import { deletePartyMember } from '../db/partyMember';
-import { Guild } from 'discord.js';
+import { ChannelType, Guild } from 'discord.js';
 import { createChannel, renameChannel } from '../discord/channel';
 import { RoleType } from '@prisma/client';
 import { sessionScheduler } from '../services/sessionScheduler.js';
 import { CreateSessionData } from '../models/session.js';
+import { createSessionImage } from '../utils/sessionImage.js';
 
 export const initSession = async (
   campaign: Guild,
@@ -84,18 +88,60 @@ export const initSession = async (
 export const cancelSession = async (sessionId: string, reason: string) => {
   const session = await getSession(sessionId);
 
-  for (const partyMember of session.partyMembers) {
-    const user = await client.users.fetch(partyMember.userId);
-    await user.send({
-      content: reason,
-    });
+  // Cancel any scheduled tasks first
+  sessionScheduler.cancelSessionTasks(sessionId);
+  console.log(`Canceled scheduled tasks for session ${sessionId}`);
+
+  // Update database status - this should happen regardless of other failures
+  try {
+    await updateSession(sessionId, { status: 'CANCELED' });
+    console.log(`Updated session ${sessionId} status to CANCELED in database`);
+  } catch (error) {
+    console.error(`Failed to update session ${sessionId} status to CANCELED:`, error);
+    throw error; // Re-throw since this is critical
   }
 
-  sessionScheduler.cancelSessionTasks(sessionId);
-  console.log(`Canceled scheduled tasks for manually canceled session ${sessionId}`);
+  // Try to regenerate the session image with red border
+  try {
+    await createSessionImage(sessionId);
+    console.log(`Regenerated session image with CANCELED status border`);
+  } catch (error) {
+    console.error(`Failed to regenerate session image for ${sessionId}:`, error);
+    // Don't throw - image generation failure shouldn't prevent cancellation
+  }
 
-  //await deleteChannel(session.id, reason);
-  await updateSession(sessionId, { status: 'CANCELED' });
+  // Try to update the Discord message with the new canceled image
+  try {
+    const channel = await client.channels.fetch(sessionId);
+    if (channel && channel.type === ChannelType.GuildText) {
+      const message = await channel.messages.fetch(session.partyMessageId);
+
+      const attachment = getImgAttachmentBuilder(
+        `${BotPaths.TempDir}/${BotAttachmentFileNames.CurrentSession}`,
+        BotAttachmentFileNames.CurrentSession
+      );
+
+      await message.edit({
+        content: `❌ **CANCELED** - ${session.name}\n${reason}`,
+        files: [attachment],
+        components: getRoleButtonsForSession('CANCELED'), // Remove buttons for canceled session
+      });
+
+      console.log(`Updated Discord message for canceled session ${sessionId}`);
+    }
+  } catch (error) {
+    console.error(`Failed to update Discord message for canceled session ${sessionId}:`, error);
+    // Don't throw - message update failure shouldn't prevent cancellation
+  }
+
+  // Try to notify guild members
+  try {
+    await notifyGuild(session.campaignId, reason);
+    console.log(`Notified guild members about session ${sessionId} cancellation`);
+  } catch (error) {
+    console.error(`Failed to notify guild about session ${sessionId} cancellation:`, error);
+    // Don't throw - notification failure shouldn't prevent cancellation
+  }
 };
 
 export const modifySession = async (interaction: ExtendedInteraction) => {

@@ -1,5 +1,5 @@
 import { AttachmentBuilder, ButtonInteraction, ChannelType, MessageFlags, MessagePayload, TextChannel, ActionRowBuilder, ButtonBuilder } from 'discord.js';
-import { roleButtons } from '../index.js';
+import { client, roleButtons } from '../index.js';
 import { ExtendedInteraction } from '../models/Command.js';
 import { SessionStatus } from '@prisma/client';
 
@@ -142,4 +142,15 @@ export const sendMessageReplyDisappearingMessage = async (
   setTimeout(() => {
     void msg.delete();
   }, 1000 * duration);
+};
+
+export const notifyGuild = async (guildId: string, messageContent: string) => {
+  const guild = await client.guilds.fetch(guildId);
+  if (!guild) {
+    throw new Error(`Guild with ID ${guildId} not found`);
+  }
+  const users = (await guild.members.fetch()).map(member => { if (!member.user.bot) return member.user; }).filter(user => user !== undefined);
+  await Promise.allSettled(users.map(user => user.send({
+    content: messageContent,
+  })));
 };
