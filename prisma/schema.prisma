@@ -58,9 +58,10 @@ model User {
   id        String @id
   channelId String @unique
   username  String @unique
+  timezone  String @default("PST")
 
   sessions PartyMember[]
-  guilds   Faction[]
+  factions Faction[]
 
   @@map("user")
 }
