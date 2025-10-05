@@ -35,10 +35,9 @@ export const BotDialogs = {
       name: string
     ) => `🎉 Session ${name} has been updated successfully.\n🖌️ Generating new image...give me a few seconds!`,
     scheduled: (
-      name: string,
       date: Date,
       timezone: string
-    ) => `🗓️ Session ${name} has been scheduled for ${formatSessionDateLong(date, timezone)}!`,
+    ) => `🗓️ ${formatSessionDateLong(date, timezone)}!`,
   },
 
   users: {

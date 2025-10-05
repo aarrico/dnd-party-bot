@@ -14,7 +14,7 @@ const coords = {
   member: { width: 300, height: 300, x: [365, 795, 1225, 1655, 2085], y: 1700 },
   dm: { width: 300, height: 300, x: 1225, y: 400 }, // Added missing dm coordinates
   sessionName: { x: 585, y: 940, maxWidth: 1200, maxHeight: 120, visualCenterX: 1350 }, // Visual center of the name area
-  date: { x: 1035, y: 1140, maxWidth: 1000, maxHeight: 100, visualCenterX: 1435 }, // Visual center of the date area
+  date: { x: 1000, y: 1140, maxWidth: 1000, maxHeight: 100, visualCenterX: 1435 }, // Visual center of the date area
   role: { yImg: 1300, yName: 2150, width: 300, height: 300 },
 };
 
