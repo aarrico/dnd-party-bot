@@ -47,6 +47,7 @@ model Session {
   timezone       String        @default("America/Los_Angeles")
   status         SessionStatus @default(SCHEDULED)
   partyMessageId String        @map("party_message_id")
+  eventId        String?       @map("event_id") // discord scheduled event id
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")
 

@@ -234,12 +234,12 @@ const getStatusColor = (status?: 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELE
  */
 const getRoleEmoji = (role: RoleType): string => {
   const emojiMap: Record<RoleType, string> = {
-    [RoleType.GAME_MASTER]: '🎭',
+    [RoleType.GAME_MASTER]: '👑',
     [RoleType.TANK]: '🛡️',
     [RoleType.SUPPORT]: '💚',
     [RoleType.RANGE_DPS]: '🏹',
     [RoleType.MELEE_DPS]: '⚔️',
-    [RoleType.FACE]: '💬',
+    [RoleType.FACE]: '🎭',
     [RoleType.CONTROL]: '🧙',
   };
   return emojiMap[role] || '🎲';
