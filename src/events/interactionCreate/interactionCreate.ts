@@ -116,7 +116,6 @@ const processButton = async (
     return;
   }
 
-  // Handle session role selection buttons
   const session = await getSessionById(interaction.channelId);
   if (!session) {
     throw new Error('something went wrong getting the session from the db');
@@ -126,7 +125,6 @@ const processButton = async (
     throw new Error('something went wrong getting the channel from discord');
   }
 
-  // Fetch the message directly instead of relying on cache
   let message;
   try {
     message = await interaction.channel.messages.fetch(session.partyMessageId);
@@ -160,7 +158,6 @@ const processButton = async (
     });
   } catch (error) {
     console.error('Failed to update session image:', error);
-    // Still update the message even if image creation fails
     await message.edit({
       content: BotDialogs.sessions.scheduled(session.name, session.date, (session.timezone ?? 'America/Los_Angeles') as string),
       components: getRoleButtonsForSession(session.status),
@@ -174,10 +171,8 @@ const processStringSelectMenu = async (interaction: StringSelectMenuInteraction<
   if (customId === 'onboarding-timezone-select' || customId === 'change-timezone-select') {
     const selectedTimezone = values[0];
 
-    // Update user's timezone in database
     await updateUserTimezone(user.id, selectedTimezone);
 
-    // Create "Change Timezone" button
     const changeTimezoneButton = new ButtonBuilder()
       .setCustomId('change-timezone-button')
       .setLabel('Change Timezone')
