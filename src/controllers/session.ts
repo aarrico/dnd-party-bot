@@ -25,6 +25,7 @@ import { addUserToParty, updatePartyMemberRole, upsertUser, getUserTimezone } fr
 import { deletePartyMember } from '../db/partyMember';
 import { ChannelType, Guild } from 'discord.js';
 import { createChannel, renameChannel } from '../discord/channel';
+import { createScheduledEvent, updateScheduledEvent, deleteScheduledEvent } from '../discord/scheduledEvent.js';
 import { RoleType } from '@prisma/client';
 import { sessionScheduler } from '../services/sessionScheduler.js';
 import { CreateSessionData } from '../models/session.js';
@@ -79,7 +80,24 @@ export const initSession = async (
   const partyMessageId = await sendNewSessionMessage(sessionForMessage, sessionChannel, party);
   console.log(`Received partyMessageId from sendNewSessionMessage: ${partyMessageId}`);
 
-  const updatedSession = await updateSession(session.id, { partyMessageId });
+  // Create Discord scheduled event (non-blocking - failures won't prevent session creation)
+  let eventId: string | null = null;
+  try {
+    eventId = await createScheduledEvent(
+      campaign.id,
+      sessionChannel.name,
+      date,
+      sessionChannel.id
+    );
+    if (eventId) {
+      console.log(`✓ Created scheduled event ${eventId} for session ${session.id}`);
+    }
+  } catch (error) {
+    console.error(`Failed to create scheduled event for session ${session.id}:`, error);
+    // Continue - event creation is optional
+  }
+
+  const updatedSession = await updateSession(session.id, { partyMessageId, eventId });
   console.log(`Updated session with partyMessageId: ${updatedSession.partyMessageId}`);
 
   sessionScheduler.scheduleSessionTasks(session.id, session.date);
@@ -94,6 +112,17 @@ export const cancelSession = async (sessionId: string, reason: string) => {
   // Cancel any scheduled tasks first
   sessionScheduler.cancelSessionTasks(sessionId);
   console.log(`Canceled scheduled tasks for session ${sessionId}`);
+
+  // Delete Discord scheduled event if it exists (non-blocking)
+  if (session.eventId) {
+    try {
+      await deleteScheduledEvent(session.campaignId, session.eventId);
+      console.log(`✓ Deleted scheduled event ${session.eventId} for canceled session ${sessionId}`);
+    } catch (error) {
+      console.error(`Failed to delete scheduled event for session ${sessionId}:`, error);
+      // Continue - event deletion is optional
+    }
+  }
 
   // Update database status - this should happen regardless of other failures
   try {
@@ -183,6 +212,7 @@ export const modifySession = async (interaction: ExtendedInteraction) => {
 
     const session = await getSessionById(sessionId);
     let dateChanged = false;
+    let nameChanged = false;
 
     if (newProposedDate) {
       if (!areDatesEqual(session.date, newProposedDate)) {
@@ -194,6 +224,7 @@ export const modifySession = async (interaction: ExtendedInteraction) => {
     if (newSessionName && newSessionName !== session.name) {
       await renameChannel(session.id, newSessionName);
       session.name = newSessionName;
+      nameChanged = true;
     }
 
     await updateSession(sessionId, session);
@@ -201,6 +232,28 @@ export const modifySession = async (interaction: ExtendedInteraction) => {
     if (dateChanged) {
       sessionScheduler.scheduleSessionTasks(sessionId, session.date);
       console.log(`Rescheduled tasks for session ${sessionId} to new date: ${session.date.toISOString()}`);
+    }
+
+    // Update Discord scheduled event if it exists and something changed
+    if (session.eventId && (dateChanged || nameChanged)) {
+      try {
+        const updates: { name?: string; scheduledStartTime?: Date } = {};
+        if (nameChanged) updates.name = session.name;
+        if (dateChanged) updates.scheduledStartTime = session.date;
+
+        const eventIdString = session.eventId as string;
+        const success = await updateScheduledEvent(
+          session.campaignId,
+          eventIdString,
+          updates
+        );
+        if (success) {
+          console.log(`✓ Updated scheduled event ${eventIdString} for session ${sessionId}`);
+        }
+      } catch (error) {
+        console.error(`Failed to update scheduled event for session ${sessionId}:`, error);
+        // Continue - event update is optional
+      }
     }
 
     await sendEphemeralReply(

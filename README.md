@@ -1,6 +1,6 @@
 # 🎲 DND Party Bot
 
-A Discord bot for managing D&D sessions and party members.
+A Discord bot for managing tabletop RPG sessions and party members.
 
 ## 📁 Project Structure
 

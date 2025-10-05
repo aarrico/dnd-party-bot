@@ -9,7 +9,7 @@ const roleEmojiMap: Record<RoleType, string> = {
   [RoleType.RANGE_DPS]: '🏹',   // Bow and arrow
   [RoleType.MELEE_DPS]: '⚔️',   // Crossed swords
   [RoleType.FACE]: '🎭',        // Theater masks
-  [RoleType.CONTROL]: '🧙‍♂️',     // Mage
+  [RoleType.CONTROL]: '🧙',     // Mage
   [RoleType.GAME_MASTER]: '👑', // Crown (shouldn't be used in selectable buttons)
 };
 
