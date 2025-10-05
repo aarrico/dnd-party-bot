@@ -45,7 +45,7 @@ export const sendNewSessionMessage = async (
 
     console.log(`Sending message with image to channel: ${channel.id}`);
     const sentMessage = await channel.send({
-      content: BotDialogs.sessions.scheduled(session.name, session.date),
+      content: BotDialogs.sessions.scheduled(session.name, session.date, session.timezone ?? 'America/Los_Angeles'),
       files: [attachment],
       components: getRoleButtonsForSession(session.status),
     });
@@ -59,7 +59,7 @@ export const sendNewSessionMessage = async (
     try {
       console.log(`Sending fallback message without image to channel: ${channel.id}`);
       const sentMessage = await channel.send({
-        content: BotDialogs.sessions.scheduled(session.name, session.date),
+        content: BotDialogs.sessions.scheduled(session.name, session.date, session.timezone ?? 'America/Los_Angeles'),
         components: getRoleButtonsForSession(session.status),
       });
 
@@ -144,13 +144,19 @@ export const sendMessageReplyDisappearingMessage = async (
   }, 1000 * duration);
 };
 
-export const notifyGuild = async (guildId: string, messageContent: string) => {
+export const notifyGuild = async (
+  guildId: string,
+  messageFormatter: (userId: string) => Promise<string>
+) => {
   const guild = await client.guilds.fetch(guildId);
   if (!guild) {
     throw new Error(`Guild with ID ${guildId} not found`);
   }
   const users = (await guild.members.fetch()).map(member => { if (!member.user.bot) return member.user; }).filter(user => user !== undefined);
-  await Promise.allSettled(users.map(user => user.send({
-    content: messageContent,
-  })));
+  await Promise.allSettled(users.map(async user => {
+    const formattedMessage = await messageFormatter(user.id);
+    return user.send({
+      content: formattedMessage,
+    });
+  }));
 };

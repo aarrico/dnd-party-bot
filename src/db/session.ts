@@ -49,6 +49,8 @@ export const getSession = async (
     date: session.date,
     campaignId: session.campaignId,
     partyMessageId: session.partyMessageId,
+    timezone: (session.timezone ?? 'America/Los_Angeles') as string,
+    status: session.status as 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED',
     partyMembers: session.partyMembers.map((member) => ({
       userId: member.user.id,
       username: member.user.username,
@@ -155,6 +157,7 @@ export async function getSessionById(
     campaignId: session.campaignId,
     partyMessageId: session.partyMessageId,
     status: session.status as 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED',
+    timezone: (session.timezone ?? 'America/Los_Angeles') as string,
     partyMembers: session.partyMembers.map((member) => ({
       userId: member.user.id,
       username: member.user.username,

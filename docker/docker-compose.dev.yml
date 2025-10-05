@@ -8,7 +8,8 @@ services:
     ports:
       - ${PORT:-3000}:${PORT:-3000}
       - 9229:9229  # Debug port
-    network_mode: host
+    networks:
+      - app-network
     depends_on:
       db:
         condition: service_healthy
@@ -23,13 +24,13 @@ services:
       - postgres-data:/app/postgres-data
     environment:
       NODE_ENV: development
-      DB_HOST: localhost
-      DB_PORT: ${DB_PORT}
+      DB_HOST: db
+      DB_PORT: 5432
       DB_USER: ${DB_USER}
       DB_NAME: ${DB_NAME}
       DB_PASSWORD: ${DB_PASSWORD}
       PORT: ${PORT:-3000}
-      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@localhost:${DB_PORT}/${DB_NAME}
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
       DISCORD_TOKEN: ${DISCORD_TOKEN}
       DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
       GUILD_ID: ${GUILD_ID}
@@ -39,8 +40,9 @@ services:
     restart: unless-stopped
     image: postgres:18rc1-alpine
     ports:
-      - ${DB_PORT}:${DB_PORT}
-    network_mode: host
+      - ${DB_PORT:-5432}:5432
+    networks:
+      - app-network
     healthcheck:
       test: [ "CMD-SHELL", "sh -c 'pg_isready -U ${DB_USER} -d ${DB_NAME}'" ]
       interval: 10s
@@ -53,8 +55,13 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
 
+
 volumes:
   postgres-data:
     name: postgres-data
   node_modules_dev:
     name: node_modules_dev
+
+networks:
+  app-network:
+    driver: bridge

@@ -1,4 +1,5 @@
 import {
+  AutocompleteInteraction,
   ChatInputApplicationCommandData,
   ChatInputCommandInteraction,
   CommandInteractionOptionResolver,
@@ -29,5 +30,6 @@ export type CommandType = {
 // New interface that matches the actual command structure
 export interface DiscordCommand {
   data: SlashCommandBuilder;
+  autocomplete?: (interaction: AutocompleteInteraction) => Promise<void>;
   execute: (interaction: ExtendedInteraction) => Promise<void>;
 }

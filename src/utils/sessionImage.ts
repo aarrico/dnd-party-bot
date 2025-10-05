@@ -8,6 +8,7 @@ import {
   RoleType,
 } from '../models/role.js';
 import { Session } from '../models/session.js';
+import { formatSessionDate } from './dateUtils.js';
 
 const coords = {
   member: { width: 300, height: 300, x: [365, 795, 1225, 1655, 2085], y: 1700 },
@@ -112,20 +113,11 @@ const placeSessionInfo = async (
     true
   );
 
-  // Format date in Pacific timezone
-  const pacificDate = new Date(session.date).toLocaleString('en-US', {
-    timeZone: 'America/Los_Angeles',
-    weekday: 'short',
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZoneName: 'short'
-  });
+  // Format date in session's timezone
+  const sessionDate = formatSessionDate(session.date, session.timezone ?? 'America/Los_Angeles');
 
   const dateOverlay = await createTextOverlay(
-    pacificDate,
+    sessionDate,
     coords.date.maxWidth,
     coords.date.maxHeight,
     true

@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, AutocompleteInteraction } from 'discord.js';
 import {
   BotCommandInfo,
   BotCommandOptionInfo,
@@ -10,6 +10,9 @@ import { initSession } from '../../controllers/session.js';
 import DateChecker from '../../utils/dateChecker';
 import { notifyGuild, sendEphemeralReply } from '../../discord/message';
 import { inspect } from 'util';
+import { getUserTimezone } from '../../db/user.js';
+import { handleTimezoneAutocomplete } from '../../utils/timezoneUtils.js';
+import { formatSessionCreationDM } from '../../utils/sessionNotifications.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -47,7 +50,17 @@ export default {
         .setName(BotCommandOptionInfo.CreateSession_TimeName)
         .setDescription(BotCommandOptionInfo.CreateSession_TimeDescription)
         .setRequired(true)
+    )
+    .addStringOption((timezone) =>
+      timezone
+        .setName(BotCommandOptionInfo.CreateSession_TimezoneName)
+        .setDescription(BotCommandOptionInfo.CreateSession_TimezoneDescription)
+        .setRequired(false)
+        .setAutocomplete(true)
     ),
+  async autocomplete(interaction: AutocompleteInteraction) {
+    await handleTimezoneAutocomplete(interaction);
+  },
   async execute(interaction: ExtendedInteraction) {
     try {
       const campaign = interaction.guild;
@@ -62,7 +75,14 @@ export default {
         return;
       }
 
-      const date = DateChecker(interaction);
+      // Get timezone from command or user's stored timezone
+      let timezone = interaction.options.getString(BotCommandOptionInfo.CreateSession_TimezoneName);
+
+      if (!timezone) {
+        timezone = await getUserTimezone(interaction.user.id);
+      }
+
+      const date = DateChecker(interaction, timezone);
       if (!date) {
         await sendEphemeralReply(
           BotDialogs.createSessionInvalidDateEntered,
@@ -73,12 +93,13 @@ export default {
 
       await interaction.deferReply();
 
-      const dmMessage = await initSession(
+      const session = await initSession(
         campaign,
         sessionName,
         date,
         interaction.user.displayName,
         interaction.user.id,
+        timezone,
       );
 
       // The channel name is normalized in createChannel (first space becomes dash)
@@ -96,7 +117,11 @@ export default {
           : BotDialogs.createSessionSuccessFallback(sessionName, date, normalizedChannelName)
       });
 
-     await notifyGuild(campaign.id, dmMessage);
+      // Send DMs to all guild members with their own timezone
+      await notifyGuild(
+        campaign.id,
+        (userId: string) => formatSessionCreationDM(campaign, session, userId)
+      );
     } catch (error) {
       // Public error message since we want transparency about session creation failures
       if (interaction.deferred) {

@@ -4,6 +4,7 @@ import {
   ClientOptions,
   Collection,
   GatewayIntentBits,
+  Partials,
   REST,
   Routes,
 } from 'discord.js';
@@ -28,8 +29,12 @@ export class ExtendedClient extends Client {
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.DirectMessages,
         GatewayIntentBits.MessageContent,
       ] as const,
+      partials: [
+        Partials.Channel, // Required for DM channels
+      ],
     };
     super(options);
   }
@@ -112,13 +117,13 @@ export class ExtendedClient extends Client {
     }
 
     const rest = new REST().setToken(process.env.DISCORD_TOKEN as string);
-    try {      
+    try {
       const res: any = await rest.put(
         Routes.applicationGuildCommands(
           process.env.DISCORD_CLIENT_ID as string,
           process.env.GUILD_ID as string
         ),
-          { body: this.commandData }
+        { body: this.commandData }
       );
 
       console.log(`Successfully reloaded ${res.length} application (/) commands.`);
