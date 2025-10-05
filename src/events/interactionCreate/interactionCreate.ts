@@ -11,6 +11,7 @@ import {
   ButtonStyle,
   StringSelectMenuBuilder,
   StringSelectMenuOptionBuilder,
+  MessageFlags,
 } from 'discord.js';
 import { client } from '../../index.js';
 import { Event } from '../../structures/Event.js';
@@ -109,7 +110,7 @@ const processButton = async (
     await interaction.reply({
       content: '🕐 Please select your new timezone:',
       components: [row],
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
 
     return;
@@ -188,7 +189,7 @@ const processStringSelectMenu = async (interaction: StringSelectMenuInteraction<
     await interaction.reply({
       content: BotDialogs.onboarding.timezoneSet(selectedTimezone),
       components: [row],
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
 
     console.log(`[Onboarding] Set timezone for user ${user.username} (${user.id}) to ${selectedTimezone}`);

@@ -2,19 +2,23 @@ import { Events, GuildMember, StringSelectMenuBuilder, StringSelectMenuOptionBui
 import { Event } from '../../structures/Event.js';
 import { AMERICAN_TIMEZONES } from '../../utils/timezoneUtils.js';
 import { BotDialogs } from '../../utils/botDialogStrings.js';
+import { upsertUser } from '../../db/user.js';
 
 const ONBOARDING_SELECT_MENU_ID = 'onboarding-timezone-select';
 
 export default new Event(Events.GuildMemberAdd, async (member: GuildMember) => {
-  // Skip if the new member is a bot
-  if (member.user.bot) {
+   if (member.user.bot) {
     return;
   }
 
   try {
     console.log(`New member joined: ${member.user.displayName} (${member.user.id})`);
 
-    // Create timezone selection menu
+    const dmChannel = await member.user.createDM();
+    await upsertUser(member.user.id, member.user.username, dmChannel.id);
+    console.log(`Added user ${member.user.username} to database`);
+
+    //Create timezone selection menu
     const timezoneSelect = new StringSelectMenuBuilder()
       .setCustomId(ONBOARDING_SELECT_MENU_ID)
       .setPlaceholder('Select your timezone')
