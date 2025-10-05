@@ -139,3 +139,37 @@ export const getUserTimezone = async (userId: string): Promise<string> => {
   });
   return user?.timezone ?? 'America/Los_Angeles';
 };
+
+export const getUserById = async (userId: string): Promise<User | null> => {
+  return await prisma.user.findUnique({
+    where: { id: userId },
+  });
+};
+
+export const addUserToCampaign = async (userId: string, campaignId: string): Promise<void> => {
+  await prisma.faction.upsert({
+    where: {
+      campaign_member_id: {
+        campaignId,
+        userId,
+      },
+    },
+    create: {
+      campaignId,
+      userId,
+    },
+    update: {}, // No updates needed if already exists
+  });
+};
+
+export const isUserInCampaign = async (userId: string, campaignId: string): Promise<boolean> => {
+  const campaignMember = await prisma.faction.findUnique({
+    where: {
+      campaign_member_id: {
+        campaignId,
+        userId,
+      },
+    },
+  });
+  return campaignMember !== null;
+};
