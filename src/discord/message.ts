@@ -1,7 +1,7 @@
 import { AttachmentBuilder, ButtonInteraction, ChannelType, MessageFlags, MessagePayload, TextChannel, ActionRowBuilder, ButtonBuilder, EmbedBuilder } from 'discord.js';
 import { client, roleButtons } from '../index.js';
 import { ExtendedInteraction } from '../models/Command.js';
-import { SessionStatus } from '@prisma/client';
+import { SessionStatus, RoleType } from '@prisma/client';
 
 import { Session } from '../models/session.js';
 import { BotAttachmentFileNames, BotDialogs, BotPaths } from '../utils/botDialogStrings';
@@ -45,10 +45,10 @@ export const sendNewSessionMessage = async (
       BotAttachmentFileNames.CurrentSession
     );
 
-    const embed = createPartyMemberEmbed(partyMembers, channel.guildId, session.name);
+    const embed = createPartyMemberEmbed(partyMembers, channel.guildId, session.name, session.status);
 
     embed.setImage(`attachment://${BotAttachmentFileNames.CurrentSession}`);
-    embed.setDescription(BotDialogs.sessions.scheduled(session.name, session.date, session.timezone ?? 'America/Los_Angeles'));
+    embed.setDescription(BotDialogs.sessions.scheduled(session.date, session.timezone ?? 'America/Los_Angeles'));
 
     console.log(`Sending message with embed, image, and buttons to channel: ${channel.id}`);
     const sentMessage = await channel.send({
@@ -64,8 +64,8 @@ export const sendNewSessionMessage = async (
 
     try {
       console.log(`Sending fallback message without image to channel: ${channel.id}`);
-      const embed = createPartyMemberEmbed(partyMembers, channel.guildId, session.name);
-      embed.setDescription(BotDialogs.sessions.scheduled(session.name, session.date, session.timezone ?? 'America/Los_Angeles'));
+      const embed = createPartyMemberEmbed(partyMembers, channel.guildId, session.name, session.status);
+      embed.setDescription(BotDialogs.sessions.scheduled(session.date, session.timezone ?? 'America/Los_Angeles'));
 
       const sentMessage = await channel.send({
         embeds: [embed],
@@ -177,10 +177,11 @@ export const notifyGuild = async (
 export const createPartyMemberEmbed = (
   partyMembers: PartyMember[],
   guildId: string,
-  sessionName: string
+  sessionName: string,
+  sessionStatus?: 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED'
 ): EmbedBuilder => {
   const embed = new EmbedBuilder()
-    .setColor(0x5865F2) // Discord blurple
+    .setColor(getStatusColor(sessionStatus))
     .setTitle(`🎲 ${sessionName}`)
     .setTimestamp();
 
@@ -188,23 +189,26 @@ export const createPartyMemberEmbed = (
     return embed;
   }
 
-  const membersByRole: Record<string, string[]> = {};
+  const membersByRole: Record<RoleType, PartyMember[]> = {} as Record<RoleType, PartyMember[]>;
 
   for (const member of partyMembers) {
-    const roleName = member.role;
-    if (!membersByRole[roleName]) {
-      membersByRole[roleName] = [];
+    const roleType = member.role;
+    if (!membersByRole[roleType]) {
+      membersByRole[roleType] = [];
     }
-
-    // Format: <@userId> creates a mention link that shows server profile
-    const memberLink = `<@${member.userId}>`;
-    membersByRole[roleName].push(memberLink);
+    membersByRole[roleType].push(member);
   }
 
-  for (const [role, members] of Object.entries(membersByRole)) {
+  for (const [roleType, members] of Object.entries(membersByRole) as [RoleType, PartyMember[]][]) {
+    // Create mention links for all members in this role
+    const memberLinks = members.map(member => `<@${member.userId}>`);
+
+    // Convert enum to display name
+    const displayName = roleType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
     embed.addFields({
-      name: `${getRoleEmoji(role)} ${role}`,
-      value: members.join('\n'),
+      name: `${getRoleEmoji(roleType)} ${displayName}`,
+      value: memberLinks.join('\n'),
       inline: true,
     });
   }
@@ -213,17 +217,30 @@ export const createPartyMemberEmbed = (
 };
 
 /**
+ * Get color based on session status
+ */
+const getStatusColor = (status?: 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED'): number => {
+  const colorMap: Record<string, number> = {
+    'SCHEDULED': 0x5865F2, // Discord blurple
+    'ACTIVE': 0x57F287,    // Green
+    'COMPLETED': 0x9B59B6, // Purple
+    'CANCELED': 0xED4245,  // Red
+  };
+  return colorMap[status || 'SCHEDULED'] || 0x5865F2;
+};
+
+/**
  * Get emoji for role type
  */
-const getRoleEmoji = (role: string): string => {
-  const emojiMap: Record<string, string> = {
-    'Game Master': '🎭',
-    'Tank': '🛡️',
-    'Support': '💚',
-    'Range DPS': '🏹',
-    'Melee DPS': '⚔️',
-    'Face': '💬',
-    'Control': '🧙',
+const getRoleEmoji = (role: RoleType): string => {
+  const emojiMap: Record<RoleType, string> = {
+    [RoleType.GAME_MASTER]: '🎭',
+    [RoleType.TANK]: '🛡️',
+    [RoleType.SUPPORT]: '💚',
+    [RoleType.RANGE_DPS]: '🏹',
+    [RoleType.MELEE_DPS]: '⚔️',
+    [RoleType.FACE]: '💬',
+    [RoleType.CONTROL]: '🧙',
   };
   return emojiMap[role] || '🎲';
 };

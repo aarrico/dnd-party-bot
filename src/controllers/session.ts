@@ -125,7 +125,7 @@ export const cancelSession = async (sessionId: string, reason: string) => {
       );
 
       const party = await getParty(sessionId);
-      const embed = createPartyMemberEmbed(party, session.campaignId, session.name);
+      const embed = createPartyMemberEmbed(party, session.campaignId, session.name, 'CANCELED');
       embed.setImage(`attachment://${BotAttachmentFileNames.CurrentSession}`);
       embed.setDescription(`❌ **CANCELED** - ${session.name}\n${reason}`);
 
