@@ -16,7 +16,7 @@ import {
 import { client } from '../../index.js';
 import { Event } from '../../structures/Event.js';
 import { ExtendedInteraction } from '../../models/Command.js';
-import { sendMessageReplyDisappearingMessage, getRoleButtonsForSession } from '../../discord/message.js';
+import { sendMessageReplyDisappearingMessage, getRoleButtonsForSession, createPartyMemberEmbed } from '../../discord/message.js';
 import { createSessionImage } from '../../utils/sessionImage.js';
 import { getImgAttachmentBuilder } from '../../utils/attachmentBuilders.js';
 import {
@@ -28,7 +28,7 @@ import {
 import { processRoleSelection } from '../../controllers/session.js';
 import { PartyMember } from '../../models/party';
 import { getRoleByString } from '../../models/role.js';
-import { getSessionById } from '../../db/session.js';
+import { getSessionById, getParty } from '../../db/session.js';
 import { updateUserTimezone } from '../../db/user.js';
 import { AMERICAN_TIMEZONES } from '../../utils/timezoneUtils.js';
 
@@ -151,15 +151,26 @@ const processButton = async (
       BotAttachmentFileNames.CurrentSession
     );
 
+    const party = await getParty(session.id);
+    const embed = createPartyMemberEmbed(party, interaction.guildId ?? '', session.name);
+    embed.setImage(`attachment://${BotAttachmentFileNames.CurrentSession}`);
+    embed.setDescription(BotDialogs.sessions.scheduled(session.name, session.date, (session.timezone ?? 'America/Los_Angeles') as string));
+
     await message.edit({
-      content: BotDialogs.sessions.scheduled(session.name, session.date, (session.timezone ?? 'America/Los_Angeles') as string),
+      embeds: [embed],
       files: [attachment],
       components: getRoleButtonsForSession(session.status),
     });
   } catch (error) {
     console.error('Failed to update session image:', error);
+
+    // Fallback: update without image but with embed
+    const party = await getParty(session.id);
+    const embed = createPartyMemberEmbed(party, interaction.guildId ?? '', session.name);
+    embed.setDescription(BotDialogs.sessions.scheduled(session.name, session.date, (session.timezone ?? 'America/Los_Angeles') as string));
+
     await message.edit({
-      content: BotDialogs.sessions.scheduled(session.name, session.date, (session.timezone ?? 'America/Los_Angeles') as string),
+      embeds: [embed],
       components: getRoleButtonsForSession(session.status),
     });
   }

@@ -11,6 +11,7 @@ import {
   sendEphemeralReply,
   notifyGuild,
   getRoleButtonsForSession,
+  createPartyMemberEmbed,
 } from '../discord/message.js';
 import { client } from '../index.js';
 import { ExtendedInteraction } from '../models/Command.js';
@@ -74,7 +75,8 @@ export const initSession = async (
     timezone: (session.timezone ?? 'America/Los_Angeles') as string,
   };
 
-  const partyMessageId = await sendNewSessionMessage(sessionForMessage, sessionChannel);
+  const party = await getParty(session.id);
+  const partyMessageId = await sendNewSessionMessage(sessionForMessage, sessionChannel, party);
   console.log(`Received partyMessageId from sendNewSessionMessage: ${partyMessageId}`);
 
   const updatedSession = await updateSession(session.id, { partyMessageId });
@@ -122,8 +124,13 @@ export const cancelSession = async (sessionId: string, reason: string) => {
         BotAttachmentFileNames.CurrentSession
       );
 
+      const party = await getParty(sessionId);
+      const embed = createPartyMemberEmbed(party, session.campaignId, session.name);
+      embed.setImage(`attachment://${BotAttachmentFileNames.CurrentSession}`);
+      embed.setDescription(`❌ **CANCELED** - ${session.name}\n${reason}`);
+
       await message.edit({
-        content: `❌ **CANCELED** - ${session.name}\n${reason}`,
+        embeds: [embed],
         files: [attachment],
         components: getRoleButtonsForSession('CANCELED'), // Remove buttons for canceled session
       });

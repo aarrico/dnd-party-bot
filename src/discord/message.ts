@@ -1,4 +1,4 @@
-import { AttachmentBuilder, ButtonInteraction, ChannelType, MessageFlags, MessagePayload, TextChannel, ActionRowBuilder, ButtonBuilder } from 'discord.js';
+import { AttachmentBuilder, ButtonInteraction, ChannelType, MessageFlags, MessagePayload, TextChannel, ActionRowBuilder, ButtonBuilder, EmbedBuilder } from 'discord.js';
 import { client, roleButtons } from '../index.js';
 import { ExtendedInteraction } from '../models/Command.js';
 import { SessionStatus } from '@prisma/client';
@@ -7,6 +7,7 @@ import { Session } from '../models/session.js';
 import { BotAttachmentFileNames, BotDialogs, BotPaths } from '../utils/botDialogStrings';
 import { getImgAttachmentBuilder } from '../utils/attachmentBuilders.js';
 import { createSessionImage } from '../utils/sessionImage.js';
+import { PartyMember } from '../models/party.js';
 
 /**
  * Get role buttons for session based on status
@@ -19,6 +20,7 @@ export const getRoleButtonsForSession = (sessionStatus?: SessionStatus | 'SCHEDU
 export const sendNewSessionMessage = async (
   session: Session,
   channel: TextChannel,
+  partyMembers: PartyMember[] = []
 ) => {
   console.log(`Sending new session message for session: ${session.id}`);
 
@@ -43,9 +45,14 @@ export const sendNewSessionMessage = async (
       BotAttachmentFileNames.CurrentSession
     );
 
-    console.log(`Sending message with image to channel: ${channel.id}`);
+    const embed = createPartyMemberEmbed(partyMembers, channel.guildId, session.name);
+
+    embed.setImage(`attachment://${BotAttachmentFileNames.CurrentSession}`);
+    embed.setDescription(BotDialogs.sessions.scheduled(session.name, session.date, session.timezone ?? 'America/Los_Angeles'));
+
+    console.log(`Sending message with embed, image, and buttons to channel: ${channel.id}`);
     const sentMessage = await channel.send({
-      content: BotDialogs.sessions.scheduled(session.name, session.date, session.timezone ?? 'America/Los_Angeles'),
+      embeds: [embed],
       files: [attachment],
       components: getRoleButtonsForSession(session.status),
     });
@@ -55,11 +62,13 @@ export const sendNewSessionMessage = async (
   } catch (error) {
     console.error(`Error creating session image, falling back to message without image:`, error);
 
-    // Fallback: send message without image
     try {
       console.log(`Sending fallback message without image to channel: ${channel.id}`);
+      const embed = createPartyMemberEmbed(partyMembers, channel.guildId, session.name);
+      embed.setDescription(BotDialogs.sessions.scheduled(session.name, session.date, session.timezone ?? 'America/Los_Angeles'));
+
       const sentMessage = await channel.send({
-        content: BotDialogs.sessions.scheduled(session.name, session.date, session.timezone ?? 'America/Los_Angeles'),
+        embeds: [embed],
         components: getRoleButtonsForSession(session.status),
       });
 
@@ -159,4 +168,62 @@ export const notifyGuild = async (
       content: formattedMessage,
     });
   }));
+};
+
+/**
+ * Create an embed with party member links
+ * Links to server profile if available, otherwise regular profile
+ */
+export const createPartyMemberEmbed = (
+  partyMembers: PartyMember[],
+  guildId: string,
+  sessionName: string
+): EmbedBuilder => {
+  const embed = new EmbedBuilder()
+    .setColor(0x5865F2) // Discord blurple
+    .setTitle(`🎲 ${sessionName}`)
+    .setTimestamp();
+
+  if (partyMembers.length === 0) {
+    return embed;
+  }
+
+  const membersByRole: Record<string, string[]> = {};
+
+  for (const member of partyMembers) {
+    const roleName = member.role;
+    if (!membersByRole[roleName]) {
+      membersByRole[roleName] = [];
+    }
+
+    // Format: <@userId> creates a mention link that shows server profile
+    const memberLink = `<@${member.userId}>`;
+    membersByRole[roleName].push(memberLink);
+  }
+
+  for (const [role, members] of Object.entries(membersByRole)) {
+    embed.addFields({
+      name: `${getRoleEmoji(role)} ${role}`,
+      value: members.join('\n'),
+      inline: true,
+    });
+  }
+
+  return embed;
+};
+
+/**
+ * Get emoji for role type
+ */
+const getRoleEmoji = (role: string): string => {
+  const emojiMap: Record<string, string> = {
+    'Game Master': '🎭',
+    'Tank': '🛡️',
+    'Support': '💚',
+    'Range DPS': '🏹',
+    'Melee DPS': '⚔️',
+    'Face': '💬',
+    'Control': '🧙',
+  };
+  return emojiMap[role] || '🎲';
 };
