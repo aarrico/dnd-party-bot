@@ -5,6 +5,12 @@ import {
   ChannelType,
   ChatInputCommandInteraction,
   Events,
+  StringSelectMenuInteraction,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  StringSelectMenuBuilder,
+  StringSelectMenuOptionBuilder,
 } from 'discord.js';
 import { client } from '../../index.js';
 import { Event } from '../../structures/Event.js';
@@ -22,6 +28,8 @@ import { processRoleSelection } from '../../controllers/session.js';
 import { PartyMember } from '../../models/party';
 import { getRoleByString } from '../../models/role.js';
 import { getSessionById } from '../../db/session.js';
+import { updateUserTimezone } from '../../db/user.js';
+import { AMERICAN_TIMEZONES } from '../../utils/timezoneUtils.js';
 
 const partyMemberJoined = async (
   userId: string,
@@ -81,6 +89,33 @@ const processAutocomplete = async (
 const processButton = async (
   interaction: ButtonInteraction<CacheType>
 ): Promise<void> => {
+  // Handle "Change Timezone" button in DMs
+  if (interaction.customId === 'change-timezone-button') {
+    // Create timezone select menu
+    const timezoneSelect = new StringSelectMenuBuilder()
+      .setCustomId('change-timezone-select')
+      .setPlaceholder('Select your timezone')
+      .addOptions(
+        AMERICAN_TIMEZONES.map((tz) =>
+          new StringSelectMenuOptionBuilder()
+            .setLabel(tz.name)
+            .setDescription(tz.value)
+            .setValue(tz.value)
+        )
+      );
+
+    const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(timezoneSelect);
+
+    await interaction.reply({
+      content: '🕐 Please select your new timezone:',
+      components: [row],
+      ephemeral: true,
+    });
+
+    return;
+  }
+
+  // Handle session role selection buttons
   const session = await getSessionById(interaction.channelId);
   if (!session) {
     throw new Error('something went wrong getting the session from the db');
@@ -132,6 +167,34 @@ const processButton = async (
   }
 };
 
+const processStringSelectMenu = async (interaction: StringSelectMenuInteraction<CacheType>) => {
+  const { customId, values, user } = interaction;
+
+  if (customId === 'onboarding-timezone-select' || customId === 'change-timezone-select') {
+    const selectedTimezone = values[0];
+
+    // Update user's timezone in database
+    await updateUserTimezone(user.id, selectedTimezone);
+
+    // Create "Change Timezone" button
+    const changeTimezoneButton = new ButtonBuilder()
+      .setCustomId('change-timezone-button')
+      .setLabel('Change Timezone')
+      .setStyle(ButtonStyle.Secondary);
+
+    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(changeTimezoneButton);
+
+    // Send confirmation message with button
+    await interaction.reply({
+      content: BotDialogs.onboarding.timezoneSet(selectedTimezone),
+      components: [row],
+      ephemeral: true,
+    });
+
+    console.log(`[Onboarding] Set timezone for user ${user.username} (${user.id}) to ${selectedTimezone}`);
+  }
+};
+
 export default new Event(Events.InteractionCreate, async (interaction) => {
   if (interaction.isCommand() && interaction.isChatInputCommand()) {
     await processCommand(interaction);
@@ -139,5 +202,7 @@ export default new Event(Events.InteractionCreate, async (interaction) => {
     await processAutocomplete(interaction);
   } else if (interaction.isButton()) {
     await processButton(interaction);
+  } else if (interaction.isStringSelectMenu()) {
+    await processStringSelectMenu(interaction);
   }
 });

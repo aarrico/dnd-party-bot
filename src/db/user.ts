@@ -21,6 +21,13 @@ export const upsertUser = async (userId: string, username: string, channelId: st
   });
 }
 
+export const updateUserTimezone = async (userId: string, timezone: string) => {
+  return await prisma.user.update({
+    where: { id: userId },
+    data: { timezone },
+  });
+};
+
 export const upsertUserWithUsername = async (userData: User) =>
   await prisma.user.upsert({
     where: { id: userData.id },

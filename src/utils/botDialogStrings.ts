@@ -46,6 +46,15 @@ export const BotDialogs = {
       '🤖🎉 Report for all users that have participated in any campaign is ready!',
   },
 
+  onboarding: {
+    welcome: (username: string) =>
+      `👋 Welcome to the Party Manager Bot, ${username}!\n\n` +
+      `To get started, please select your timezone. This will be used to display session times in your local time when you receive direct messages.`,
+    timezoneSet: (timezone: string) =>
+      `✅ Great! Your timezone has been set to **${timezone}**.\n\n` +
+      `_Need to change it later? Just send me a message with "timezone" and I'll help you update it!_`,
+  },
+
   // InteractionCreate responses
   interactionCreateNonexistentCommand:
     '🤖 You have used a nonexistent command!',
