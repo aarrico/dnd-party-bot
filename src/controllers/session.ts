@@ -20,7 +20,7 @@ import { ListSessionsOptions, ListSessionsResult, Session } from '../models/sess
 import { BotCommandOptionInfo, BotDialogs, BotAttachmentFileNames, BotPaths } from '../utils/botDialogStrings.js';
 import { getImgAttachmentBuilder } from '../utils/attachmentBuilders.js';
 import DateChecker from '../utils/dateChecker.js';
-import { addUserToParty, updatePartyMemberRole, upsertUser } from '../db/user';
+import { addUserToParty, updatePartyMemberRole, upsertUser, getUserTimezone } from '../db/user';
 import { deletePartyMember } from '../db/partyMember';
 import { ChannelType, Guild } from 'discord.js';
 import { createChannel, renameChannel } from '../discord/channel';
@@ -28,6 +28,7 @@ import { RoleType } from '@prisma/client';
 import { sessionScheduler } from '../services/sessionScheduler.js';
 import { CreateSessionData } from '../models/session.js';
 import { createSessionImage } from '../utils/sessionImage.js';
+import { areDatesEqual, isFutureDate } from '../utils/dateUtils.js';
 
 export const initSession = async (
   campaign: Guild,
@@ -35,7 +36,8 @@ export const initSession = async (
   date: Date,
   username: string,
   userId: string,
-): Promise<string> => {
+  timezone: string,
+): Promise<Session> => {
 
   const sessionChannel = await createChannel(
     campaign,
@@ -48,6 +50,7 @@ export const initSession = async (
     date,
     campaignId: campaign.id,
     partyMessageId: '',
+    timezone,
   };
 
   const user = await client.users.fetch(userId);
@@ -68,6 +71,7 @@ export const initSession = async (
     campaignId: session.campaignId,
     partyMessageId: session.partyMessageId ?? '',
     status: session.status as 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED',
+    timezone: (session.timezone ?? 'America/Los_Angeles') as string,
   };
 
   const partyMessageId = await sendNewSessionMessage(sessionForMessage, sessionChannel);
@@ -79,10 +83,7 @@ export const initSession = async (
   sessionScheduler.scheduleSessionTasks(session.id, session.date);
   console.log(`Scheduled tasks for session ${session.id} at ${session.date.toISOString()}`);
 
-  return BotDialogs.createSessionDMSessionTime(
-    campaign,
-    updatedSession,
-  );
+  return sessionForMessage;
 };
 
 export const cancelSession = async (sessionId: string, reason: string) => {
@@ -136,7 +137,19 @@ export const cancelSession = async (sessionId: string, reason: string) => {
 
   // Try to notify guild members
   try {
-    await notifyGuild(session.campaignId, reason);
+    const { getUserTimezone } = await import('../db/user.js');
+    const { formatSessionDateLong } = await import('../utils/dateUtils.js');
+
+    await notifyGuild(session.campaignId, async (userId: string) => {
+      const userTimezone = await getUserTimezone(userId);
+      const sessionTime = formatSessionDateLong(session.date, userTimezone);
+
+      return `❌ **Session Canceled**\n\n` +
+        `🎲 **[${session.name}](https://discord.com/channels/${session.campaignId}/${session.id}/${session.partyMessageId})** has been canceled.\n` +
+        `📅 **Was scheduled for:** ${sessionTime}\n` +
+        `❗ **Reason:** ${reason}\n\n` +
+        `We apologize for any inconvenience. 🎯`;
+    });
     console.log(`Notified guild members about session ${sessionId} cancellation`);
   } catch (error) {
     console.error(`Failed to notify guild about session ${sessionId} cancellation:`, error);
@@ -151,13 +164,21 @@ export const modifySession = async (interaction: ExtendedInteraction) => {
     )?.value as string;
     const newSessionName = interaction?.options?.get('new-session-name')
       ?.value as string;
-    const newProposedDate = DateChecker(interaction);
+
+    // Get timezone from command or user's stored timezone
+    let timezone = interaction.options.getString(BotCommandOptionInfo.CreateSession_TimezoneName);
+
+    if (!timezone) {
+      timezone = await getUserTimezone(interaction.user.id);
+    }
+
+    const newProposedDate = DateChecker(interaction, timezone);
 
     const session = await getSessionById(sessionId);
     let dateChanged = false;
 
     if (newProposedDate) {
-      if (session.date.getTime() !== newProposedDate.getTime()) {
+      if (!areDatesEqual(session.date, newProposedDate)) {
         session.date = newProposedDate;
         dateChanged = true;
       }
@@ -200,7 +221,7 @@ export const processRoleSelection = async (
     return RoleSelectionStatus.LOCKED;
   }
 
-  if (date < new Date()) {
+  if (!isFutureDate(date)) {
     return RoleSelectionStatus.EXPIRED;
   }
 

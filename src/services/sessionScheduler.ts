@@ -3,6 +3,12 @@ import { client } from '../index.js';
 import { getSessionById } from '../db/session.js';
 import { SessionWithParty } from '../models/session.js';
 import { notifyGuild } from '../discord/message.js';
+import {
+  getHoursBefore,
+  getMinutesBefore,
+  formatSessionDateLong,
+  isFutureDate
+} from '../utils/dateUtils.js';
 
 interface ScheduledTask {
   sessionId: string;
@@ -24,15 +30,14 @@ class SessionScheduler {
   }
 
   public scheduleSessionTasks(sessionId: string, sessionDate: Date): void {
-    this.cancelSessionTasks(sessionId); 
+    this.cancelSessionTasks(sessionId);
 
-    const now = new Date();
-    const reminderTime = new Date(sessionDate.getTime() - 60 * 60 * 1000); // 1 hour before
-    const cancelTime = new Date(sessionDate.getTime() - 5 * 60 * 1000); // 5 minutes before start
+    const reminderTime = getHoursBefore(sessionDate, 1); // 1 hour before
+    const cancelTime = getMinutesBefore(sessionDate, 5); // 5 minutes before start
 
     const task: ScheduledTask = { sessionId };
 
-    if (reminderTime > now) {
+    if (isFutureDate(reminderTime)) {
       const reminderJob = new CronJob(
         reminderTime,
         () => this.handleReminder(sessionId),
@@ -46,13 +51,13 @@ class SessionScheduler {
       console.log(`Session ${sessionId} reminder time has already passed (${reminderTime.toISOString()})`);
     }
 
-    if (cancelTime > now) {
+    if (isFutureDate(cancelTime)) {
       const cancellationJob = new CronJob(
         cancelTime,
         () => this.handleCancellation(sessionId),
         null,
         true,
-        'UTC' 
+        'UTC'
       );
       task.cancellationJob = cancellationJob;
       console.log(`Scheduled cancellation check for session ${sessionId} at ${cancelTime.toISOString()} (UTC)`);
@@ -132,14 +137,16 @@ class SessionScheduler {
   private async sendSessionReminders(session: SessionWithParty, sendToPartyOnly: boolean): Promise<void> {
     console.log(`Sending reminders for session ${session.name} to ${session.partyMembers.length} members`);
 
-    const reminderMessage = this.createReminderMessage(session);
-
     if (sendToPartyOnly) {
       let successCount = 0;
       let failureCount = 0;
 
       for (const member of session.partyMembers) {
         try {
+          const { getUserTimezone } = await import('../db/user.js');
+          const userTimezone = await getUserTimezone(member.userId);
+          const reminderMessage = this.createReminderMessage(session, userTimezone);
+
           const user = await client.users.fetch(member.userId);
           await user.send(reminderMessage);
           console.log(`Sent reminder to ${member.username} (${member.userId})`);
@@ -152,18 +159,24 @@ class SessionScheduler {
 
       console.log(`Reminder summary for session ${session.id}: ${successCount} sent, ${failureCount} failed`);
     } else {
-      await notifyGuild(session.campaignId, reminderMessage);
+      const { getUserTimezone } = await import('../db/user.js');
+      await notifyGuild(session.campaignId, async (userId: string) => {
+        const userTimezone = await getUserTimezone(userId);
+        return this.createReminderMessage(session, userTimezone);
+      });
     }
   }
 
   private async cancelUnfilledSession(session: SessionWithParty): Promise<void> {
     console.log(`Cancelling unfilled session ${session.name} - only ${session.partyMembers.length}/6 members`);
 
-    const cancellationMessage = this.createCancellationMessage(session);
+    // Note: The cancellation message will be formatted per-user in the notifyGuild call
+    // For now we use session timezone as the reason string, but notifyGuild doesn't use it directly for user messages
+    const cancellationReason = `Insufficient players (${session.partyMembers.length}/6)`;
 
     try {
       const { cancelSession } = await import('../controllers/session.js');
-      await cancelSession(session.id, cancellationMessage);
+      await cancelSession(session.id, cancellationReason);
       console.log(`Successfully canceled unfilled session ${session.id}`);
     } catch (error) {
       console.error(`CRITICAL: Failed to cancel unfilled session ${session.id}:`, error);
@@ -180,16 +193,8 @@ class SessionScheduler {
   }
 
 
-  private createReminderMessage(session: SessionWithParty): string {
-    const sessionTime = session.date.toLocaleString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZoneName: 'short'
-    });
+  private createReminderMessage(session: SessionWithParty, timezone: string): string {
+    const sessionTime = formatSessionDateLong(session.date, timezone);
 
     return `⏰ **Session Reminder**\n\n` +
       `🎲 **[${session.name}](https://discord.com/channels/${session.campaignId}/${session.id}/${session.partyMessageId})** starts in 1 hour!\n` +
@@ -200,16 +205,8 @@ class SessionScheduler {
   }
 
 
-  private createCancellationMessage(session: SessionWithParty): string {
-    const sessionTime = session.date.toLocaleString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZoneName: 'short'
-    });
+  private createCancellationMessage(session: SessionWithParty, timezone: string): string {
+    const sessionTime = formatSessionDateLong(session.date, timezone);
 
     return `❌ **Session Canceled**\n\n` +
       `🎲 **[${session.name}](https://discord.com/channels/${session.campaignId}/${session.id}/${session.partyMessageId})** has been canceled due to insufficient players.\n` +
@@ -231,7 +228,7 @@ class SessionScheduler {
         includeUserRole: false,
       });
 
-      const futureSessions = allSessions.filter(session => session.date > new Date());
+      const futureSessions = allSessions.filter(session => isFutureDate(session.date));
 
       console.log(`Found ${futureSessions.length} future sessions to schedule`);
 

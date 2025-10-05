@@ -2,6 +2,8 @@ import { Session } from '@prisma/client';
 import { PartyMember, RoleSelectionStatus } from '../models/party.js';
 import path from 'path';
 import { Guild } from 'discord.js';
+import { formatSessionDateLong } from './dateUtils.js';
+import { format } from 'date-fns';
 
 
 export const BotDialogs = {
@@ -9,17 +11,18 @@ export const BotDialogs = {
   createSessionInvalidSessionName: 'Your session name is invalid.',
   createSessionDMSessionTime: (
     campaign: Guild,
-    session: Session,
+    session: Pick<Session, 'name' | 'id' | 'partyMessageId' | 'date'>,
+    timezone: string,
   ) =>
-    `🤖 New session [${session.name}](https://discord.com/channels/${campaign.id}/${session.id}/${session.partyMessageId}) for ${campaign.name} scheduled for ${session.date.toLocaleString()}`,
+    `🤖 New session [${session.name}](https://discord.com/channels/${campaign.id}/${session.id}/${session.partyMessageId}) for ${campaign.name} scheduled for ${formatSessionDateLong(session.date, timezone)}`,
   createSessionOneMoment:
     '🤖 One Moment while I create your session. You will receive a message via Direct Message when complete!',
   createSessionInvalidDateEntered:
     "🤖 The date you entered is invalid. This could be due to the following reasons:\n- You entered a date that doesn't exist.\n- You entered a day that has already passed.",
   createSessionSuccess: (sessionName: string, date: Date, channelId: string) =>
-    `✅ **${sessionName}** session has been created!\n📅 Scheduled for: ${date.toDateString()}\n🎲 Join the session: <#${channelId}>`,
+    `✅ **${sessionName}** session has been created!\n📅 Scheduled for: ${format(date, 'PPP')}\n🎲 Join the session: <#${channelId}>`,
   createSessionSuccessFallback: (sessionName: string, date: Date, channelName: string) =>
-    `✅ **${sessionName}** session has been created!\n📅 Scheduled for: ${date.toDateString()}\n🎲 Join the session: #${channelName}`,
+    `✅ **${sessionName}** session has been created!\n📅 Scheduled for: ${format(date, 'PPP')}\n🎲 Join the session: #${channelName}`,
   createSessionError: '❌ There was an error creating the session. Please try again.',
 
   sessions: {
@@ -33,8 +36,9 @@ export const BotDialogs = {
     ) => `🎉 Session ${name} has been updated successfully.\n🖌️ Generating new image...give me a few seconds!`,
     scheduled: (
       name: string,
-      date: Date
-    ) => `🗓️ Session ${name} has been scheduled for ${date.toLocaleString()}!`,
+      date: Date,
+      timezone: string
+    ) => `🗓️ Session ${name} has been scheduled for ${formatSessionDateLong(date, timezone)}!`,
   },
 
   users: {
@@ -142,7 +146,7 @@ export enum BotCommandOptionInfo {
   CreateSession_YearName = 'year',
   CreateSession_YearDescription = 'Year of session',
   CreateSession_TimeName = 'time',
-  CreateSession_TimeDescription = 'Time using 24 hour HH:MM format',
+  CreateSession_TimeDescription = 'Time in 12-hour (7:00 PM) or 24-hour (19:00) format',
   //GetAllUserSessions
   GetAllUserSessions_UserIDDescription = 'User ID that you are finding the sessions for.',
   GetAllUserSessions_SessionIDDescription = 'UUID of session in DB(unique identifier)',
@@ -167,4 +171,6 @@ export enum BotCommandOptionInfo {
   CancelSession_ReasonName = 'reason',
   CancelSession_ReasonDescription = 'Message to party members about the cancellation of the session.',
   Campaign_Description = 'Include campaign name in the output.',
+  CreateSession_TimezoneName = "timezone",
+  CreateSession_TimezoneDescription = "Timezone for the session (defaults to your saved timezone)",
 }

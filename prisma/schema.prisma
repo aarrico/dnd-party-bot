@@ -44,6 +44,7 @@ model Session {
   campaign       Campaign      @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   name           String
   date           DateTime
+  timezone       String        @default("America/Los_Angeles")
   status         SessionStatus @default(SCHEDULED)
   partyMessageId String        @map("party_message_id")
   createdAt      DateTime      @default(now()) @map("created_at")
@@ -58,7 +59,7 @@ model User {
   id        String @id
   channelId String @unique
   username  String @unique
-  timezone  String @default("PST")
+  timezone  String @default("America/Los_Angeles")
 
   sessions PartyMember[]
   factions Faction[]

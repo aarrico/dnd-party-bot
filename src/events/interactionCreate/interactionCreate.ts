@@ -1,4 +1,5 @@
 import {
+  AutocompleteInteraction,
   ButtonInteraction,
   CacheType,
   ChannelType,
@@ -63,6 +64,20 @@ const processCommand = async (
   await command.execute(interaction as ExtendedInteraction);
 };
 
+const processAutocomplete = async (
+  interaction: AutocompleteInteraction<CacheType>
+): Promise<void> => {
+  const command = client.commands.get(interaction.commandName);
+  if (!command) {
+    return;
+  }
+
+  // Check if the command has an autocomplete method
+  if ('autocomplete' in command && command.autocomplete) {
+    await command.autocomplete(interaction);
+  }
+};
+
 const processButton = async (
   interaction: ButtonInteraction<CacheType>
 ): Promise<void> => {
@@ -103,7 +118,7 @@ const processButton = async (
     );
 
     await message.edit({
-      content: BotDialogs.sessions.scheduled(session.name, session.date),
+      content: BotDialogs.sessions.scheduled(session.name, session.date, (session.timezone ?? 'America/Los_Angeles') as string),
       files: [attachment],
       components: getRoleButtonsForSession(session.status),
     });
@@ -111,7 +126,7 @@ const processButton = async (
     console.error('Failed to update session image:', error);
     // Still update the message even if image creation fails
     await message.edit({
-      content: BotDialogs.sessions.scheduled(session.name, session.date),
+      content: BotDialogs.sessions.scheduled(session.name, session.date, (session.timezone ?? 'America/Los_Angeles') as string),
       components: getRoleButtonsForSession(session.status),
     });
   }
@@ -120,6 +135,8 @@ const processButton = async (
 export default new Event(Events.InteractionCreate, async (interaction) => {
   if (interaction.isCommand() && interaction.isChatInputCommand()) {
     await processCommand(interaction);
+  } else if (interaction.isAutocomplete()) {
+    await processAutocomplete(interaction);
   } else if (interaction.isButton()) {
     await processButton(interaction);
   }

@@ -9,16 +9,16 @@ import { client } from '../index';
 
 export const upsertUser = async (userId: string, username: string, channelId: string) => {
   return await prisma.user.upsert({
-  where: { id: userId },
-  create: {
-    id: userId,
-    username: username,
-    channelId: channelId,
-  },
-  update: {
-    username: username,
-  },
-});
+    where: { id: userId },
+    create: {
+      id: userId,
+      username: username,
+      channelId: channelId,
+    },
+    update: {
+      username: username,
+    },
+  });
 }
 
 export const upsertUserWithUsername = async (userData: User) =>
@@ -62,7 +62,7 @@ export const addUserToParty = async (
   if (username) {
     const user = await client.users.fetch(userId);
     const dmChannel = await user.createDM();
-    
+
     await prisma.user.upsert({
       where: { id: userId },
       create: {
@@ -123,4 +123,12 @@ export const getSessionsForUser = async (
       }
     ),
   };
+};
+
+export const getUserTimezone = async (userId: string): Promise<string> => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { timezone: true }
+  });
+  return user?.timezone ?? 'America/Los_Angeles';
 };
