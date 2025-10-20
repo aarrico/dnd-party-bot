@@ -5,7 +5,7 @@
     "dev": "tsx watch src/index.ts",
     "dev:docker": "docker compose -f docker/docker-compose.dev.yml up --build --detach",
     "dev:docker:down": "docker compose -f docker/docker-compose.dev.yml down",
-    "dev:fresh": "docker compose -f docker/docker-compose.dev.yml down --volumes --remove-orphans && docker volume rm postgres-data node_modules_dev 2>/dev/null || true && npm run dev:docker",
+    "dev:fresh": "docker compose -f docker/docker-compose.dev.yml down --remove-orphans && docker volume rm node_modules_dev 2>/dev/null || true && npm run dev:docker",
     "local": "npm run build && node dist/src/index.js",
     "start": "docker compose -f docker/docker-compose.prod.yml up --build --detach",
     "start:fresh": "docker compose -f docker/docker-compose.prod.yml down --volumes --remove-orphans && docker volume rm postgres-data 2>/dev/null || true && npm run start",

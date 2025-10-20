@@ -4,6 +4,8 @@ import {
   GuildScheduledEvent,
 } from 'discord.js';
 import { client } from '../index.js';
+import { safeGuildFetch } from '../utils/discordErrorHandler.js';
+import { retryWithBackoff } from '../utils/retryWithBackoff.js';
 
 /**
  * Default session duration in hours
@@ -25,7 +27,7 @@ export const createScheduledEvent = async (
   channelId?: string
 ): Promise<string | null> => {
   try {
-    const guild = await client.guilds.fetch(guildId);
+    const guild = await safeGuildFetch(client, guildId);
     if (!guild) {
       console.warn(`Guild ${guildId} not found for scheduled event creation`);
       return null;
@@ -35,16 +37,18 @@ export const createScheduledEvent = async (
       sessionDate.getTime() + DEFAULT_SESSION_DURATION_HOURS * 60 * 60 * 1000
     );
 
-    const event: GuildScheduledEvent = await guild.scheduledEvents.create({
-      name: sessionName,
-      scheduledStartTime: sessionDate,
-      scheduledEndTime: endTime,
-      privacyLevel: GuildScheduledEventPrivacyLevel.GuildOnly,
-      entityType: GuildScheduledEventEntityType.External,
-      entityMetadata: {
-        location: channelId ? `Session Channel: #${channelId}` : 'Game Session',
-      },
-      description: `🎲 Tabletop RPG Session\n\nClick "Interested" to get notifications about this session!\n\nJoin the session channel to select your role and prepare for adventure!`,
+    const event: GuildScheduledEvent = await retryWithBackoff(async () => {
+      return await guild.scheduledEvents.create({
+        name: sessionName,
+        scheduledStartTime: sessionDate,
+        scheduledEndTime: endTime,
+        privacyLevel: GuildScheduledEventPrivacyLevel.GuildOnly,
+        entityType: GuildScheduledEventEntityType.External,
+        entityMetadata: {
+          location: channelId ? `Session Channel: #${channelId}` : 'Game Session',
+        },
+        description: `🎲 Tabletop RPG Session\n\nClick "Interested" to get notifications about this session!\n\nJoin the session channel to select your role and prepare for adventure!`,
+      });
     });
 
     console.log(`✓ Created scheduled event: ${event.name} (${event.id})`);
@@ -72,13 +76,16 @@ export const updateScheduledEvent = async (
   }
 ): Promise<boolean> => {
   try {
-    const guild = await client.guilds.fetch(guildId);
+    const guild = await safeGuildFetch(client, guildId);
     if (!guild) {
       console.warn(`Guild ${guildId} not found for scheduled event update`);
       return false;
     }
 
-    const event = await guild.scheduledEvents.fetch(eventId);
+    const event = await retryWithBackoff(async () => {
+      return await guild.scheduledEvents.fetch(eventId);
+    });
+
     if (!event) {
       console.warn(`Scheduled event ${eventId} not found`);
       return false;
@@ -107,7 +114,10 @@ export const updateScheduledEvent = async (
       updateData.description = updates.description;
     }
 
-    await event.edit(updateData);
+    await retryWithBackoff(async () => {
+      return await event.edit(updateData);
+    });
+
     console.log(`✓ Updated scheduled event: ${eventId}`);
     return true;
   } catch (error) {
@@ -127,19 +137,25 @@ export const deleteScheduledEvent = async (
   eventId: string
 ): Promise<boolean> => {
   try {
-    const guild = await client.guilds.fetch(guildId);
+    const guild = await safeGuildFetch(client, guildId);
     if (!guild) {
       console.warn(`Guild ${guildId} not found for scheduled event deletion`);
       return false;
     }
 
-    const event = await guild.scheduledEvents.fetch(eventId);
+    const event = await retryWithBackoff(async () => {
+      return await guild.scheduledEvents.fetch(eventId);
+    });
+
     if (!event) {
       console.warn(`Scheduled event ${eventId} not found or already deleted`);
       return false;
     }
 
-    await event.delete();
+    await retryWithBackoff(async () => {
+      return await event.delete();
+    });
+
     console.log(`✓ Deleted scheduled event: ${eventId}`);
     return true;
   } catch (error) {
@@ -162,13 +178,16 @@ export const cancelScheduledEvent = async (
   reason?: string
 ): Promise<boolean> => {
   try {
-    const guild = await client.guilds.fetch(guildId);
+    const guild = await safeGuildFetch(client, guildId);
     if (!guild) {
       console.warn(`Guild ${guildId} not found for scheduled event cancellation`);
       return false;
     }
 
-    const event = await guild.scheduledEvents.fetch(eventId);
+    const event = await retryWithBackoff(async () => {
+      return await guild.scheduledEvents.fetch(eventId);
+    });
+
     if (!event) {
       console.warn(`Scheduled event ${eventId} not found`);
       return false;
@@ -181,9 +200,11 @@ export const cancelScheduledEvent = async (
       description = `❌ **CANCELED**\n\n---\n${description}`;
     }
 
-    await event.edit({
-      description,
-      status: 4, // CANCELED status
+    await retryWithBackoff(async () => {
+      return await event.edit({
+        description,
+        status: 4, // CANCELED status
+      });
     });
 
     console.log(`✓ Canceled scheduled event: ${eventId}`);

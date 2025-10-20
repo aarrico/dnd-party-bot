@@ -31,6 +31,14 @@ import { sessionScheduler } from '../services/sessionScheduler.js';
 import { CreateSessionData } from '../models/session.js';
 import { createSessionImage } from '../utils/sessionImage.js';
 import { areDatesEqual, isFutureDate } from '../utils/dateUtils.js';
+import {
+  safeChannelFetch,
+  safeMessageFetch,
+  safeMessageEdit,
+  safeUserFetch,
+  safeCreateDM,
+  safePermissionOverwritesEdit
+} from '../utils/discordErrorHandler.js';
 
 export const initSession = async (
   campaign: Guild,
@@ -55,11 +63,11 @@ export const initSession = async (
     timezone,
   };
 
-  const user = await client.users.fetch(userId);
-  const dmChannel = await user.createDM();
+  const user = await safeUserFetch(client, userId);
+  const dmChannel = await safeCreateDM(user);
   await upsertUser(userId, username, dmChannel.id);
 
-  await sessionChannel.permissionOverwrites.edit(userId, {
+  await safePermissionOverwritesEdit(sessionChannel, userId, {
     ViewChannel: true,
     SendMessages: true
   });
@@ -77,8 +85,17 @@ export const initSession = async (
   };
 
   const party = await getParty(session.id);
-  const partyMessageId = await sendNewSessionMessage(sessionForMessage, sessionChannel, party);
-  console.log(`Received partyMessageId from sendNewSessionMessage: ${partyMessageId}`);
+
+  // Send the session message (with retry logic)
+  let partyMessageId: string = '';
+  try {
+    partyMessageId = await sendNewSessionMessage(sessionForMessage, sessionChannel, party);
+    console.log(`Received partyMessageId from sendNewSessionMessage: ${partyMessageId}`);
+  } catch (error) {
+    console.error(`Failed to send new session message for session ${session.id}:`, error);
+    // Continue - we still want to create the session even if message sending fails
+    // The message can be resent later or users can access via the channel directly
+  }
 
   // Create Discord scheduled event (non-blocking - failures won't prevent session creation)
   let eventId: string | null = null;
@@ -97,8 +114,17 @@ export const initSession = async (
     // Continue - event creation is optional
   }
 
-  const updatedSession = await updateSession(session.id, { partyMessageId, eventId });
-  console.log(`Updated session with partyMessageId: ${updatedSession.partyMessageId}`);
+  // Update session with partyMessageId and eventId
+  try {
+    console.log(`Attempting to update session ${session.id} with partyMessageId: ${partyMessageId}, eventId: ${eventId}`);
+    const updatedSession = await updateSession(session.id, { partyMessageId, eventId });
+    console.log(`✓ Successfully updated session with partyMessageId: ${updatedSession.partyMessageId}`);
+  } catch (error) {
+    console.error(`Failed to update session ${session.id} with partyMessageId and eventId:`, error);
+    // This is a critical error but we've already created the session
+    // Log it prominently for investigation
+    console.error(`⚠️ SESSION ${session.id} CREATED BUT NOT UPDATED WITH MESSAGE ID ${partyMessageId}`);
+  }
 
   sessionScheduler.scheduleSessionTasks(session.id, session.date);
   console.log(`Scheduled tasks for session ${session.id} at ${session.date.toISOString()}`);
@@ -144,9 +170,9 @@ export const cancelSession = async (sessionId: string, reason: string) => {
 
   // Try to update the Discord message with the new canceled image
   try {
-    const channel = await client.channels.fetch(sessionId);
+    const channel = await safeChannelFetch(client, sessionId);
     if (channel && channel.type === ChannelType.GuildText) {
-      const message = await channel.messages.fetch(session.partyMessageId);
+      const message = await safeMessageFetch(channel, session.partyMessageId);
 
       const attachment = getImgAttachmentBuilder(
         `${BotPaths.TempDir}/${BotAttachmentFileNames.CurrentSession}`,
@@ -158,10 +184,10 @@ export const cancelSession = async (sessionId: string, reason: string) => {
       embed.setImage(`attachment://${BotAttachmentFileNames.CurrentSession}`);
       embed.setDescription(`❌ **CANCELED** - ${session.name}\n${reason}`);
 
-      await message.edit({
+      await safeMessageEdit(message, {
         embeds: [embed],
         files: [attachment],
-        components: getRoleButtonsForSession('CANCELED'), // Remove buttons for canceled session
+        components: getRoleButtonsForSession('CANCELED'),
       });
 
       console.log(`Updated Discord message for canceled session ${sessionId}`);
@@ -327,7 +353,7 @@ export const getPartyInfoForImg = async (
   const partyWithAvatars = await Promise.all(
     party.map(async (member) => {
       try {
-        const user = await client.users.fetch(member.userId);
+        const user = await safeUserFetch(client, member.userId);
         return {
           userId: member.userId,
           username: member.username,
