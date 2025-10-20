@@ -176,23 +176,31 @@ export const updateSession = async (
   sessionId: string,
   data: Partial<CreateSessionData>,
 ): Promise<Session> => {
-  return await prisma.session.update({
-    where: { id: sessionId },
-    data: {
-      ...(data.name && { name: data.name }),
-      ...(data.date && {
-        date: data.date,
-      }),
-      ...(data.campaignId && {
-        campaign: {
-          connect: {
-            id: data.campaignId,
-          },
+  const updateData = {
+    ...(data.name && { name: data.name }),
+    ...(data.date && {
+      date: data.date,
+    }),
+    ...(data.campaignId && {
+      campaign: {
+        connect: {
+          id: data.campaignId,
         },
-      }),
-      ...(data.partyMessageId !== undefined && { partyMessageId: data.partyMessageId }),
-      ...(data.eventId !== undefined && { eventId: data.eventId }),
-      ...(data.status && { status: data.status }),
-    },
+      },
+    }),
+    ...(data.partyMessageId !== undefined && { partyMessageId: data.partyMessageId }),
+    ...(data.eventId !== undefined && { eventId: data.eventId }),
+    ...(data.status && { status: data.status }),
+  };
+
+  console.log(`[DB] Updating session ${sessionId} with data:`, JSON.stringify(updateData, null, 2));
+
+  const updatedSession = await prisma.session.update({
+    where: { id: sessionId },
+    data: updateData,
   });
+
+  console.log(`[DB] Updated session result - partyMessageId: ${updatedSession.partyMessageId}`);
+
+  return updatedSession;
 };

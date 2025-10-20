@@ -8,6 +8,12 @@ import { BotAttachmentFileNames, BotDialogs, BotPaths } from '../utils/botDialog
 import { getImgAttachmentBuilder } from '../utils/attachmentBuilders.js';
 import { createSessionImage } from '../utils/sessionImage.js';
 import { PartyMember } from '../models/party.js';
+import {
+  safeGuildFetch,
+  safeGuildMembersFetch,
+  safeChannelSend,
+  safeUserSend,
+} from '../utils/discordErrorHandler.js';
 
 /**
  * Get role buttons for session based on status
@@ -51,7 +57,7 @@ export const sendNewSessionMessage = async (
     embed.setDescription(BotDialogs.sessions.scheduled(session.date, session.timezone ?? 'America/Los_Angeles'));
 
     console.log(`Sending message with embed, image, and buttons to channel: ${channel.id}`);
-    const sentMessage = await channel.send({
+    const sentMessage = await safeChannelSend(channel, {
       embeds: [embed],
       files: [attachment],
       components: getRoleButtonsForSession(session.status),
@@ -67,7 +73,7 @@ export const sendNewSessionMessage = async (
       const embed = createPartyMemberEmbed(partyMembers, channel.guildId, session.name, session.status);
       embed.setDescription(BotDialogs.sessions.scheduled(session.date, session.timezone ?? 'America/Los_Angeles'));
 
-      const sentMessage = await channel.send({
+      const sentMessage = await safeChannelSend(channel, {
         embeds: [embed],
         components: getRoleButtonsForSession(session.status),
       });
@@ -157,23 +163,28 @@ export const notifyGuild = async (
   guildId: string,
   messageFormatter: (userId: string) => Promise<string>
 ) => {
-  const guild = await client.guilds.fetch(guildId);
+  const guild = await safeGuildFetch(client, guildId);
   if (!guild) {
     throw new Error(`Guild with ID ${guildId} not found`);
   }
-  const users = (await guild.members.fetch()).map(member => { if (!member.user.bot) return member.user; }).filter(user => user !== undefined);
+  const members = await safeGuildMembersFetch(guild);
+  const users = Array.from(members.values())
+    .map(member => { if (!member.user.bot) return member.user; })
+    .filter(user => user !== undefined);
+
   await Promise.allSettled(users.map(async user => {
-    const formattedMessage = await messageFormatter(user.id);
-    return user.send({
-      content: formattedMessage,
-    });
+    try {
+      const formattedMessage = await messageFormatter(user.id);
+      return await safeUserSend(user, {
+        content: formattedMessage,
+      });
+    } catch (error) {
+      console.warn(`Failed to send DM to user ${user.id}:`, error);
+      return null;
+    }
   }));
 };
 
-/**
- * Create an embed with party member links
- * Links to server profile if available, otherwise regular profile
- */
 export const createPartyMemberEmbed = (
   partyMembers: PartyMember[],
   guildId: string,
@@ -219,12 +230,12 @@ export const createPartyMemberEmbed = (
 /**
  * Get color based on session status
  */
-const getStatusColor = (status?: 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED'): number => {
+const getStatusColor = (status?: 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED'): number => {  
   const colorMap: Record<string, number> = {
-    'SCHEDULED': 0x5865F2, // Discord blurple
-    'ACTIVE': 0x57F287,    // Green
-    'COMPLETED': 0x9B59B6, // Purple
-    'CANCELED': 0xED4245,  // Red
+    'SCHEDULED': 0x00FF00, // Green
+    'ACTIVE': 0xFFD700,    // Gold
+    'COMPLETED': 0x0080FF, // Blue
+    'CANCELED': 0xFF0000,  // Red
   };
   return colorMap[status || 'SCHEDULED'] || 0x5865F2;
 };

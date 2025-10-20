@@ -1,11 +1,17 @@
 import { ChannelType, Guild, TextChannel } from 'discord.js';
 import { client } from '../index';
+import {
+  safeChannelFetch,
+  safeChannelCreate,
+  safeChannelDelete,
+  safeChannelEdit,
+} from '../utils/discordErrorHandler.js';
 
 export const createChannel = async (
   campaign: Guild,
   channelName: string
 ): Promise<TextChannel> => {
-  const session = await campaign.channels.create({
+  const session = await safeChannelCreate(campaign, {
     name: channelName.replace(' ', '-'),
     type: ChannelType.GuildText,
   });
@@ -17,15 +23,15 @@ export const deleteChannel = async (
   channelId: string,
   reason: string = 'session expired.'
 ) => {
-  const channel = await client.channels.fetch(channelId);
+  const channel = await safeChannelFetch(client, channelId);
   if (channel) {
-    await channel.delete(reason);
+    await safeChannelDelete(channel, reason);
   }
 };
 
 export const renameChannel = async (channelId: string, name: string) => {
-  const channel = await client.channels.fetch(channelId);
+  const channel = await safeChannelFetch(client, channelId);
   if (channel && channel.type === ChannelType.GuildText) {
-    await channel.edit({ name: name.replace(' ', '-') });
+    await safeChannelEdit(channel, { name: name.replace(' ', '-') });
   }
 };

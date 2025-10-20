@@ -7,6 +7,7 @@ import {
   Partials,
   REST,
   Routes,
+  Events,
 } from 'discord.js';
 import { Event } from './Event.js';
 import { DiscordCommand } from '../models/Command.js';
@@ -37,6 +38,76 @@ export class ExtendedClient extends Client {
       ],
     };
     super(options);
+
+    // Set up error handlers for better resilience
+    this.setupErrorHandlers();
+  }
+
+  /**
+   * Set up error handlers for the Discord client
+   */
+  private setupErrorHandlers(): void {
+    // Handle WebSocket errors
+    this.on(Events.Error, (error) => {
+      console.error('Discord client error:', error);
+    });
+
+    // Handle WebSocket warnings
+    this.on(Events.Warn, (warning) => {
+      console.warn('Discord client warning:', warning);
+    });
+
+    // Handle rate limit events
+    this.on(Events.Debug, (info) => {
+      // Only log rate limit related debug info
+      if (info.includes('429') || info.toLowerCase().includes('rate limit')) {
+        console.warn('Rate limit debug:', info);
+      }
+    });
+
+    // Handle disconnect events
+    this.on(Events.ShardDisconnect, (event, shardId) => {
+      console.warn(`Shard ${shardId} disconnected (code: ${event.code}, reason: ${event.reason})`);
+    });
+
+    // Handle reconnect events
+    this.on(Events.ShardReconnecting, (shardId) => {
+      console.log(`Shard ${shardId} is reconnecting...`);
+    });
+
+    // Handle resume events
+    this.on(Events.ShardResume, (shardId, replayedEvents) => {
+      console.log(`Shard ${shardId} resumed successfully (replayed ${replayedEvents} events)`);
+    });
+
+    // Handle shard ready events
+    this.on(Events.ShardReady, (shardId) => {
+      console.log(`Shard ${shardId} is ready`);
+    });
+
+    // Handle process-level errors
+    process.on('unhandledRejection', (error: Error) => {
+      console.error('Unhandled promise rejection:', error);
+
+      // Check if it's a socket error
+      if (error.message && error.message.includes('other side closed')) {
+        console.warn('Socket closed error detected - Discord.js will automatically retry');
+      }
+    });
+
+    process.on('uncaughtException', (error: Error) => {
+      console.error('Uncaught exception:', error);
+
+      // For critical errors, we might want to restart
+      // but for socket errors, just log and continue
+      if (error.message && error.message.includes('other side closed')) {
+        console.warn('Socket closed exception detected - continuing operation');
+      } else {
+        console.error('Critical error - consider restarting the application');
+        // Optionally exit and let process manager restart
+        // process.exit(1);
+      }
+    });
   }
 
   start = async () => {
@@ -118,7 +189,7 @@ export class ExtendedClient extends Client {
 
     const rest = new REST().setToken(process.env.DISCORD_TOKEN as string);
     try {
-      const res: any = await rest.put(
+      await rest.put(
         Routes.applicationGuildCommands(
           process.env.DISCORD_CLIENT_ID as string,
           process.env.GUILD_ID as string
@@ -126,7 +197,7 @@ export class ExtendedClient extends Client {
         { body: this.commandData }
       );
 
-      console.log(`Successfully reloaded ${res.length} application (/) commands.`);
+      console.log(`Successfully reloaded application (/) commands.`);
     } catch (error) {
       console.error('failed registering commands to guild:', inspect(error, { depth: null, colors: true }));
     }
