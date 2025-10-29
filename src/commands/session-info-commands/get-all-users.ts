@@ -9,7 +9,7 @@ import {
 import { getTxtAttachmentBuilder } from '../../utils/attachmentBuilders.js';
 import { ExtendedInteraction } from '../../models/Command.js';
 import { sendEphemeralReply } from '../../discord/message.js';
-import { listUsers } from '../../controllers/users';
+import { listUsers } from '../../controllers/users.js';
 
 export default {
   data: new SlashCommandBuilder()

@@ -12,7 +12,7 @@ import { SlashCommandBuilder } from 'discord.js';
 import {
   formatSessionPartyAsStr,
   listPartyForSession,
-} from '../../controllers/party';
+} from '../../controllers/party.js';
 
 export default {
   data: new SlashCommandBuilder()

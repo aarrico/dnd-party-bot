@@ -1,5 +1,5 @@
 import { ChannelType, Guild, TextChannel } from 'discord.js';
-import { client } from '../index';
+import { client } from '../index.js';
 import {
   safeChannelFetch,
   safeChannelCreate,

@@ -1,5 +1,5 @@
-import { ExtendedInteraction } from '../models/Command';
-import { BotCommandOptionInfo } from './botDialogStrings';
+import { ExtendedInteraction } from '../models/Command.js';
+import { BotCommandOptionInfo } from './botDialogStrings.js';
 import { TZDate } from '@date-fns/tz';
 import { isFutureDate } from './dateUtils.js';
 

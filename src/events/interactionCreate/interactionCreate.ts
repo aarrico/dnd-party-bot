@@ -26,11 +26,11 @@ import {
   getAddPartyMemberMsg,
 } from '../../utils/botDialogStrings.js';
 import { processRoleSelection } from '../../controllers/session.js';
-import { PartyMember } from '../../models/party';
+import { PartyMember } from '../../models/party.js';
 import { getRoleByString } from '../../models/role.js';
 import { getSessionById, getParty } from '../../db/session.js';
 import { updateUserTimezone } from '../../db/user.js';
-import { AMERICAN_TIMEZONES } from '../../utils/timezoneUtils.js';
+import { TIMEZONES } from '../../utils/timezoneUtils.js';
 
 const partyMemberJoined = async (
   userId: string,
@@ -97,7 +97,7 @@ const processButton = async (
       .setCustomId('change-timezone-select')
       .setPlaceholder('Select your timezone')
       .addOptions(
-        AMERICAN_TIMEZONES.map((tz) =>
+        TIMEZONES.map((tz) =>
           new StringSelectMenuOptionBuilder()
             .setLabel(tz.name)
             .setDescription(tz.value)

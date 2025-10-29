@@ -1,0 +1,77 @@
+# Railway Docker Compose Configuration
+# This is a standalone configuration file for deploying to Railway
+# All services are defined inline without using 'extends'
+#
+# Usage:
+#   1. Rename this file to docker-compose.yml or use with: docker compose -f docker-compose.railway.yml up
+#   2. Make sure your .env file has all required variables
+#   3. Deploy to Railway by connecting your GitHub repo
+#
+# Required Environment Variables:
+#   - DISCORD_TOKEN
+#   - DISCORD_CLIENT_ID
+#   - DATABASE_URL (Railway auto-generates this when you add PostgreSQL)
+#   - PORT (optional, defaults to 3000)
+
+services:
+  # Discord Bot API Service
+  api:
+    container_name: api
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.prod
+    ports:
+      - ${PORT:-3000}:3000
+    networks:
+      - app-network
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      DISCORD_TOKEN: ${DISCORD_TOKEN}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # PostgreSQL Database Service
+  db:
+    container_name: postgres
+    restart: unless-stopped
+    image: postgres:18rc1-alpine
+    ports:
+      - ${DB_PORT:-5432}:5432
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "sh -c 'pg_isready -U ${DB_USER} -d ${DB_NAME}'"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+    name: postgres-data

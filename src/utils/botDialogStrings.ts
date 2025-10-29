@@ -1,6 +1,7 @@
 import { Session } from '@prisma/client';
 import { PartyMember, RoleSelectionStatus } from '../models/party.js';
 import path from 'path';
+import os from 'os';
 import { Guild } from 'discord.js';
 import { formatSessionDateLong } from './dateUtils.js';
 import { format } from 'date-fns';
@@ -105,7 +106,7 @@ export const getAddPartyMemberMsg = (
 
 //potential resolve path here instead.
 export const BotPaths = {
-  TempDir: path.join(process.cwd(), 'tmp'),
+  TempDir: process.env.TEMP_DIR || os.tmpdir(),
   SessionBackdrop: path.join(process.cwd(), 'resources/images/backdrop.png'),
 };
 
