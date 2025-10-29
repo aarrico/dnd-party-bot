@@ -112,7 +112,17 @@ export class ExtendedClient extends Client {
 
   start = async () => {
     await this.loadCommands();
-    await this.registerCommands();
+
+    // Register commands globally or to specific guild
+    if (process.env.GUILD_ID) {
+      // Development mode: register to specific guild for instant updates
+      console.log('GUILD_ID found - registering commands to specific guild for development');
+      await this.registerCommandsToGuild(process.env.GUILD_ID);
+    } else {
+      // Production mode: register globally (takes up to 1 hour to propagate)
+      await this.registerCommands();
+    }
+
     await this.getEvents(getAllFolders(path.join(__dirname, '..', 'events')));
 
     try {
@@ -181,6 +191,9 @@ export class ExtendedClient extends Client {
     }
   };
 
+  /**
+   * Register commands globally (takes up to 1 hour to propagate)
+   */
   registerCommands = async () => {
     if (this.commands.size === 0) {
       console.error('No commands to register!');
@@ -189,17 +202,41 @@ export class ExtendedClient extends Client {
 
     const rest = new REST().setToken(process.env.DISCORD_TOKEN as string);
     try {
+      console.log('Registering commands globally...');
+      await rest.put(
+        Routes.applicationCommands(process.env.DISCORD_CLIENT_ID as string),
+        { body: this.commandData }
+      );
+
+      console.log(`Successfully registered ${this.commandData.length} application (/) commands globally.`);
+    } catch (error) {
+      console.error('Failed registering commands globally:', inspect(error, { depth: null, colors: true }));
+    }
+  };
+
+  /**
+   * Register commands to a specific guild (instant, useful for testing or new guild joins)
+   */
+  registerCommandsToGuild = async (guildId: string) => {
+    if (this.commands.size === 0) {
+      console.error('No commands to register!');
+      return;
+    }
+
+    const rest = new REST().setToken(process.env.DISCORD_TOKEN as string);
+    try {
+      console.log(`Registering commands to guild ${guildId}...`);
       await rest.put(
         Routes.applicationGuildCommands(
           process.env.DISCORD_CLIENT_ID as string,
-          process.env.GUILD_ID as string
+          guildId
         ),
         { body: this.commandData }
       );
 
-      console.log(`Successfully reloaded application (/) commands.`);
+      console.log(`Successfully registered ${this.commandData.length} commands to guild ${guildId}.`);
     } catch (error) {
-      console.error('failed registering commands to guild:', inspect(error, { depth: null, colors: true }));
+      console.error(`Failed registering commands to guild ${guildId}:`, inspect(error, { depth: null, colors: true }));
     }
   };
 }

@@ -11,7 +11,7 @@ import { ExtendedInteraction } from '../../models/Command.js';
 import { sendEphemeralReply } from '../../discord/message.js';
 import { ListSessionsOptions } from '../../models/session.js';
 import { getSessionsForUser } from '../../db/user.js';
-import { formatSessionsAsStr } from '../../controllers/session';
+import { formatSessionsAsStr } from '../../controllers/session.js';
 
 export default {
   data: new SlashCommandBuilder()

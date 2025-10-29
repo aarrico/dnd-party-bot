@@ -4,7 +4,7 @@ import { ExtendedInteraction } from '../models/Command.js';
 import { SessionStatus, RoleType } from '@prisma/client';
 
 import { Session } from '../models/session.js';
-import { BotAttachmentFileNames, BotDialogs, BotPaths } from '../utils/botDialogStrings';
+import { BotAttachmentFileNames, BotDialogs, BotPaths } from '../utils/botDialogStrings.js';
 import { getImgAttachmentBuilder } from '../utils/attachmentBuilders.js';
 import { createSessionImage } from '../utils/sessionImage.js';
 import { PartyMember } from '../models/party.js';
@@ -230,7 +230,7 @@ export const createPartyMemberEmbed = (
 /**
  * Get color based on session status
  */
-const getStatusColor = (status?: 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED'): number => {  
+const getStatusColor = (status?: 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED'): number => {
   const colorMap: Record<string, number> = {
     'SCHEDULED': 0x00FF00, // Green
     'ACTIVE': 0xFFD700,    // Gold

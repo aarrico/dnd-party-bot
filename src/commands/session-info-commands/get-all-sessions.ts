@@ -5,7 +5,7 @@ import {
   BotCommandOptionInfo,
   BotDialogs,
   BotPaths,
-} from '../../utils/botDialogStrings';
+} from '../../utils/botDialogStrings.js';
 import { ExtendedInteraction } from '../../models/Command.js';
 import {
   formatSessionsAsStr,
@@ -13,7 +13,7 @@ import {
 } from '../../controllers/session.js';
 import { getTxtAttachmentBuilder } from '../../utils/attachmentBuilders.js';
 import { sendEphemeralReply } from '../../discord/message.js';
-import { ListSessionsOptions } from '../../models/session';
+import { ListSessionsOptions } from '../../models/session.js';
 
 export default {
   data: new SlashCommandBuilder()

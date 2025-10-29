@@ -51,16 +51,27 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN as s
 
 (async () => {
   try {
-    console.log('registering slash commands...');
-    await rest.put(
-      Routes.applicationGuildCommands(
-        process.env.DISCORD_CLIENT_ID as string,
-        process.env.GUILD_ID as string
-      ),
-      { body: commands }
-    );
-    console.log('Slash commands registered successfully...');
+    if (process.env.GUILD_ID) {
+      // Register to specific guild (instant, for development)
+      console.log(`Registering slash commands to guild ${process.env.GUILD_ID}...`);
+      await rest.put(
+        Routes.applicationGuildCommands(
+          process.env.DISCORD_CLIENT_ID as string,
+          process.env.GUILD_ID as string
+        ),
+        { body: commands }
+      );
+      console.log('Slash commands registered to guild successfully!');
+    } else {
+      // Register globally (takes up to 1 hour to propagate)
+      console.log('Registering slash commands globally...');
+      await rest.put(
+        Routes.applicationCommands(process.env.DISCORD_CLIENT_ID as string),
+        { body: commands }
+      );
+      console.log('Slash commands registered globally successfully! (May take up to 1 hour to appear)');
+    }
   } catch (error) {
-    console.log(`there was an error: ${error}`);
+    console.log(`There was an error: ${error}`);
   }
 })();

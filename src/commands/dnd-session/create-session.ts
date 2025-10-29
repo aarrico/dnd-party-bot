@@ -7,8 +7,8 @@ import {
 import { monthOptionChoicesArray } from '../../utils/genericInformation.js';
 import { ExtendedInteraction } from '../../models/Command.js';
 import { initSession } from '../../controllers/session.js';
-import DateChecker from '../../utils/dateChecker';
-import { notifyGuild, sendEphemeralReply } from '../../discord/message';
+import DateChecker from '../../utils/dateChecker.js';
+import { notifyGuild, sendEphemeralReply } from '../../discord/message.js';
 import { inspect } from 'util';
 import { getUserTimezone } from '../../db/user.js';
 import { handleTimezoneAutocomplete } from '../../utils/timezoneUtils.js';

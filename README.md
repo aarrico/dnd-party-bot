@@ -82,12 +82,15 @@ npm run start:fresh
 Create a `.env` file in the project root (copy from `.env.example`):
 
 ```env
+```env
 # Discord Bot Configuration
 TOKEN=your_discord_bot_token_here
-GUILD_ID=your_discord_guild_id
 CLIENT_ID=your_discord_client_id
 SESSION_CHANNEL_ID=your_session_channel_id
 SESSION_CATEGORY_CHANNEL_ID=your_category_channel_id
+
+# Optional: For faster command registration during development (instant instead of up to 1 hour)
+# GUILD_ID=your_discord_guild_id
 
 # Application
 PORT=3000
@@ -98,6 +101,7 @@ DB_USER=your_database_username
 DB_PASSWORD=your_database_password
 DB_NAME=your_database_name
 DB_PORT=5432
+```
 
 # Database URL (IMPORTANT: Use actual values, not variables)
 DATABASE_URL=postgresql://your_username:your_password@localhost:5432/your_database?schema=public

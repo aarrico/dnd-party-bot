@@ -1,8 +1,8 @@
 import { ActionRowBuilder, GuildMember, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } from 'discord.js';
-import { getAllUsers, upsertUser, getUserById, addUserToCampaign, isUserInCampaign } from '../db/user';
-import { ListUsersOptions, ListUsersResult } from '../models/user'; // listUsers overloads for type safety
-import { BotDialogs } from '../utils/botDialogStrings';
-import { AMERICAN_TIMEZONES } from '../utils/timezoneUtils';
+import { getAllUsers, upsertUser, getUserById, addUserToCampaign, isUserInCampaign } from '../db/user.js';
+import { ListUsersOptions, ListUsersResult } from '../models/user.js'; // listUsers overloads for type safety
+import { BotDialogs } from '../utils/botDialogStrings.js';
+import { TIMEZONES } from '../utils/timezoneUtils.js';
 
 const ONBOARDING_SELECT_MENU_ID = 'onboarding-timezone-select';
 
@@ -67,7 +67,7 @@ export const newGuildMember = async (member: GuildMember) => {
       .setCustomId(ONBOARDING_SELECT_MENU_ID)
       .setPlaceholder('Select your timezone')
       .addOptions(
-        AMERICAN_TIMEZONES.map((tz) =>
+        TIMEZONES.map((tz) =>
           new StringSelectMenuOptionBuilder()
             .setLabel(tz.name)
             .setDescription(`${tz.value}`)

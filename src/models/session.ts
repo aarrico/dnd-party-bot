@@ -1,4 +1,4 @@
-import { PartyMember } from './party';
+import { PartyMember } from './party.js';
 
 export type Session = {
   id: string;

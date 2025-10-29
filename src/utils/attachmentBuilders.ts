@@ -1,7 +1,7 @@
 import { AttachmentBuilder } from 'discord.js';
 import { writeFileSync } from 'fs';
 import path from 'path';
-import { getAbsolutePath } from './getAbsolutePath';
+import { getAbsolutePath } from './getAbsolutePath.js';
 
 export function getTxtAttachmentBuilder(
   pathStr: string,

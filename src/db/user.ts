@@ -1,11 +1,11 @@
 import { User, RoleType } from '@prisma/client';
-import { prisma } from '../index';
+import { prisma } from '../index.js';
 import {
   ListUsersOptions,
   ListUsersResult,
   ListUserWithSessionsResult,
-} from '../models/user';
-import { client } from '../index';
+} from '../models/user.js';
+import { client } from '../index.js';
 
 export const upsertUser = async (userId: string, username: string, channelId: string) => {
   return await prisma.user.upsert({

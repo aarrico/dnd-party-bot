@@ -21,10 +21,10 @@ import { ListSessionsOptions, ListSessionsResult, Session } from '../models/sess
 import { BotCommandOptionInfo, BotDialogs, BotAttachmentFileNames, BotPaths } from '../utils/botDialogStrings.js';
 import { getImgAttachmentBuilder } from '../utils/attachmentBuilders.js';
 import DateChecker from '../utils/dateChecker.js';
-import { addUserToParty, updatePartyMemberRole, upsertUser, getUserTimezone } from '../db/user';
-import { deletePartyMember } from '../db/partyMember';
+import { addUserToParty, updatePartyMemberRole, upsertUser, getUserTimezone } from '../db/user.js';
+import { deletePartyMember } from '../db/partyMember.js';
 import { ChannelType, Guild } from 'discord.js';
-import { createChannel, renameChannel } from '../discord/channel';
+import { createChannel, renameChannel } from '../discord/channel.js';
 import { createScheduledEvent, updateScheduledEvent, deleteScheduledEvent } from '../discord/scheduledEvent.js';
 import { RoleType } from '@prisma/client';
 import { sessionScheduler } from '../services/sessionScheduler.js';
