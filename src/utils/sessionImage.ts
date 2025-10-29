@@ -12,9 +12,9 @@ import { formatSessionDate } from './dateUtils.js';
 
 const coords = {
   member: { width: 300, height: 300, x: [365, 795, 1225, 1655, 2085], y: 1700 },
-  dm: { width: 300, height: 300, x: 1225, y: 400 }, // Added missing dm coordinates
-  sessionName: { x: 585, y: 940, maxWidth: 1200, maxHeight: 120, visualCenterX: 1350 }, // Visual center of the name area
-  date: { x: 1000, y: 1140, maxWidth: 1000, maxHeight: 100, visualCenterX: 1435 }, // Visual center of the date area
+  dm: { width: 380, height: 380, x: 1170, y: 380 },
+  sessionName: { x: 585, y: 925, maxWidth: 1300, maxHeight: 160, visualCenterX: 1358 },
+  date: { x: 1000, y: 1140, maxWidth: 1000, maxHeight: 100, visualCenterX: 1358 },
   role: { yImg: 1300, yName: 2150, width: 300, height: 300 },
 };
 
@@ -26,6 +26,7 @@ export const createSessionImage = async (sessionId: string): Promise<void> => {
 
   const session = await getSessionById(sessionId);
   console.log(`Retrieved session: ${session?.name}`);
+  console.log(`Session details:`, session);
 
   // Ensure temp directory exists
   const tempDir = BotPaths.TempDir;
@@ -105,15 +106,14 @@ export const createSessionImage = async (sessionId: string): Promise<void> => {
 const placeSessionInfo = async (
   session: Session
 ): Promise<OverlayOptions[]> => {
-  // Calculate centered positions for the text overlays
   const sessionNameOverlay = await createTextOverlay(
     session.name,
     coords.sessionName.maxWidth,
     coords.sessionName.maxHeight,
+    true,
     true
   );
 
-  // Format date in session's timezone
   const sessionDate = formatSessionDate(session.date, session.timezone ?? 'America/Los_Angeles');
 
   const dateOverlay = await createTextOverlay(
@@ -137,7 +137,6 @@ const placeSessionInfo = async (
   ];
 };
 
-// Helper function to get image width from buffer
 const getImageWidth = async (imageBuffer: Buffer): Promise<number> => {
   const metadata = await sharp(imageBuffer).metadata();
   return metadata.width || 0;
@@ -178,20 +177,10 @@ const placeRole = async (
 
   return [
     { input: roleImage, left: coords.member.x[slot], top: coords.role.yImg },
-    {
-      input: await createTextOverlay(
-        roleData.displayName,
-        coords.role.width,
-        80,
-        true // Center the role name
-      ),
-      left: coords.member.x[slot], // Role containers are already centered since they align with the avatars
-      top: coords.role.yName,
-    },
   ];
 };
 
-const createTextOverlay = async (text: string, maxWidth?: number, maxHeight?: number, centered: boolean = false): Promise<Buffer> => {
+const createTextOverlay = async (text: string, maxWidth?: number, maxHeight?: number, centered: boolean = false, bold: boolean = false): Promise<Buffer> => {
   const fontSize = maxWidth && maxHeight ?
     calculateOptimalFontSize(text, maxWidth, maxHeight) :
     100;
@@ -200,7 +189,6 @@ const createTextOverlay = async (text: string, maxWidth?: number, maxHeight?: nu
   let svgWidth, textX, textAnchor;
 
   if (centered) {
-    // Estimate actual text width for a more precise container
     const estimatedTextWidth = estimateTextWidth(text, fontSize);
     svgWidth = Math.min(estimatedTextWidth * 1.1, maxWidth || 400); // Add 10% padding
     textX = svgWidth / 2;
@@ -222,6 +210,7 @@ const createTextOverlay = async (text: string, maxWidth?: number, maxHeight?: nu
         font-size="${fontSize}"
         fill="white"
         text-anchor="${textAnchor}"
+        font-weight="${bold ? 'bold' : 'normal'}"
       >${text}</text>
     </svg>
   `;
