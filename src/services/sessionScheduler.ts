@@ -121,7 +121,19 @@ class SessionScheduler {
 
         try {
           const { createSessionImage } = await import('../utils/sessionImage.js');
-          await createSessionImage(session.id);
+          const { getPartyInfoForImg } = await import('../controllers/session.js');
+          const party = await getPartyInfoForImg(session.id);
+          const sessionData = {
+            id: session.id,
+            name: session.name,
+            date: session.date,
+            campaignId: session.campaignId,
+            partyMessageId: session.partyMessageId ?? '',
+            eventId: session.eventId,
+            status: 'ACTIVE' as const,
+            timezone: session.timezone ?? 'America/Los_Angeles',
+          };
+          await createSessionImage(sessionData, party);
           console.log(`Regenerated session image with ACTIVE status border`);
         } catch (error) {
           console.error(`Failed to regenerate session image:`, error);

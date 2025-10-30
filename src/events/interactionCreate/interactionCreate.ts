@@ -144,7 +144,9 @@ const processButton = async (
   await sendMessageReplyDisappearingMessage(interaction, result);
 
   try {
-    await createSessionImage(session.id);
+    const { getPartyInfoForImg } = await import('../../controllers/session.js');
+    const partyForImg = await getPartyInfoForImg(session.id);
+    await createSessionImage(session, partyForImg);
 
     const attachment = getImgAttachmentBuilder(
       `${BotPaths.TempDir}/${BotAttachmentFileNames.CurrentSession}`,
@@ -153,8 +155,7 @@ const processButton = async (
 
     const party = await getParty(session.id);
     const embed = createPartyMemberEmbed(party, interaction.guildId ?? '', session.name, session.status);
-    embed.setImage(`attachment://${BotAttachmentFileNames.CurrentSession}`);
-    embed.setDescription(BotDialogs.sessions.scheduled(session.date, (session.timezone ?? 'America/Los_Angeles') as string));
+    embed.setDescription(BotDialogs.sessions.scheduled(session.date, session.timezone ?? 'America/Los_Angeles'));
 
     await message.edit({
       embeds: [embed],
@@ -167,7 +168,7 @@ const processButton = async (
     // Fallback: update without image but with embed
     const party = await getParty(session.id);
     const embed = createPartyMemberEmbed(party, interaction.guildId ?? '', session.name, session.status);
-    embed.setDescription(BotDialogs.sessions.scheduled(session.date, (session.timezone ?? 'America/Los_Angeles') as string));
+    embed.setDescription(BotDialogs.sessions.scheduled(session.date, session.timezone ?? 'America/Los_Angeles'));
 
     await message.edit({
       embeds: [embed],

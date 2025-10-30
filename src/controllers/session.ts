@@ -81,7 +81,7 @@ export const initSession = async (
     campaignId: session.campaignId,
     partyMessageId: session.partyMessageId ?? '',
     status: session.status as 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED',
-    timezone: (session.timezone ?? 'America/Los_Angeles') as string,
+    timezone: session.timezone ?? 'America/Los_Angeles',
   };
 
   const party = await getParty(session.id);
@@ -161,7 +161,18 @@ export const cancelSession = async (sessionId: string, reason: string) => {
 
   // Try to regenerate the session image with red border
   try {
-    await createSessionImage(sessionId);
+    const party = await getPartyInfoForImg(sessionId);
+    const sessionData: Session = {
+      id: session.id,
+      name: session.name,
+      date: session.date,
+      campaignId: session.campaignId,
+      partyMessageId: session.partyMessageId ?? '',
+      eventId: session.eventId,
+      status: 'CANCELED',
+      timezone: session.timezone ?? 'America/Los_Angeles',
+    };
+    await createSessionImage(sessionData, party);
     console.log(`Regenerated session image with CANCELED status border`);
   } catch (error) {
     console.error(`Failed to regenerate session image for ${sessionId}:`, error);
@@ -181,7 +192,6 @@ export const cancelSession = async (sessionId: string, reason: string) => {
 
       const party = await getParty(sessionId);
       const embed = createPartyMemberEmbed(party, session.campaignId, session.name, 'CANCELED');
-      embed.setImage(`attachment://${BotAttachmentFileNames.CurrentSession}`);
       embed.setDescription(`❌ **CANCELED** - ${session.name}\n${reason}`);
 
       await safeMessageEdit(message, {
@@ -267,7 +277,7 @@ export const modifySession = async (interaction: ExtendedInteraction) => {
         if (nameChanged) updates.name = session.name;
         if (dateChanged) updates.scheduledStartTime = session.date;
 
-        const eventIdString = session.eventId as string;
+        const eventIdString = session.eventId;
         const success = await updateScheduledEvent(
           session.campaignId,
           eventIdString,
@@ -302,7 +312,6 @@ export const processRoleSelection = async (
   const session = await getSession(sessionId);
   const { date, partyMembers: party, status } = session;
 
-  // Check if session allows role selection (only SCHEDULED sessions)
   if (status && status !== 'SCHEDULED') {
     return RoleSelectionStatus.LOCKED;
   }
