@@ -8,14 +8,13 @@ import { format } from 'date-fns';
 
 
 export const BotDialogs = {
-  // CreateSession
   createSessionInvalidSessionName: 'Your session name is invalid.',
   createSessionDMSessionTime: (
     campaign: Guild,
     session: Pick<Session, 'name' | 'id' | 'partyMessageId' | 'date'>,
     timezone: string,
   ) =>
-    `🤖 New session [${session.name}](https://discord.com/channels/${campaign.id}/${session.id}/${session.partyMessageId}) for ${campaign.name} scheduled for ${formatSessionDateLong(session.date, timezone)}`,
+    `🥳 New session for [${campaign.name}](https://discord.com/channels/${campaign.id}) available to join!\n🎲 [${session.name}](https://discord.com/channels/${campaign.id}/${session.id}/${session.partyMessageId})\n📅 ${formatSessionDateLong(session.date, timezone)}`,
   createSessionOneMoment:
     '🤖 One moment while I create your session. You will receive a message via Direct Message when complete!',
   createSessionInvalidDateEntered:
@@ -55,7 +54,6 @@ export const BotDialogs = {
       `_Need to change it later? Just send me a message with "timezone" and I'll help you update it!_`,
   },
 
-  // InteractionCreate responses
   interactionCreateNonexistentCommand:
     '🤖 You have used a nonexistent command!',
   interactionCreateNewSessionAnnouncement:
@@ -121,16 +119,12 @@ export enum BotAttachmentFileNames {
 export enum BotCommandInfo {
   CreateSessionName = 'create-session',
   CreateSessionDescription = 'creates an session in the session stack.',
-  //GetAllUserSessions
   GetAllUserSessions_Name = 'get-all-sessions-a-user-is-in',
   GetAllUserSessions_Description = 'Retrieves a list of all sessions that a user has signed up for from the db.',
-  //GetAllSessions
   GetAllSessions_Name = 'get-all-sessions',
   GetAllSessions_Description = 'Retrieves a list of all sessions added to db by bot.',
-  //GetAllUsersInASession
   GetAllUsersInASession_Name = 'get-all-users-in-a-session',
   GetAllUsersInASession_Description = 'Retrieves a list of all users in a particular session via Session UUID string added to db by bot.',
-  //GetAllUsers
   GetAllUsers_Name = 'get-all-users',
   GetAllUsers_Description = 'Retrieves a list of all users added to db by bot.',
 }
@@ -145,7 +139,6 @@ export enum BotCommandOptionInfo {
   CampaignName_Name = 'campaign-name',
   CampaignId_Name = 'campaign-id',
   CampaignId_Description = 'Campaign ID of the session - found by right-clicking campaign channel. Defaults to active campaign.',
-  //CreateSession
   CreateSession_SessionName = 'session-name',
   CreateSession_SessionName_Description = 'Name of session',
   CreateSession_MonthName = 'month',
@@ -156,23 +149,19 @@ export enum BotCommandOptionInfo {
   CreateSession_YearDescription = 'Year of session',
   CreateSession_TimeName = 'time',
   CreateSession_TimeDescription = 'Time in 12-hour (7:00 PM) or 24-hour (19:00) format',
-  //GetAllUserSessions
   GetAllUserSessions_UserIDDescription = 'User ID that you are finding the sessions for.',
   GetAllUserSessions_SessionIDDescription = 'UUID of session in DB(unique identifier)',
   GetAllUserSessions_UserRoleName = 'user-role-in-this-session',
   GetAllUserSessions_UserRoleDescription = 'User role for session',
   GetAllUserSessions_SessionMessageIDName = 'session-message-id',
   GetAllUserSessions_SessionMessageIDDescription = 'discord message id for session',
-  //GetAllSessions
   GetAllSessions_SessionMessageIDName = 'session-message-id',
   GetAllSessions_SessionMessageIDDescription = 'Discord message ID for session list',
-  //GetAllUsersInASession
   GetAllUsersInASession_UserIDDescription = 'UUID of user in DB(unique identifier)',
   GetAllUsersInASession_UserRoleName = 'user-role-in-this-session',
   GetAllUsersInASession_UserRoleDescription = 'Discord message ID for this session',
   GetAllUsersInASession_UserChannelIDName = 'user-channel-id',
   GetAllUsersInASession_UserChannelIDDescription = 'User DM channel id',
-  //GetAllUsers
   GetAllUsers_UserChannelIDName = 'user-dm-channel-id',
   GetAllUsers_UserChannelIDDescription = 'User DM channel ID',
   CancelSession_Name = 'cancel-session',
