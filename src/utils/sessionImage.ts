@@ -1,36 +1,209 @@
+import fs from 'fs';
 import sharp, { OverlayOptions } from 'sharp';
-import { getSessionById } from '../db/session.js';
+import path from 'path';
+import { fileURLToPath, pathToFileURL } from 'url';
 import { BotAttachmentFileNames, BotPaths } from './botDialogStrings.js';
-import { getPartyInfoForImg } from '../controllers/session.js';
 import {
   getRoleByString,
   getRoleImage,
   RoleType,
 } from '../models/role.js';
 import { Session } from '../models/session.js';
+import { PartyMemberImgInfo } from '../models/discord.js';
 import { formatSessionDate } from './dateUtils.js';
+
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+const defaultFontsDir = path.resolve(process.cwd(), 'resources/fonts');
+const fallbackFontsDir = path.resolve(moduleDir, '../../resources/fonts');
+
+const resolvedFontsDir = fs.existsSync(path.join(defaultFontsDir, 'Vecna-oppx.ttf'))
+  ? defaultFontsDir
+  : fallbackFontsDir;
+
+const regularFontPath = path.join(resolvedFontsDir, 'Vecna-oppx.ttf');
+const boldFontPath = path.join(resolvedFontsDir, 'VecnaBold-4YY4.ttf');
+
+if (!fs.existsSync(regularFontPath) || !fs.existsSync(boldFontPath)) {
+  throw new Error(`Vecna font files not found in ${resolvedFontsDir}`);
+}
+
+const regularFontUrl = pathToFileURL(regularFontPath).href;
+const boldFontUrl = pathToFileURL(boldFontPath).href;
+
+const TEXT_WIDTH_RATIO = 0.88;
+const TEXT_HEIGHT_RATIO = 0.95;
+const MIN_FONT_SIZE = 12;
+
+type FontMeasurement = {
+  width: number;
+  height: number;
+};
+
+const measurementCache = new Map<string, FontMeasurement>();
+
+const escapeXml = (input: string): string =>
+  input
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+const getFontConfig = (bold: boolean) => ({
+  family: bold ? 'VecnaBold' : 'VecnaRegular',
+  url: bold ? boldFontUrl : regularFontUrl,
+  weight: bold ? 'bold' : 'normal',
+});
+
+const buildTextSvg = (
+  text: string,
+  {
+    width,
+    height,
+    fontSize,
+    bold,
+    anchor,
+    x,
+    y,
+    dominantBaseline,
+  }: {
+    width: number;
+    height: number;
+    fontSize: number;
+    bold: boolean;
+    anchor: 'start' | 'middle';
+    x: number;
+    y: number;
+    dominantBaseline?: string;
+  }
+): string => {
+  const { family, url, weight } = getFontConfig(bold);
+
+  const baselineAttr = dominantBaseline
+    ? `dominant-baseline="${dominantBaseline}"`
+    : '';
+
+  return `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+      <style>
+        @font-face {
+          font-family: '${family}';
+          src: url('${url}') format('truetype');
+          font-weight: ${weight};
+        }
+      </style>
+      <text
+        x="${x}"
+        y="${y}"
+        font-family="${family}"
+        font-size="${fontSize}"
+        font-weight="${weight}"
+        fill="white"
+        text-anchor="${anchor}"
+        ${baselineAttr}
+      >${escapeXml(text)}</text>
+    </svg>
+  `;
+};
+
+const measureTextDimensions = async (
+  text: string,
+  fontSize: number,
+  bold: boolean
+): Promise<FontMeasurement> => {
+  const cacheKey = `${bold ? 'b' : 'n'}|${fontSize}|${text}`;
+  const cached = measurementCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  const measurementWidth = Math.max(64, Math.ceil(fontSize * (text.length + 2)));
+  const measurementHeight = Math.max(64, Math.ceil(fontSize * 2));
+
+  const svg = buildTextSvg(text, {
+    width: measurementWidth,
+    height: measurementHeight,
+    fontSize,
+    bold,
+    anchor: 'start',
+    x: fontSize * 0.1,
+    y: fontSize,
+    dominantBaseline: 'alphabetic',
+  });
+
+  const trimmedBuffer = await sharp(Buffer.from(svg)).png().trim().toBuffer();
+  const metadata = await sharp(trimmedBuffer).metadata();
+  const measurement = {
+    width: metadata.width ?? 0,
+    height: metadata.height ?? 0,
+  };
+
+  measurementCache.set(cacheKey, measurement);
+  return measurement;
+};
+
+const calculateOptimalFontMetrics = async (
+  text: string,
+  maxWidth: number,
+  maxHeight: number,
+  bold: boolean
+): Promise<{ fontSize: number; textWidth: number; textHeight: number }> => {
+  if (!text.trim()) {
+    return { fontSize: MIN_FONT_SIZE, textWidth: 0, textHeight: 0 };
+  }
+
+  const targetWidth = maxWidth * TEXT_WIDTH_RATIO;
+  const targetHeight = maxHeight * TEXT_HEIGHT_RATIO;
+
+  let low = MIN_FONT_SIZE;
+  let high = Math.max(low, Math.floor(maxHeight));
+  let bestFontSize = low;
+  let bestWidth = 0;
+  let bestHeight = 0;
+
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+    const { width, height } = await measureTextDimensions(text, mid, bold);
+
+    const fitsWidth = width <= targetWidth || width === 0;
+    const fitsHeight = height <= targetHeight || height === 0;
+
+    if (fitsWidth && fitsHeight) {
+      bestFontSize = mid;
+      bestWidth = width;
+      bestHeight = height;
+      low = mid + 1;
+    } else {
+      high = mid - 1;
+    }
+  }
+
+  if (bestWidth === 0 && bestHeight === 0) {
+    const { width, height } = await measureTextDimensions(text, bestFontSize, bold);
+    bestWidth = width;
+    bestHeight = height;
+  }
+
+  return { fontSize: bestFontSize, textWidth: bestWidth, textHeight: bestHeight };
+};
 
 const coords = {
   member: { width: 300, height: 300, x: [365, 795, 1225, 1655, 2085], y: 1700 },
   dm: { width: 380, height: 380, x: 1170, y: 380 },
-  sessionName: { x: 585, y: 925, maxWidth: 1300, maxHeight: 160, visualCenterX: 1358 },
-  date: { x: 1000, y: 1140, maxWidth: 1000, maxHeight: 100, visualCenterX: 1358 },
+  sessionName: { x: 585, y: 925, maxWidth: 1600, maxHeight: 160, visualCenterX: 1358 },
+  date: { x: 1000, y: 1140, maxWidth: 1300, maxHeight: 160, visualCenterX: 1358 },
   role: { yImg: 1300, yName: 2150, width: 300, height: 300 },
 };
 
-export const createSessionImage = async (sessionId: string): Promise<void> => {
-  console.log(`Starting createSessionImage for sessionId: ${sessionId}`);
-
-  const users = await getPartyInfoForImg(sessionId);
-  console.log(`Retrieved ${users.length} users for session:`, users.map(u => ({ username: u.username, role: u.role })));
-
-  const session = await getSessionById(sessionId);
-  console.log(`Retrieved session: ${session?.name}`);
-  console.log(`Session details:`, session);
+export const createSessionImage = async (
+  session: Session,
+  partyMembers: PartyMemberImgInfo[]
+): Promise<void> => {
+  console.log(`Starting createSessionImage for session: ${session.name}`);
+  console.log(`Retrieved ${partyMembers.length} users for session:`, partyMembers.map(u => ({ username: u.username, role: u.role })));
 
   // Ensure temp directory exists
   const tempDir = BotPaths.TempDir;
-  const fs = await import('fs');
   if (!fs.existsSync(tempDir)) {
     console.log(`Creating temp directory: ${tempDir}`);
     fs.mkdirSync(tempDir, { recursive: true });
@@ -41,14 +214,13 @@ export const createSessionImage = async (sessionId: string): Promise<void> => {
     throw new Error(`Backdrop image not found at: ${BotPaths.SessionBackdrop}`);
   }
 
-  // Find the game master using our new role system
-  const dm = users.find((member) => {
+  const dm = partyMembers.find((member) => {
     const roleData = getRoleByString(member.role);
     return roleData.id === RoleType.GAME_MASTER;
   });
 
   if (!dm) {
-    console.error(`No dungeon master found! Available users:`, users);
+    console.error(`No dungeon master found! Available users:`, partyMembers);
     throw new Error('no dungeon master');
   }
 
@@ -63,13 +235,13 @@ export const createSessionImage = async (sessionId: string): Promise<void> => {
   );
 
   // Filter out the game master from party members
-  const partyMembers = users.filter((member) => {
+  const nonDmPartyMembers = partyMembers.filter((member) => {
     const roleData = getRoleByString(member.role);
     return roleData.id !== RoleType.GAME_MASTER;
   });
 
   const partyOverlays: OverlayOptions[] = [];
-  for (const [index, member] of partyMembers.entries()) {
+  for (const [index, member] of nonDmPartyMembers.entries()) {
     const avatarOverlay = await placeUserAvatar(
       member.userAvatarURL,
       coords.member.width,
@@ -84,10 +256,9 @@ export const createSessionImage = async (sessionId: string): Promise<void> => {
   const sessionOverlays = await placeSessionInfo(session);
 
   // Add status border overlay
-  const status = (session.status || 'SCHEDULED') as 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED';
+  const status = session.status || 'SCHEDULED';
   const borderOverlay = await createStatusBorder(status);
 
-  const path = await import('path');
   const outputPath = path.join(BotPaths.TempDir, BotAttachmentFileNames.CurrentSession);
 
   await sharp(BotPaths.SessionBackdrop)
@@ -110,7 +281,6 @@ const placeSessionInfo = async (
     session.name,
     coords.sessionName.maxWidth,
     coords.sessionName.maxHeight,
-    true,
     true
   );
 
@@ -119,8 +289,7 @@ const placeSessionInfo = async (
   const dateOverlay = await createTextOverlay(
     sessionDate,
     coords.date.maxWidth,
-    coords.date.maxHeight,
-    true
+    coords.date.maxHeight
   );
 
   return [
@@ -180,103 +349,54 @@ const placeRole = async (
   ];
 };
 
-const createTextOverlay = async (text: string, maxWidth?: number, maxHeight?: number, centered: boolean = false, bold: boolean = false): Promise<Buffer> => {
-  const fontSize = maxWidth && maxHeight ?
-    calculateOptimalFontSize(text, maxWidth, maxHeight) :
-    100;
+const createTextOverlay = async (
+  text: string,
+  maxWidth: number,
+  maxHeight: number,
+  bold: boolean = true
+): Promise<Buffer> => {
+  const { fontSize, textWidth } = await calculateOptimalFontMetrics(
+    text,
+    maxWidth,
+    maxHeight,
+    bold
+  );
 
-  // If centering, create a smaller container based on estimated text width
-  let svgWidth, textX, textAnchor;
+  console.log(`Creating text overlay: "${text}" with fontSize: ${fontSize}, textWidth: ${textWidth}, maxWidth: ${maxWidth}, maxHeight: ${maxHeight}, bold: ${bold}`);
 
-  if (centered) {
-    const estimatedTextWidth = estimateTextWidth(text, fontSize);
-    svgWidth = Math.min(estimatedTextWidth * 1.1, maxWidth || 400); // Add 10% padding
-    textX = svgWidth / 2;
-    textAnchor = "middle";
-  } else {
-    svgWidth = maxWidth || 400;
-    textX = 0;
-    textAnchor = "start";
-  }
+  const effectiveWidth = textWidth || maxWidth * TEXT_WIDTH_RATIO;
+  const paddedWidth = Math.min(
+    maxWidth,
+    Math.max(
+      Math.ceil(effectiveWidth / TEXT_WIDTH_RATIO),
+      Math.ceil(effectiveWidth + 4)
+    )
+  );
 
-  const svgHeight = maxHeight || 100;
+  console.log(`Effective Width: ${effectiveWidth}, paddedWidth: ${paddedWidth}`);
 
-  const svg = `
-    <svg width="${svgWidth}" height="${svgHeight}">
-      <text
-        x="${textX}"
-        y="${fontSize * 0.8}"
-        font-family="Vecna"
-        font-size="${fontSize}"
-        fill="white"
-        text-anchor="${textAnchor}"
-        font-weight="${bold ? 'bold' : 'normal'}"
-      >${text}</text>
-    </svg>
-  `;
+  const svgWidth = bold ? maxWidth : paddedWidth;
+  const svgHeight = maxHeight;
+  const textX = svgWidth / 2;
 
-  return await sharp(Buffer.from(svg)).png().toBuffer();
-};
+  // Push baseline slightly downward so tall glyphs keep their ascenders
+  const baselineAdjustment = Math.ceil(fontSize * 0.12);
+  const textY = Math.floor(svgHeight / 2) + baselineAdjustment;
 
-// Helper function to estimate text width (extracted from calculateOptimalFontSize)
-const estimateTextWidth = (text: string, fontSize: number): number => {
-  let totalWidth = 0;
-  for (const char of text) {
-    if (/[A-Z]/.test(char)) {
-      totalWidth += fontSize * 0.7; // Capital letters are wider
-    } else if (/[a-z]/.test(char)) {
-      totalWidth += fontSize * 0.5; // Lowercase letters
-    } else if (/[0-9]/.test(char)) {
-      totalWidth += fontSize * 0.6; // Numbers
-    } else if (/[\s]/.test(char)) {
-      totalWidth += fontSize * 0.3; // Spaces
-    } else {
-      totalWidth += fontSize * 0.4; // Other characters (punctuation, etc.)
-    }
-  }
-  return totalWidth;
-};/**
- * Calculates the optimal font size to fit text within given dimensions
- * Uses an approximation based on typical font characteristics
- */
-const calculateOptimalFontSize = (text: string, maxWidth: number, maxHeight: number): number => {
-  // Start with maximum possible font size based on height
-  let fontSize = Math.floor(maxHeight * 0.8); // Leave some padding
+  console.log(`SVG Dimensions - Width: ${svgWidth}, Height: ${svgHeight}, TextX: ${textX}, TextY: ${textY}`);
 
-  // Character width estimation for different types of characters
-  // This accounts for the fact that some characters are wider than others
-  const estimateTextWidth = (text: string, fontSize: number): number => {
-    let totalWidth = 0;
-    for (const char of text) {
-      if (/[A-Z]/.test(char)) {
-        totalWidth += fontSize * 0.7; // Capital letters are wider
-      } else if (/[a-z]/.test(char)) {
-        totalWidth += fontSize * 0.5; // Lowercase letters
-      } else if (/[0-9]/.test(char)) {
-        totalWidth += fontSize * 0.6; // Numbers
-      } else if (/[\s]/.test(char)) {
-        totalWidth += fontSize * 0.3; // Spaces
-      } else {
-        totalWidth += fontSize * 0.4; // Other characters (punctuation, etc.)
-      }
-    }
-    return totalWidth;
-  };
+  const svg = buildTextSvg(text, {
+    width: svgWidth,
+    height: svgHeight,
+    fontSize,
+    bold,
+    anchor: 'middle',
+    x: textX,
+    y: textY,
+    dominantBaseline: 'middle',
+  });
 
-  let estimatedWidth = estimateTextWidth(text, fontSize);
-
-  if (estimatedWidth > maxWidth) {
-    fontSize = Math.floor((maxWidth / estimatedWidth) * fontSize);
-    estimatedWidth = estimateTextWidth(text, fontSize);
-  }
-
-  const minFontSize = 16;
-  fontSize = Math.max(fontSize, minFontSize);
-
-  fontSize = Math.min(fontSize, Math.floor(maxHeight * 0.9));
-
-
-  return fontSize;
+  return sharp(Buffer.from(svg)).png().toBuffer();
 };
 
 /**

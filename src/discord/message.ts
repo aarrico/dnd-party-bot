@@ -32,7 +32,9 @@ export const sendNewSessionMessage = async (
 
   try {
     console.log(`Creating session image...`);
-    await createSessionImage(session.id);
+    const { getPartyInfoForImg } = await import('../controllers/session.js');
+    const party = await getPartyInfoForImg(session.id);
+    await createSessionImage(session, party);
 
     const imagePath = `${BotPaths.TempDir}/${BotAttachmentFileNames.CurrentSession}`;
     console.log(`Attempting to attach image from: ${imagePath}`);
@@ -53,7 +55,6 @@ export const sendNewSessionMessage = async (
 
     const embed = createPartyMemberEmbed(partyMembers, channel.guildId, session.name, session.status);
 
-    embed.setImage(`attachment://${BotAttachmentFileNames.CurrentSession}`);
     embed.setDescription(BotDialogs.sessions.scheduled(session.date, session.timezone ?? 'America/Los_Angeles'));
 
     console.log(`Sending message with embed, image, and buttons to channel: ${channel.id}`);

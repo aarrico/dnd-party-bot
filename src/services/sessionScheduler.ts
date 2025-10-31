@@ -86,6 +86,29 @@ class SessionScheduler {
     }
   }
 
+  private clearReminderTask(sessionId: string): void {
+    const task = this.scheduledTasks.get(sessionId);
+    if (!task?.reminderJob) {
+      return;
+    }
+
+    try {
+      task.reminderJob.stop();
+    } catch (error) {
+      console.error(`Failed to stop reminder job for session ${sessionId}:`, error);
+    }
+
+    task.reminderJob = undefined;
+
+    if (!task.cancellationJob) {
+      this.scheduledTasks.delete(sessionId);
+      console.log(`Cleared reminder task for session ${sessionId}; no cancellation job remained`);
+    } else {
+      this.scheduledTasks.set(sessionId, task);
+      console.log(`Cleared reminder task for session ${sessionId}; cancellation job still scheduled`);
+    }
+  }
+
   private async handleReminder(sessionId: string): Promise<void> {
     try {
       const session = await getSessionById(sessionId, true);
@@ -93,10 +116,10 @@ class SessionScheduler {
       const isPartyFull = session.partyMembers.length >= 6;
 
       await this.sendSessionReminders(session, isPartyFull);
-
-      this.cancelSessionTasks(sessionId);
     } catch (error) {
       console.error(`Error handling reminder/cancellation for session ${sessionId}:`, error);
+    } finally {
+      this.clearReminderTask(sessionId);
     }
   }
 
@@ -121,7 +144,19 @@ class SessionScheduler {
 
         try {
           const { createSessionImage } = await import('../utils/sessionImage.js');
-          await createSessionImage(session.id);
+          const { getPartyInfoForImg } = await import('../controllers/session.js');
+          const party = await getPartyInfoForImg(session.id);
+          const sessionData = {
+            id: session.id,
+            name: session.name,
+            date: session.date,
+            campaignId: session.campaignId,
+            partyMessageId: session.partyMessageId ?? '',
+            eventId: session.eventId,
+            status: 'ACTIVE' as const,
+            timezone: session.timezone ?? 'America/Los_Angeles',
+          };
+          await createSessionImage(sessionData, party);
           console.log(`Regenerated session image with ACTIVE status border`);
         } catch (error) {
           console.error(`Failed to regenerate session image:`, error);

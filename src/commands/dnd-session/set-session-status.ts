@@ -8,7 +8,7 @@ import { createSessionImage } from '../../utils/sessionImage.js';
 export default {
   data: new SlashCommandBuilder()
     .setName('set-session-status')
-    .setDescription('Set the status of a session (for testing purposes)')
+    .setDescription('Set the status of an session (for testing purposes)')
     .addStringOption((id) =>
       id
         .setName(BotCommandOptionInfo.SessionId_Name)
@@ -42,8 +42,29 @@ export default {
       // Update the session status
       await updateSession(sessionId, { status: newStatus });
 
+      // Get session and party data for image generation
+      const { getSessionById } = await import('../../db/session.js');
+      const { getPartyInfoForImg } = await import('../../controllers/session.js');
+      const session = await getSessionById(sessionId);
+      const party = await getPartyInfoForImg(sessionId);
+
+      if (!session) {
+        throw new Error('Session not found');
+      }
+
+      const sessionData = {
+        id: session.id,
+        name: session.name,
+        date: session.date,
+        campaignId: session.campaignId,
+        partyMessageId: session.partyMessageId ?? '',
+        eventId: session.eventId,
+        status: newStatus,
+        timezone: session.timezone ?? 'America/Los_Angeles',
+      };
+
       // Regenerate the session image with the new status border
-      await createSessionImage(sessionId);
+      await createSessionImage(sessionData, party);
 
       const statusEmojis = {
         SCHEDULED: '🟢',

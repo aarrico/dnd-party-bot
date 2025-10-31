@@ -13,6 +13,7 @@ import { inspect } from 'util';
 import { getUserTimezone } from '../../db/user.js';
 import { handleTimezoneAutocomplete } from '../../utils/timezoneUtils.js';
 import { formatSessionCreationDM } from '../../utils/sessionNotifications.js';
+import { sanitizeUserInput } from '../../utils/sanitizeUserInput.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -68,7 +69,8 @@ export default {
         throw new Error('Command must be run in a server!');
       }
 
-      const sessionName = interaction.options.getString(BotCommandOptionInfo.CreateSession_SessionName, true);
+      const rawSessionName = interaction.options.getString(BotCommandOptionInfo.CreateSession_SessionName, true);
+      const sessionName = sanitizeUserInput(rawSessionName);
 
       if (!sessionName) {
         await sendEphemeralReply(BotDialogs.createSessionInvalidSessionName, interaction);
@@ -93,11 +95,14 @@ export default {
 
       await interaction.deferReply();
 
+      const creatorDisplayName =
+        sanitizeUserInput(interaction.user.displayName) || interaction.user.username;
+
       const session = await initSession(
         campaign,
         sessionName,
         date,
-        interaction.user.displayName,
+        creatorDisplayName,
         interaction.user.id,
         timezone,
       );

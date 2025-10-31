@@ -31,6 +31,7 @@ import { sessionScheduler } from '../services/sessionScheduler.js';
 import { CreateSessionData } from '../models/session.js';
 import { createSessionImage } from '../utils/sessionImage.js';
 import { areDatesEqual, isFutureDate } from '../utils/dateUtils.js';
+import { sanitizeUserInput } from '../utils/sanitizeUserInput.js';
 import {
   safeChannelFetch,
   safeMessageFetch,
@@ -81,7 +82,7 @@ export const initSession = async (
     campaignId: session.campaignId,
     partyMessageId: session.partyMessageId ?? '',
     status: session.status as 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED',
-    timezone: (session.timezone ?? 'America/Los_Angeles') as string,
+    timezone: session.timezone ?? 'America/Los_Angeles',
   };
 
   const party = await getParty(session.id);
@@ -161,7 +162,18 @@ export const cancelSession = async (sessionId: string, reason: string) => {
 
   // Try to regenerate the session image with red border
   try {
-    await createSessionImage(sessionId);
+    const party = await getPartyInfoForImg(sessionId);
+    const sessionData: Session = {
+      id: session.id,
+      name: session.name,
+      date: session.date,
+      campaignId: session.campaignId,
+      partyMessageId: session.partyMessageId ?? '',
+      eventId: session.eventId,
+      status: 'CANCELED',
+      timezone: session.timezone ?? 'America/Los_Angeles',
+    };
+    await createSessionImage(sessionData, party);
     console.log(`Regenerated session image with CANCELED status border`);
   } catch (error) {
     console.error(`Failed to regenerate session image for ${sessionId}:`, error);
@@ -181,7 +193,6 @@ export const cancelSession = async (sessionId: string, reason: string) => {
 
       const party = await getParty(sessionId);
       const embed = createPartyMemberEmbed(party, session.campaignId, session.name, 'CANCELED');
-      embed.setImage(`attachment://${BotAttachmentFileNames.CurrentSession}`);
       embed.setDescription(`❌ **CANCELED** - ${session.name}\n${reason}`);
 
       await safeMessageEdit(message, {
@@ -224,8 +235,16 @@ export const modifySession = async (interaction: ExtendedInteraction) => {
     const sessionId = interaction?.options?.get(
       BotCommandOptionInfo.SessionId_Name
     )?.value as string;
-    const newSessionName = interaction?.options?.get('new-session-name')
+    const rawNewSessionName = interaction?.options?.get('new-session-name')
       ?.value as string;
+    const newSessionName = rawNewSessionName
+      ? sanitizeUserInput(rawNewSessionName)
+      : undefined;
+
+    if (rawNewSessionName && !newSessionName) {
+      await sendEphemeralReply(BotDialogs.createSessionInvalidSessionName, interaction);
+      return;
+    }
 
     // Get timezone from command or user's stored timezone
     let timezone = interaction.options.getString(BotCommandOptionInfo.CreateSession_TimezoneName);
@@ -267,7 +286,7 @@ export const modifySession = async (interaction: ExtendedInteraction) => {
         if (nameChanged) updates.name = session.name;
         if (dateChanged) updates.scheduledStartTime = session.date;
 
-        const eventIdString = session.eventId as string;
+        const eventIdString = session.eventId;
         const success = await updateScheduledEvent(
           session.campaignId,
           eventIdString,
@@ -302,7 +321,6 @@ export const processRoleSelection = async (
   const session = await getSession(sessionId);
   const { date, partyMembers: party, status } = session;
 
-  // Check if session allows role selection (only SCHEDULED sessions)
   if (status && status !== 'SCHEDULED') {
     return RoleSelectionStatus.LOCKED;
   }
@@ -399,15 +417,22 @@ export const formatSessionsAsStr = (
     includeId,
     includeRole = false,
   } = options;
-  const header = `Session Name${includeId && '\tSession Channel ID'}]\
-    ${includeTime && '\tScheduled Date'}${includeCampaign && '\tCampaign Name'}\
-    ${includeRole && '\tUser Role'}`;
+  const headerParts = [
+    'Session Name',
+    includeId && 'Session Channel ID',
+    includeTime && 'Scheduled Date',
+    includeCampaign && 'Campaign Name',
+    includeRole && 'User Role',
+  ].filter(Boolean);
+  const header = headerParts.join('\t');
 
   const data = sessions.map((session) => {
     const row = [session.name];
     if (includeId) row.push(session.id);
     if (includeTime) row.push(session.date.toUTCString());
-    if (includeCampaign && session.campaign) row.push(session.campaign);
+    if (includeCampaign && session.campaign) {
+      row.push(session.campaign);
+    }
     if (includeRole && session.userRole) row.push(session.userRole);
     return row;
   });

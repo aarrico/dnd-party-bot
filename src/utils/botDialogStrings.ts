@@ -17,7 +17,7 @@ export const BotDialogs = {
   ) =>
     `🤖 New session [${session.name}](https://discord.com/channels/${campaign.id}/${session.id}/${session.partyMessageId}) for ${campaign.name} scheduled for ${formatSessionDateLong(session.date, timezone)}`,
   createSessionOneMoment:
-    '🤖 One Moment while I create your session. You will receive a message via Direct Message when complete!',
+    '🤖 One moment while I create your session. You will receive a message via Direct Message when complete!',
   createSessionInvalidDateEntered:
     "🤖 The date you entered is invalid. This could be due to the following reasons:\n- You entered a date that doesn't exist.\n- You entered a day that has already passed.",
   createSessionSuccess: (sessionName: string, date: Date, channelId: string) =>
@@ -120,7 +120,7 @@ export enum BotAttachmentFileNames {
 
 export enum BotCommandInfo {
   CreateSessionName = 'create-session',
-  CreateSessionDescription = 'creates a session in the session stack.',
+  CreateSessionDescription = 'creates an session in the session stack.',
   //GetAllUserSessions
   GetAllUserSessions_Name = 'get-all-sessions-a-user-is-in',
   GetAllUserSessions_Description = 'Retrieves a list of all sessions that a user has signed up for from the db.',
@@ -165,18 +165,18 @@ export enum BotCommandOptionInfo {
   GetAllUserSessions_SessionMessageIDDescription = 'discord message id for session',
   //GetAllSessions
   GetAllSessions_SessionMessageIDName = 'session-message-id',
-  GetAllSessions_SessionMessageIDDescription = 'discord message id for session',
+  GetAllSessions_SessionMessageIDDescription = 'Discord message ID for session list',
   //GetAllUsersInASession
   GetAllUsersInASession_UserIDDescription = 'UUID of user in DB(unique identifier)',
   GetAllUsersInASession_UserRoleName = 'user-role-in-this-session',
-  GetAllUsersInASession_UserRoleDescription = 'discord message id for session',
+  GetAllUsersInASession_UserRoleDescription = 'Discord message ID for this session',
   GetAllUsersInASession_UserChannelIDName = 'user-channel-id',
   GetAllUsersInASession_UserChannelIDDescription = 'User DM channel id',
   //GetAllUsers
   GetAllUsers_UserChannelIDName = 'user-dm-channel-id',
-  GetAllUsers_UserChannelIDDescription = 'User DM channel id',
+  GetAllUsers_UserChannelIDDescription = 'User DM channel ID',
   CancelSession_Name = 'cancel-session',
-  CancelSession_Description = 'Deletes a session from a campaign, including its associated channel.',
+  CancelSession_Description = 'Deletes an session from a campaign, including its associated channel.',
   CancelSession_ReasonName = 'reason',
   CancelSession_ReasonDescription = 'Message to party members about the cancellation of the session.',
   Campaign_Description = 'Include campaign name in the output.',
