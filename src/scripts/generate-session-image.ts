@@ -91,7 +91,7 @@ async function generateSessionImage(sessionId: string): Promise<void> {
     // Prepare session object for image generation
     const session: Session = {
       id: sessionData.id,
-      name: sessionData.name,
+      name: 'Night of the Bell\'s Toll',
       date: sessionData.date,
       campaignId: sessionData.campaignId,
       partyMessageId: sessionData.partyMessageId,

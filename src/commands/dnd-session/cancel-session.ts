@@ -3,6 +3,7 @@ import { BotCommandOptionInfo } from '../../utils/botDialogStrings.js';
 import { ExtendedInteraction } from '../../models/Command.js';
 import { cancelSession } from '../../controllers/session.js';
 import { sendEphemeralReply } from '../../discord/message.js';
+import { sanitizeUserInput } from '../../utils/sanitizeUserInput.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -22,10 +23,11 @@ export default {
     ),
   async execute(interaction: ExtendedInteraction) {
     const sessionId = interaction.options.getString(BotCommandOptionInfo.SessionId_Name, true);
-    const reason = interaction.options.getString(BotCommandOptionInfo.CancelSession_ReasonName, true);
+    const rawReason = interaction.options.getString(BotCommandOptionInfo.CancelSession_ReasonName, true);
+    const reason = sanitizeUserInput(rawReason, { maxLength: 512 }) || 'No reason provided.';
 
     await cancelSession(sessionId, reason);
 
-    await sendEphemeralReply(`Session data has been deleted.`, interaction);
+    await sendEphemeralReply('Session data has been deleted.', interaction);
   },
 };

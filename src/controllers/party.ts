@@ -13,7 +13,7 @@ export const formatSessionPartyAsStr = (
   options: ListPartyForSessionOptions,
   delimiter = ', '
 ): string => {
-  const title = `User List for ${session.name}\n`;
+  const title = `User List for Session ${session.name}\n`;
   const header = [
     'Username',
     options.addUserRoleInThisSession && 'Role',

@@ -8,7 +8,7 @@ import { createSessionImage } from '../../utils/sessionImage.js';
 export default {
   data: new SlashCommandBuilder()
     .setName('set-session-status')
-    .setDescription('Set the status of a session (for testing purposes)')
+    .setDescription('Set the status of an session (for testing purposes)')
     .addStringOption((id) =>
       id
         .setName(BotCommandOptionInfo.SessionId_Name)

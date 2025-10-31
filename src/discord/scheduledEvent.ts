@@ -47,7 +47,7 @@ export const createScheduledEvent = async (
         entityMetadata: {
           location: channelId ? `Session Channel: #${channelId}` : 'Game Session',
         },
-        description: `🎲 Tabletop RPG Session\n\nClick "Interested" to get notifications about this session!\n\nJoin the session channel to select your role and prepare for adventure!`,
+        description: `🎲 Tabletop RPG Session\n\nClick "Interested" to get notifications about this session!\n\nJoin the session channel to select your role and prepare for epic moments!`,
       });
     });
 

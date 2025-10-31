@@ -190,7 +190,7 @@ const calculateOptimalFontMetrics = async (
 const coords = {
   member: { width: 300, height: 300, x: [365, 795, 1225, 1655, 2085], y: 1700 },
   dm: { width: 380, height: 380, x: 1170, y: 380 },
-  sessionName: { x: 585, y: 920, maxWidth: 1800, maxHeight: 175, visualCenterX: 1358 },
+  sessionName: { x: 585, y: 925, maxWidth: 1600, maxHeight: 160, visualCenterX: 1358 },
   date: { x: 1000, y: 1140, maxWidth: 1300, maxHeight: 160, visualCenterX: 1358 },
   role: { yImg: 1300, yName: 2150, width: 300, height: 300 },
 };
@@ -362,6 +362,8 @@ const createTextOverlay = async (
     bold
   );
 
+  console.log(`Creating text overlay: "${text}" with fontSize: ${fontSize}, textWidth: ${textWidth}, maxWidth: ${maxWidth}, maxHeight: ${maxHeight}, bold: ${bold}`);
+
   const effectiveWidth = textWidth || maxWidth * TEXT_WIDTH_RATIO;
   const paddedWidth = Math.min(
     maxWidth,
@@ -371,10 +373,17 @@ const createTextOverlay = async (
     )
   );
 
+  console.log(`Effective Width: ${effectiveWidth}, paddedWidth: ${paddedWidth}`);
+
   const svgWidth = bold ? maxWidth : paddedWidth;
   const svgHeight = maxHeight;
   const textX = svgWidth / 2;
-  const textY = svgHeight / 2;
+
+  // Push baseline slightly downward so tall glyphs keep their ascenders
+  const baselineAdjustment = Math.ceil(fontSize * 0.12);
+  const textY = Math.floor(svgHeight / 2) + baselineAdjustment;
+
+  console.log(`SVG Dimensions - Width: ${svgWidth}, Height: ${svgHeight}, TextX: ${textX}, TextY: ${textY}`);
 
   const svg = buildTextSvg(text, {
     width: svgWidth,

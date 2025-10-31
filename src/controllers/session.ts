@@ -31,6 +31,7 @@ import { sessionScheduler } from '../services/sessionScheduler.js';
 import { CreateSessionData } from '../models/session.js';
 import { createSessionImage } from '../utils/sessionImage.js';
 import { areDatesEqual, isFutureDate } from '../utils/dateUtils.js';
+import { sanitizeUserInput } from '../utils/sanitizeUserInput.js';
 import {
   safeChannelFetch,
   safeMessageFetch,
@@ -234,8 +235,16 @@ export const modifySession = async (interaction: ExtendedInteraction) => {
     const sessionId = interaction?.options?.get(
       BotCommandOptionInfo.SessionId_Name
     )?.value as string;
-    const newSessionName = interaction?.options?.get('new-session-name')
+    const rawNewSessionName = interaction?.options?.get('new-session-name')
       ?.value as string;
+    const newSessionName = rawNewSessionName
+      ? sanitizeUserInput(rawNewSessionName)
+      : undefined;
+
+    if (rawNewSessionName && !newSessionName) {
+      await sendEphemeralReply(BotDialogs.createSessionInvalidSessionName, interaction);
+      return;
+    }
 
     // Get timezone from command or user's stored timezone
     let timezone = interaction.options.getString(BotCommandOptionInfo.CreateSession_TimezoneName);
@@ -408,15 +417,22 @@ export const formatSessionsAsStr = (
     includeId,
     includeRole = false,
   } = options;
-  const header = `Session Name${includeId && '\tSession Channel ID'}]\
-    ${includeTime && '\tScheduled Date'}${includeCampaign && '\tCampaign Name'}\
-    ${includeRole && '\tUser Role'}`;
+  const headerParts = [
+    'Session Name',
+    includeId && 'Session Channel ID',
+    includeTime && 'Scheduled Date',
+    includeCampaign && 'Campaign Name',
+    includeRole && 'User Role',
+  ].filter(Boolean);
+  const header = headerParts.join('\t');
 
   const data = sessions.map((session) => {
     const row = [session.name];
     if (includeId) row.push(session.id);
     if (includeTime) row.push(session.date.toUTCString());
-    if (includeCampaign && session.campaign) row.push(session.campaign);
+    if (includeCampaign && session.campaign) {
+      row.push(session.campaign);
+    }
     if (includeRole && session.userRole) row.push(session.userRole);
     return row;
   });

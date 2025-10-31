@@ -9,7 +9,7 @@ export default {
   data: new SlashCommandBuilder()
     .setName('modify-session')
     .setDescription(
-      'Makes changes to existing session. Also updates photos to reflect changes.'
+      'Makes changes to an existing session. Also updates photos to reflect changes.'
     )
     .addStringOption((id) =>
       id

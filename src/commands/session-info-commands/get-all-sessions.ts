@@ -63,7 +63,8 @@ export default {
         attachment,
       ]);
     } catch (error) {
-      await sendEphemeralReply(`There was an error: ${error}`, interaction);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      await sendEphemeralReply(`There was an error: ${errorMessage}`, interaction);
     }
   },
 };
