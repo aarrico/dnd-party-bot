@@ -57,7 +57,7 @@ export const initSession = async (
 
   const newSession: CreateSessionData = {
     id: sessionChannel.id,
-    name: sessionChannel.name,
+    name: sessionName,
     date,
     campaignId: campaign.id,
     partyMessageId: '',
