@@ -108,6 +108,7 @@ export const getSessionsForUser = async (
               id: true,
               name: true,
               date: true,
+              status: true,
               campaignId: true,
               campaign: includeCampaign,
             },

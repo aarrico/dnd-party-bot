@@ -77,7 +77,6 @@ export default {
         return;
       }
 
-      // Get timezone from command or user's stored timezone
       let timezone = interaction.options.getString(BotCommandOptionInfo.CreateSession_TimezoneName);
 
       if (!timezone) {
@@ -107,36 +106,31 @@ export default {
         timezone,
       );
 
-      // The channel name is normalized in createChannel (first space becomes dash)
       const normalizedChannelName = sessionName.replace(' ', '-').toLowerCase();
 
-      // Find the created channel by name
       const createdChannel = campaign.channels.cache.find(channel =>
         channel.name === normalizedChannelName
       );
 
-      // Send public message announcing the session is ready with a link to the channel
       await interaction.editReply({
         content: createdChannel
           ? BotDialogs.createSessionSuccess(sessionName, date, createdChannel.id)
           : BotDialogs.createSessionSuccessFallback(sessionName, date, normalizedChannelName)
       });
 
-      // Send DMs to all guild members with their own timezone
       await notifyGuild(
         campaign.id,
         (userId: string) => formatSessionCreationDM(campaign, session, userId)
       );
     } catch (error) {
-      // Public error message since we want transparency about session creation failures
+      const payload = {
+        content: (error as Error).message || BotDialogs.createSessionError
+      };
+      
       if (interaction.deferred) {
-        await interaction.editReply({
-          content: BotDialogs.createSessionError
-        });
+        await interaction.editReply(payload);
       } else {
-        await interaction.reply({
-          content: BotDialogs.createSessionError
-        });
+        await interaction.reply(payload);
       }
       console.error(`Error creating session:`, inspect(error, { depth: null, colors: true }))
     }

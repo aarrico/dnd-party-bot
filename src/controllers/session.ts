@@ -5,6 +5,9 @@ import {
   getSessionById,
   getSessions,
   updateSession,
+  isUserInActiveSession,
+  isUserHostingOnDate,
+  isUserMemberOnDate,
 } from '../db/session.js';
 import {
   sendNewSessionMessage,
@@ -49,6 +52,11 @@ export const initSession = async (
   userId: string,
   timezone: string,
 ): Promise<Session> => {
+
+  const validationError = await isSessionValid(campaign, date, userId, timezone);
+  if (validationError) {
+    throw new Error(validationError);
+  }
 
   const sessionChannel = await createChannel(
     campaign,
@@ -319,7 +327,7 @@ export const processRoleSelection = async (
   sessionId: string
 ): Promise<RoleSelectionStatus> => {
   const session = await getSession(sessionId);
-  const { date, partyMembers: party, status } = session;
+  const { date, partyMembers: party, status, campaignId, timezone } = session;
 
   if (status && status !== 'SCHEDULED') {
     return RoleSelectionStatus.LOCKED;
@@ -327,6 +335,26 @@ export const processRoleSelection = async (
 
   if (!isFutureDate(date)) {
     return RoleSelectionStatus.EXPIRED;
+  }
+
+  const isInAnotherSession = await isUserInActiveSession(
+    newPartyMember.userId,
+    sessionId
+  );
+  if (isInAnotherSession) {
+    return RoleSelectionStatus.ALREADY_IN_SESSION;
+  }
+
+  // Check if the user is hosting another session on the same day
+  const isHostingOnSameDay = await isUserHostingOnDate(
+    newPartyMember.userId,
+    date,
+    campaignId,
+    timezone
+  );
+
+  if (isHostingOnSameDay) {
+    return RoleSelectionStatus.HOSTING_SAME_DAY;
   }
 
   if (party.length >= 6) {
@@ -438,4 +466,35 @@ export const formatSessionsAsStr = (
   });
 
   return [[header], ...data].map((row) => row.join(delimiter)).join('\n');
+};
+
+const isSessionValid = async (campaign: Guild, date: Date, userId: string, timezone: string): Promise<string> => {
+  if (!campaign) {
+    return BotDialogs.createSessionInvalidGuild;
+  }
+
+  if (!date || isNaN(date.getTime())) {
+    return BotDialogs.createSessionInvalidDate;
+  }
+  if (!isFutureDate(date)) {
+    return BotDialogs.createSessionDateMustBeFuture;
+  }
+
+  if (!userId) {
+    return BotDialogs.createSessionInvalidUserId;
+  }
+
+  // Check if the user is already hosting a session on the same day
+  const isHostingOnSameDay = await isUserHostingOnDate(userId, date, campaign.id, timezone);
+  if (isHostingOnSameDay) {
+    return BotDialogs.createSessionHostingMultipleSessions;
+  }
+
+  // Check if the user is a member of another session on the same day
+  const isMemberOnSameDay = await isUserMemberOnDate(userId, date, campaign.id, timezone);
+  if (isMemberOnSameDay) {
+    return BotDialogs.createSessionAlreadyMemberSameDay;
+  }
+
+  return '';
 };

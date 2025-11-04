@@ -114,6 +114,7 @@ export const getSessions = async (
       id: s.id,
       name: s.name,
       date: s.date,
+      status: s.status,
     };
   });
 };
@@ -203,4 +204,91 @@ export const updateSession = async (
   console.log(`[DB] Updated session result - partyMessageId: ${updatedSession.partyMessageId}`);
 
   return updatedSession;
+};
+
+/**
+ * Check if a user is in any active or scheduled sessions (excluding a specific session)
+ * This is more efficient than fetching all sessions and filtering in JavaScript
+ * 
+ * @param userId - The user ID to check
+ * @param excludeSessionId - Optional session ID to exclude from the check
+ * @returns true if the user is in another active/scheduled session, false otherwise
+ */
+export const isUserInActiveSession = async (
+  userId: string,
+  excludeSessionId?: string
+): Promise<boolean> => {
+  const count = await prisma.session.count({
+    where: {
+      ...(excludeSessionId && { id: { not: excludeSessionId } }),
+      status: { in: ['SCHEDULED', 'ACTIVE'] },
+      partyMembers: {
+        some: { userId },
+      },
+    },
+  });
+
+  return count > 0;
+};
+
+/**
+ * Check if a user is hosting (GM) a session on a specific date
+ * 
+ * @param userId - The user ID to check
+ * @param date - The date to check for (in UTC)
+ * @param campaignId - The campaign ID to check within
+ * @param timezone - The timezone to use for "same day" comparison
+ * @returns true if the user is hosting a session on the given date, false otherwise
+ */
+export const isUserHostingOnDate = async (
+  userId: string,
+  date: Date,
+  campaignId: string,
+  timezone: string
+): Promise<boolean> => {
+  // Use raw SQL to leverage PostgreSQL's AT TIME ZONE for accurate timezone conversion
+  // We convert both the session dates and the target date to the specified timezone
+  // and compare just the date part (ignoring time)
+  const result = await prisma.$queryRaw<[{ count: bigint }]>`
+    SELECT COUNT(*)::int as count
+    FROM session s
+    JOIN party_member pm ON s.id = pm.session_id
+    WHERE s.campaign_id = ${campaignId}
+      AND pm.user_id = ${userId}
+      AND pm.role_id = 'GAME_MASTER'
+      AND DATE(s.date AT TIME ZONE ${timezone}) = DATE(${date}::timestamptz AT TIME ZONE ${timezone})
+  `;
+
+  return Number(result[0].count) > 0;
+};  
+
+/**
+ * Check if a user is a member (non-GM) of any session on a specific date
+ * 
+ * @param userId - The user ID to check
+ * @param date - The date to check for (in UTC)
+ * @param campaignId - The campaign ID to check within
+ * @param timezone - The timezone to use for "same day" comparison
+ * @returns true if the user is a member of a session on the given date, false otherwise
+ */
+export const isUserMemberOnDate = async (
+  userId: string,
+  date: Date,
+  campaignId: string,
+  timezone: string
+): Promise<boolean> => {
+  // Use raw SQL to leverage PostgreSQL's AT TIME ZONE for accurate timezone conversion
+  // We convert both the session dates and the target date to the specified timezone
+  // and compare just the date part (ignoring time)
+  const result = await prisma.$queryRaw<[{ count: bigint }]>`
+    SELECT COUNT(*)::int as count
+    FROM session s
+    JOIN party_member pm ON s.id = pm.session_id
+    WHERE s.campaign_id = ${campaignId}
+      AND pm.user_id = ${userId}
+      AND pm.role_id != 'GAME_MASTER'
+      AND DATE(s.date AT TIME ZONE ${timezone}) = DATE(${date}::timestamptz AT TIME ZONE ${timezone})
+  `;
+
+  return Number(result[0].count) > 0;
 };
