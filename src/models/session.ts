@@ -23,16 +23,17 @@ export interface CreateSessionData {
 }
 
 export interface ListSessionsOptions {
-  includeId: boolean;
-  includeTime: boolean;
-  includeCampaign: boolean;
-  includeUserRole: boolean;
+  includeId?: boolean;
+  includeTime?: boolean;
+  includeCampaign?: boolean;
+  includeUserRole?: boolean;
   userId?: string;
   campaignId?: string;
   includeRole?: boolean;
 }
 
 export interface ListSessionsResult {
+  status: string;
   id: string;
   name: string;
   date: Date;

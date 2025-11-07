@@ -24,6 +24,12 @@ export const BotDialogs = {
   createSessionSuccessFallback: (sessionName: string, date: Date, channelName: string) =>
     `✅ **${sessionName}** session has been created!\n📅 Scheduled for: ${format(date, 'PPP')}\n🎲 Join the session: #${channelName}`,
   createSessionError: '❌ There was an error creating the session. Please try again.',
+  createSessionHostingMultipleSessions: '❌ You cannot host multiple sessions on the same day.',
+  createSessionAlreadyMemberSameDay: '❌ You cannot host a session on a day when you are already a member of another session.',
+  createSessionInvalidGuild: '❌ Invalid campaign/guild provided.',
+  createSessionInvalidDate: '❌ Invalid date provided for session creation.',
+  createSessionDateMustBeFuture: '❌ Session date must be in the future.',
+  createSessionInvalidUserId: '❌ Invalid user ID provided.',
 
   sessions: {
     listAllResult: '🤖🎉 Report for all scheduled sessions is ready!',
@@ -61,16 +67,19 @@ export const BotDialogs = {
 
   roleChosenMessageContent: {
     welcomeToParty: (username: string, role: string) =>
-      `🤖 Welcome to the Party ${username}. You have been added as a ${role}!`,
+      `🥳 Welcome to the party ${username}! You have been added as a ${role}.`,
     farewell: (username: string) =>
-      `🤖 Farewell, ${username}! You have been removed from the session! To rejoin, click a role button!`,
+      `👋 Farewell, ${username}! You have been removed from the session! To rejoin, click a role button!`,
     roleSwap: (username: string, role: string) =>
-      `🤖 Deciding to change the game, ${username}? You have been changed to a ${role}!`,
+      `🔃 Deciding to change the game, ${username}? You have been changed to a ${role}!`,
     partyFull:
-      '🤖 Unfortunately, this party is full and no new users can be added at present!',
-    dmCantSwap: '🤖 You cannot change roles as you are the Game Master!',
+      '🙅 Unfortunately, this party is full and no new members can be added.',
+    dmCantSwap: '🙅 Game Master cannot change roles!',
     sessionLocked: '🔒 This session is locked and no longer accepting role changes.',
     noActionTaken: '🤖 No Action was taken. Something went wrong',
+    expired: '⏰ The session has expired and can no longer accept role changes.',
+    alreadyInSession: '🙅 You are already in another active or scheduled session and cannot join this one.',
+    hostingSameDay: '🙅 You cannot join this session because you are hosting another session on the same day.',
   },
 } as const;
 
@@ -97,6 +106,12 @@ export const getAddPartyMemberMsg = (
       return BotDialogs.roleChosenMessageContent.dmCantSwap;
     case RoleSelectionStatus.LOCKED:
       return BotDialogs.roleChosenMessageContent.sessionLocked;
+    case RoleSelectionStatus.EXPIRED:
+      return BotDialogs.roleChosenMessageContent.expired;
+    case RoleSelectionStatus.ALREADY_IN_SESSION:
+      return BotDialogs.roleChosenMessageContent.alreadyInSession;
+    case RoleSelectionStatus.HOSTING_SAME_DAY:
+      return BotDialogs.roleChosenMessageContent.hostingSameDay;
     default:
       return BotDialogs.roleChosenMessageContent.noActionTaken;
   }
