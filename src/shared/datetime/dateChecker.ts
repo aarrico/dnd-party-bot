@@ -1,5 +1,5 @@
-import { ExtendedInteraction } from '../models/Command.js';
-import { BotCommandOptionInfo } from './botDialogStrings.js';
+import { ExtendedInteraction } from '@models/Command.js';
+import { BotCommandOptionInfo } from '../messages/botDialogStrings.js';
 import { TZDate } from '@date-fns/tz';
 import { isFutureDate } from './dateUtils.js';
 
@@ -7,10 +7,10 @@ const monthMaxDayCounts = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
 
 export default function DateChecker(interaction: ExtendedInteraction, timezone?: string) {
-  const month = interaction.options.getInteger(BotCommandOptionInfo.CreateSession_MonthName, true);
-  const day = interaction.options.getInteger(BotCommandOptionInfo.CreateSession_DayName, true);
-  const year = interaction.options.getInteger(BotCommandOptionInfo.CreateSession_YearName, true);
-  const time = interaction.options.getString(BotCommandOptionInfo.CreateSession_TimeName, true);
+  const month = interaction.options.getInteger(BotCommandOptionInfo.Session_Month_Name, true);
+  const day = interaction.options.getInteger(BotCommandOptionInfo.Session_Day_Name, true);
+  const year = interaction.options.getInteger(BotCommandOptionInfo.Session_Year_Name, true);
+  const time = interaction.options.getString(BotCommandOptionInfo.Session_DateTime_Name, true);
 
   const parsedTime = parseTime(time);
   if (!parsedTime) {

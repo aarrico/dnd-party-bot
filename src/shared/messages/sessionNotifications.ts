@@ -1,6 +1,6 @@
 import { Guild } from 'discord.js';
-import { Session } from '../models/session.js';
-import { getUserTimezone } from '../db/user.js';
+import { Session } from '@modules/session/domain/session.types.js';
+import { getUserTimezone } from '@modules/user/repository/user.repository.js';
 import { BotDialogs } from './botDialogStrings.js';
 
 /**

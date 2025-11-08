@@ -1,9 +1,9 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { BotCommandOptionInfo } from '../../utils/botDialogStrings.js';
-import { ExtendedInteraction } from '../../models/Command.js';
-import { cancelSession } from '../../controllers/session.js';
-import { sendEphemeralReply } from '../../discord/message.js';
-import { sanitizeUserInput } from '../../utils/sanitizeUserInput.js';
+import { BotCommandOptionInfo } from '@shared/messages/botDialogStrings.js';
+import { ExtendedInteraction } from '@models/Command.js';
+import { cancelSession } from '@modules/session/controller/session.controller.js';
+import { sendEphemeralReply } from '@discord/message.js';
+import { sanitizeUserInput } from '@shared/validation/sanitizeUserInput.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -11,8 +11,8 @@ export default {
     .setDescription(BotCommandOptionInfo.CancelSession_Description)
     .addStringOption((id) =>
       id
-        .setName(BotCommandOptionInfo.SessionId_Name)
-        .setDescription(BotCommandOptionInfo.SessionId_Description)
+        .setName(BotCommandOptionInfo.Session_Id_Name)
+        .setDescription(BotCommandOptionInfo.Session_Id_Description)
         .setRequired(true)
     )
     .addStringOption((reason) =>
@@ -22,7 +22,7 @@ export default {
         .setRequired(true)
     ),
   async execute(interaction: ExtendedInteraction) {
-    const sessionId = interaction.options.getString(BotCommandOptionInfo.SessionId_Name, true);
+    const sessionId = interaction.options.getString(BotCommandOptionInfo.Session_Id_Name, true);
     const rawReason = interaction.options.getString(BotCommandOptionInfo.CancelSession_ReasonName, true);
     const reason = sanitizeUserInput(rawReason, { maxLength: 512 }) || 'No reason provided.';
 

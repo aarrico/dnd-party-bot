@@ -1,11 +1,11 @@
-import { prisma } from '../index.js';
-import { PartyMember } from '../models/party.js';
+import { prisma } from '@app/index.js';
+import { PartyMember } from '@modules/party/domain/party.types.js';
 import {
   ListSessionsOptions,
   ListSessionsResult,
   SessionWithParty,
   CreateSessionData,
-} from '../models/session.js';
+} from '@modules/session/domain/session.types.js';
 import { RoleType, Session } from '@prisma/client';
 
 export const createSession = async (
@@ -49,8 +49,8 @@ export const getSession = async (
     date: session.date,
     campaignId: session.campaignId,
     partyMessageId: session.partyMessageId,
-    eventId: (session.eventId as string | null) || undefined,
-    timezone: (session.timezone ?? 'America/Los_Angeles') as string,
+    eventId: session.eventId ?? undefined,
+    timezone: session.timezone ?? 'America/Los_Angeles',
     status: session.status as 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED',
     partyMembers: session.partyMembers.map((member) => ({
       userId: member.user.id,
@@ -158,9 +158,9 @@ export async function getSessionById(
     date: session.date,
     campaignId: session.campaignId,
     partyMessageId: session.partyMessageId,
-    eventId: (session.eventId as string | null) || undefined,
+    eventId: session.eventId ?? undefined,
     status: session.status as 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED',
-    timezone: (session.timezone ?? 'America/Los_Angeles') as string,
+    timezone: session.timezone ?? 'America/Los_Angeles',
     partyMembers: session.partyMembers.map((member) => ({
       userId: member.user.id,
       username: member.user.username,
@@ -206,14 +206,6 @@ export const updateSession = async (
   return updatedSession;
 };
 
-/**
- * Check if a user is in any active or scheduled sessions (excluding a specific session)
- * This is more efficient than fetching all sessions and filtering in JavaScript
- * 
- * @param userId - The user ID to check
- * @param excludeSessionId - Optional session ID to exclude from the check
- * @returns true if the user is in another active/scheduled session, false otherwise
- */
 export const isUserInActiveSession = async (
   userId: string,
   excludeSessionId?: string
@@ -231,24 +223,12 @@ export const isUserInActiveSession = async (
   return count > 0;
 };
 
-/**
- * Check if a user is hosting (GM) a session on a specific date
- * 
- * @param userId - The user ID to check
- * @param date - The date to check for (in UTC)
- * @param campaignId - The campaign ID to check within
- * @param timezone - The timezone to use for "same day" comparison
- * @returns true if the user is hosting a session on the given date, false otherwise
- */
 export const isUserHostingOnDate = async (
   userId: string,
   date: Date,
   campaignId: string,
   timezone: string
 ): Promise<boolean> => {
-  // Use raw SQL to leverage PostgreSQL's AT TIME ZONE for accurate timezone conversion
-  // We convert both the session dates and the target date to the specified timezone
-  // and compare just the date part (ignoring time)
   const result = await prisma.$queryRaw<[{ count: bigint }]>`
     SELECT COUNT(*)::int as count
     FROM session s
@@ -260,26 +240,14 @@ export const isUserHostingOnDate = async (
   `;
 
   return Number(result[0].count) > 0;
-};  
+};
 
-/**
- * Check if a user is a member (non-GM) of any session on a specific date
- * 
- * @param userId - The user ID to check
- * @param date - The date to check for (in UTC)
- * @param campaignId - The campaign ID to check within
- * @param timezone - The timezone to use for "same day" comparison
- * @returns true if the user is a member of a session on the given date, false otherwise
- */
 export const isUserMemberOnDate = async (
   userId: string,
   date: Date,
   campaignId: string,
   timezone: string
 ): Promise<boolean> => {
-  // Use raw SQL to leverage PostgreSQL's AT TIME ZONE for accurate timezone conversion
-  // We convert both the session dates and the target date to the specified timezone
-  // and compare just the date part (ignoring time)
   const result = await prisma.$queryRaw<[{ count: bigint }]>`
     SELECT COUNT(*)::int as count
     FROM session s

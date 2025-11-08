@@ -10,13 +10,13 @@ import {
   Events,
 } from 'discord.js';
 import { Event } from './Event.js';
-import { DiscordCommand } from '../models/Command.js';
+import { DiscordCommand } from '@models/Command.js';
 import path from 'path';
-import { getAllFiles, getAllFolders } from '../utils/getAllFiles.js';
+import { getAllFiles, getAllFolders } from '@shared/files/getAllFiles.js';
 import * as fs from 'node:fs';
 import { URL } from 'node:url';
 import { inspect } from 'node:util';
-import { syncGuildsFromDiscord } from '../db/guild.js';
+import { syncGuildsFromDiscord } from '@modules/guild/repository/guild.repository.js';
 
 const __dirname = new URL('../events', import.meta.url).pathname;
 

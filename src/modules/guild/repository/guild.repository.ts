@@ -1,7 +1,7 @@
 import { Campaign } from '@prisma/client';
-import { prisma } from '../index.js';
-import { client } from '../index.js';
-import { syncGuildMember } from '../controllers/users.js';
+import { prisma } from '@app/index.js';
+import { client } from '@app/index.js';
+import { syncGuildMember } from '@modules/user/controller/user.controller.js';
 
 export const upsertGuild = async (guildData: { id: string; name: string }): Promise<Campaign> => {
   return await prisma.campaign.upsert({

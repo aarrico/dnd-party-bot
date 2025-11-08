@@ -1,4 +1,4 @@
-import { ListSessionsResult } from './session.js';
+import { ListSessionsResult } from '../../session/domain/session.types.js';
 
 export interface ListUsersOptions {
   includeUserId: boolean;

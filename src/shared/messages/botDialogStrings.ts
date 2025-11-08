@@ -1,9 +1,9 @@
 import { Session } from '@prisma/client';
-import { PartyMember, RoleSelectionStatus } from '../models/party.js';
+import { PartyMember, RoleSelectionStatus } from '@modules/party/domain/party.types.js';
 import path from 'path';
 import os from 'os';
 import { Guild } from 'discord.js';
-import { formatSessionDateLong } from './dateUtils.js';
+import { formatSessionDateLong } from '../datetime/dateUtils.js';
 import { format } from 'date-fns';
 
 
@@ -145,25 +145,25 @@ export enum BotCommandInfo {
 }
 
 export enum BotCommandOptionInfo {
-  SessionId_Name = 'session-id',
-  SessionId_Description = 'Channel ID of the session - found by right-clicking channel.',
+  Session_Id_Name = 'session-id',
+  Session_Id_Description = 'Channel ID of the session - found by right-clicking channel.',
   UserId_Name = 'user-id',
   UserId_Description = 'User ID of the session - found by right-clicking user.',
-  SessionTime_Name = 'session-date-time',
-  SessionTime_Description = 'Date/Time of session in DB',
+  Session_DateTime_Name = 'session-date-time',
+  Session_DateTime_Description = 'Date/Time of session in DB',
   CampaignName_Name = 'campaign-name',
   CampaignId_Name = 'campaign-id',
   CampaignId_Description = 'Campaign ID of the session - found by right-clicking campaign channel. Defaults to active campaign.',
-  CreateSession_SessionName = 'session-name',
-  CreateSession_SessionName_Description = 'Name of session',
-  CreateSession_MonthName = 'month',
-  CreateSession_MonthDescription = 'Month of session',
-  CreateSession_DayName = 'day',
-  CreateSession_DayDescription = 'Day of session',
-  CreateSession_YearName = 'year',
-  CreateSession_YearDescription = 'Year of session',
-  CreateSession_TimeName = 'time',
-  CreateSession_TimeDescription = 'Time in 12-hour (7:00 PM) or 24-hour (19:00) format',
+  Session_Name = 'session-name',
+  Session_Name_Description = 'Name of session',
+  Session_Month_Name = 'month',
+  Session_Month_Description = 'Month of session',
+  Session_Day_Name = 'day',
+  Session_Day_Description = 'Day of session',
+  Session_Year_Name = 'year',
+  Session_Year_Description = 'Year of session',
+  Session_Time_Name = 'time',
+  Session_Time_Description = 'Time in 12-hour (7:00 PM) or 24-hour (19:00) format',
   GetAllUserSessions_UserIDDescription = 'User ID that you are finding the sessions for.',
   GetAllUserSessions_SessionIDDescription = 'UUID of session in DB(unique identifier)',
   GetAllUserSessions_UserRoleName = 'user-role-in-this-session',

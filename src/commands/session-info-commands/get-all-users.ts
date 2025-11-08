@@ -5,11 +5,11 @@ import {
   BotCommandOptionInfo,
   BotDialogs,
   BotPaths,
-} from '../../utils/botDialogStrings.js';
-import { getTxtAttachmentBuilder } from '../../utils/attachmentBuilders.js';
-import { ExtendedInteraction } from '../../models/Command.js';
-import { sendEphemeralReply } from '../../discord/message.js';
-import { listUsers } from '../../controllers/users.js';
+} from '@shared/messages/botDialogStrings.js';
+import { getTxtAttachmentBuilder } from '@shared/files/attachmentBuilders.js';
+import { ExtendedInteraction } from '@models/Command.js';
+import { sendEphemeralReply } from '@discord/message.js';
+import { listUsers } from '@modules/user/controller/user.controller.js';
 
 export default {
   data: new SlashCommandBuilder()

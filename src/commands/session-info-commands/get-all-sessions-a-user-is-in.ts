@@ -5,13 +5,13 @@ import {
   BotCommandOptionInfo,
   BotDialogs,
   BotPaths,
-} from '../../utils/botDialogStrings.js';
-import { getTxtAttachmentBuilder } from '../../utils/attachmentBuilders.js';
-import { ExtendedInteraction } from '../../models/Command.js';
-import { sendEphemeralReply } from '../../discord/message.js';
-import { ListSessionsOptions } from '../../models/session.js';
-import { getSessionsForUser } from '../../db/user.js';
-import { formatSessionsAsStr } from '../../controllers/session.js';
+} from '@shared/messages/botDialogStrings.js';
+import { getTxtAttachmentBuilder } from '@shared/files/attachmentBuilders.js';
+import { ExtendedInteraction } from '@models/Command.js';
+import { sendEphemeralReply } from '@discord/message.js';
+import { ListSessionsOptions } from '@modules/session/domain/session.types.js';
+import { getSessionsForUser } from '@modules/user/repository/user.repository.js';
+import { formatSessionsAsStr } from '@modules/session/controller/session.controller.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -27,7 +27,7 @@ export default {
     )
     .addBooleanOption((includeSession) =>
       includeSession
-        .setName(BotCommandOptionInfo.SessionId_Name)
+        .setName(BotCommandOptionInfo.Session_Id_Name)
         .setDescription(
           BotCommandOptionInfo.GetAllUserSessions_SessionIDDescription
         )
@@ -41,8 +41,8 @@ export default {
     )
     .addBooleanOption((includeTime) =>
       includeTime
-        .setName(BotCommandOptionInfo.SessionTime_Name)
-        .setDescription(BotCommandOptionInfo.SessionTime_Description)
+        .setName(BotCommandOptionInfo.Session_DateTime_Name)
+        .setDescription(BotCommandOptionInfo.Session_DateTime_Description)
     )
     .addBooleanOption((includeCampaign) =>
       includeCampaign
@@ -50,8 +50,8 @@ export default {
         .setDescription(BotCommandOptionInfo.Campaign_Description)
     ),
   async execute(interaction: ExtendedInteraction) {
-    const includeSessionId = interaction.options.getBoolean(BotCommandOptionInfo.SessionId_Name) ?? false;
-    const includeTime = interaction.options.getBoolean(BotCommandOptionInfo.SessionTime_Name) ?? false;
+    const includeSessionId = interaction.options.getBoolean(BotCommandOptionInfo.Session_Id_Name) ?? false;
+    const includeTime = interaction.options.getBoolean(BotCommandOptionInfo.Session_DateTime_Name) ?? false;
     const includeCampaign = interaction.options.getBoolean(BotCommandOptionInfo.CampaignName_Name) ?? false;
     const includeUserRole = interaction.options.getBoolean(BotCommandOptionInfo.GetAllUserSessions_UserRoleName) ?? false;
     const userId = interaction.options.getString(BotCommandOptionInfo.UserId_Name, true);

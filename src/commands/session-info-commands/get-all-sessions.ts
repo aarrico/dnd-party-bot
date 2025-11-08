@@ -5,15 +5,15 @@ import {
   BotCommandOptionInfo,
   BotDialogs,
   BotPaths,
-} from '../../utils/botDialogStrings.js';
-import { ExtendedInteraction } from '../../models/Command.js';
+} from '@shared/messages/botDialogStrings.js';
+import { ExtendedInteraction } from '@models/Command.js';
 import {
   formatSessionsAsStr,
   listSessions,
-} from '../../controllers/session.js';
-import { getTxtAttachmentBuilder } from '../../utils/attachmentBuilders.js';
-import { sendEphemeralReply } from '../../discord/message.js';
-import { ListSessionsOptions } from '../../models/session.js';
+} from '@modules/session/controller/session.controller.js';
+import { getTxtAttachmentBuilder } from '@shared/files/attachmentBuilders.js';
+import { sendEphemeralReply } from '@discord/message.js';
+import { ListSessionsOptions } from '@modules/session/domain/session.types.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -21,12 +21,12 @@ export default {
     .setDescription(BotCommandInfo.GetAllSessions_Description)
     .addBooleanOption((includeSessionId) =>
       includeSessionId
-        .setName(BotCommandOptionInfo.SessionId_Name)
+        .setName(BotCommandOptionInfo.Session_Id_Name)
         .setDescription('Include channel id of the session in the output.')
     )
     .addBooleanOption((includeTime) =>
       includeTime
-        .setName(BotCommandOptionInfo.SessionTime_Name)
+        .setName(BotCommandOptionInfo.Session_DateTime_Name)
         .setDescription('Include scheduled time in the output.')
     )
     .addBooleanOption((includeCampaign) =>
@@ -36,8 +36,8 @@ export default {
     ),
   async execute(interaction: ExtendedInteraction) {
     try {
-      const includeId = interaction.options.getBoolean(BotCommandOptionInfo.SessionId_Name) ?? false;
-      const includeTime = interaction.options.getBoolean(BotCommandOptionInfo.SessionTime_Name) ?? false;
+      const includeId = interaction.options.getBoolean(BotCommandOptionInfo.Session_Id_Name) ?? false;
+      const includeTime = interaction.options.getBoolean(BotCommandOptionInfo.Session_DateTime_Name) ?? false;
       const includeCampaign = interaction.options.getBoolean(BotCommandOptionInfo.CampaignName_Name) ?? false;
 
       const options: ListSessionsOptions = {

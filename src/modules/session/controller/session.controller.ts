@@ -8,33 +8,33 @@ import {
   isUserInActiveSession,
   isUserHostingOnDate,
   isUserMemberOnDate,
-} from '../db/session.js';
+} from '@modules/session/repository/session.repository.js';
 import {
   sendNewSessionMessage,
   sendEphemeralReply,
   notifyGuild,
   getRoleButtonsForSession,
   createPartyMemberEmbed,
-} from '../discord/message.js';
-import { client } from '../index.js';
-import { ExtendedInteraction } from '../models/Command.js';
-import { AvatarOptions, PartyMemberImgInfo } from '../models/discord.js';
-import { PartyMember, RoleSelectionStatus } from '../models/party.js';
-import { ListSessionsOptions, ListSessionsResult, Session } from '../models/session.js';
-import { BotCommandOptionInfo, BotDialogs, BotAttachmentFileNames, BotPaths } from '../utils/botDialogStrings.js';
-import { getImgAttachmentBuilder } from '../utils/attachmentBuilders.js';
-import DateChecker from '../utils/dateChecker.js';
-import { addUserToParty, updatePartyMemberRole, upsertUser, getUserTimezone } from '../db/user.js';
-import { deletePartyMember } from '../db/partyMember.js';
+} from '@discord/message.js';
+import { client } from '@app/index.js';
+import { ExtendedInteraction } from '@models/Command.js';
+import { AvatarOptions, PartyMemberImgInfo } from '@models/discord.js';
+import { PartyMember, RoleSelectionStatus } from '@modules/party/domain/party.types.js';
+import { ListSessionsOptions, ListSessionsResult, Session } from '@modules/session/domain/session.types.js';
+import { BotCommandOptionInfo, BotDialogs, BotAttachmentFileNames, BotPaths } from '@shared/messages/botDialogStrings.js';
+import { getImgAttachmentBuilder } from '@shared/files/attachmentBuilders.js';
+import DateChecker from '@shared/datetime/dateChecker.js';
+import { addUserToParty, updatePartyMemberRole, upsertUser, getUserTimezone } from '@modules/user/repository/user.repository.js';
+import { deletePartyMember } from '@modules/party/repository/partyMember.repository.js';
 import { ChannelType, Guild } from 'discord.js';
-import { createChannel, renameChannel } from '../discord/channel.js';
-import { createScheduledEvent, updateScheduledEvent, deleteScheduledEvent } from '../discord/scheduledEvent.js';
+import { createChannel, renameChannel } from '@discord/channel.js';
+import { createScheduledEvent, updateScheduledEvent, deleteScheduledEvent } from '@discord/scheduledEvent.js';
 import { RoleType } from '@prisma/client';
-import { sessionScheduler } from '../services/sessionScheduler.js';
-import { CreateSessionData } from '../models/session.js';
-import { createSessionImage } from '../utils/sessionImage.js';
-import { areDatesEqual, isFutureDate } from '../utils/dateUtils.js';
-import { sanitizeUserInput } from '../utils/sanitizeUserInput.js';
+import { sessionScheduler } from '@services/sessionScheduler.js';
+import { CreateSessionData } from '@modules/session/domain/session.types.js';
+import { createSessionImage } from '@shared/messages/sessionImage.js';
+import { areDatesEqual, isFutureDate } from '@shared/datetime/dateUtils.js';
+import { sanitizeUserInput } from '@shared/validation/sanitizeUserInput.js';
 import {
   safeChannelFetch,
   safeMessageFetch,
@@ -42,7 +42,7 @@ import {
   safeUserFetch,
   safeCreateDM,
   safePermissionOverwritesEdit
-} from '../utils/discordErrorHandler.js';
+} from '@shared/discord/discordErrorHandler.js';
 
 export const initSession = async (
   campaign: Guild,
@@ -218,8 +218,8 @@ export const cancelSession = async (sessionId: string, reason: string) => {
 
   // Try to notify guild members
   try {
-    const { getUserTimezone } = await import('../db/user.js');
-    const { formatSessionDateLong } = await import('../utils/dateUtils.js');
+    const { getUserTimezone } = await import('../../user/repository/user.repository.js');
+    const { formatSessionDateLong } = await import('../../../shared/datetime/dateUtils.js');
 
     await notifyGuild(session.campaignId, async (userId: string) => {
       const userTimezone = await getUserTimezone(userId);
@@ -241,7 +241,7 @@ export const cancelSession = async (sessionId: string, reason: string) => {
 export const modifySession = async (interaction: ExtendedInteraction) => {
   try {
     const sessionId = interaction?.options?.get(
-      BotCommandOptionInfo.SessionId_Name
+      BotCommandOptionInfo.Session_Id_Name
     )?.value as string;
     const rawNewSessionName = interaction?.options?.get('new-session-name')
       ?.value as string;
@@ -344,8 +344,6 @@ export const processRoleSelection = async (
   if (isInAnotherSession) {
     return RoleSelectionStatus.ALREADY_IN_SESSION;
   }
-
-  // Check if the user is hosting another session on the same day
   const isHostingOnSameDay = await isUserHostingOnDate(
     newPartyMember.userId,
     date,

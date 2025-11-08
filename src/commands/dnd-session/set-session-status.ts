@@ -1,9 +1,9 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { BotCommandOptionInfo } from '../../utils/botDialogStrings.js';
-import { ExtendedInteraction } from '../../models/Command.js';
-import { updateSession } from '../../db/session.js';
-import { sendEphemeralReply } from '../../discord/message.js';
-import { createSessionImage } from '../../utils/sessionImage.js';
+import { BotCommandOptionInfo } from '@shared/messages/botDialogStrings.js';
+import { ExtendedInteraction } from '@models/Command.js';
+import { updateSession } from '@modules/session/repository/session.repository.js';
+import { sendEphemeralReply } from '@discord/message.js';
+import { createSessionImage } from '@shared/messages/sessionImage.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -11,8 +11,8 @@ export default {
     .setDescription('Set the status of an session (for testing purposes)')
     .addStringOption((id) =>
       id
-        .setName(BotCommandOptionInfo.SessionId_Name)
-        .setDescription(BotCommandOptionInfo.SessionId_Description)
+        .setName(BotCommandOptionInfo.Session_Id_Name)
+        .setDescription(BotCommandOptionInfo.Session_Id_Description)
         .setRequired(true)
     )
     .addStringOption((status) =>
@@ -34,7 +34,7 @@ export default {
         return;
       }
 
-      const sessionId = interaction.options.getString(BotCommandOptionInfo.SessionId_Name, true);
+      const sessionId = interaction.options.getString(BotCommandOptionInfo.Session_Id_Name, true);
       const newStatus = interaction.options.getString('status', true) as 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED';
 
       await interaction.deferReply();
@@ -43,8 +43,8 @@ export default {
       await updateSession(sessionId, { status: newStatus });
 
       // Get session and party data for image generation
-      const { getSessionById } = await import('../../db/session.js');
-      const { getPartyInfoForImg } = await import('../../controllers/session.js');
+      const { getSessionById } = await import('@modules/session/repository/session.repository.js');
+      const { getPartyInfoForImg } = await import('@modules/session/controller/session.controller.js');
       const session = await getSessionById(sessionId);
       const party = await getPartyInfoForImg(sessionId);
 

@@ -5,7 +5,7 @@ import {
   ButtonBuilder,
   ButtonStyle
 } from 'discord.js';
-import { Event } from '../../structures/Event.js';
+import { Event } from '@structures/Event.js';
 
 const handleDMMessage = async (message: Message) => {
   // Ignore messages from bots (including our own)

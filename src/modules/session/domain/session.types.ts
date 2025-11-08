@@ -1,4 +1,4 @@
-import { PartyMember } from './party.js';
+import { PartyMember } from '@modules/party/domain/party.types.js';
 
 export type Session = {
   id: string;

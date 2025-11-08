@@ -1,19 +1,19 @@
 import { AttachmentBuilder, ButtonInteraction, ChannelType, MessageFlags, MessagePayload, TextChannel, ActionRowBuilder, ButtonBuilder, EmbedBuilder } from 'discord.js';
-import { client, roleButtons } from '../index.js';
-import { ExtendedInteraction } from '../models/Command.js';
+import { client, roleButtons } from '@app/index.js';
+import { ExtendedInteraction } from '@models/Command.js';
 import { SessionStatus, RoleType } from '@prisma/client';
 
-import { Session } from '../models/session.js';
-import { BotAttachmentFileNames, BotDialogs, BotPaths } from '../utils/botDialogStrings.js';
-import { getImgAttachmentBuilder } from '../utils/attachmentBuilders.js';
-import { createSessionImage } from '../utils/sessionImage.js';
-import { PartyMember } from '../models/party.js';
+import { Session } from '@modules/session/domain/session.types.js';
+import { BotAttachmentFileNames, BotDialogs, BotPaths } from '@shared/messages/botDialogStrings.js';
+import { getImgAttachmentBuilder } from '@shared/files/attachmentBuilders.js';
+import { createSessionImage } from '@shared/messages/sessionImage.js';
+import { PartyMember } from '@modules/party/domain/party.types.js';
 import {
   safeGuildFetch,
   safeGuildMembersFetch,
   safeChannelSend,
   safeUserSend,
-} from '../utils/discordErrorHandler.js';
+} from '@shared/discord/discordErrorHandler.js';
 
 /**
  * Get role buttons for session based on status
@@ -32,7 +32,7 @@ export const sendNewSessionMessage = async (
 
   try {
     console.log(`Creating session image...`);
-    const { getPartyInfoForImg } = await import('../controllers/session.js');
+    const { getPartyInfoForImg } = await import('@modules/session/controller/session.controller.js');
     const party = await getPartyInfoForImg(session.id);
     await createSessionImage(session, party);
 

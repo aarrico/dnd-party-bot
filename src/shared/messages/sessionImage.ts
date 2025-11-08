@@ -7,10 +7,10 @@ import {
   getRoleByString,
   getRoleImage,
   RoleType,
-} from '../models/role.js';
-import { Session } from '../models/session.js';
-import { PartyMemberImgInfo } from '../models/discord.js';
-import { formatSessionDate } from './dateUtils.js';
+} from '@models/role.js';
+import { Session } from '@modules/session/domain/session.types.js';
+import { PartyMemberImgInfo } from '@models/discord.js';
+import { formatSessionDate } from '../datetime/dateUtils.js';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 const defaultFontsDir = path.resolve(process.cwd(), 'resources/fonts');

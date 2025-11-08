@@ -13,24 +13,24 @@ import {
   StringSelectMenuOptionBuilder,
   MessageFlags,
 } from 'discord.js';
-import { client } from '../../index.js';
-import { Event } from '../../structures/Event.js';
-import { ExtendedInteraction } from '../../models/Command.js';
-import { sendMessageReplyDisappearingMessage, getRoleButtonsForSession, createPartyMemberEmbed } from '../../discord/message.js';
-import { createSessionImage } from '../../utils/sessionImage.js';
-import { getImgAttachmentBuilder } from '../../utils/attachmentBuilders.js';
+import { client } from '@app/index.js';
+import { Event } from '@structures/Event.js';
+import { ExtendedInteraction } from '@models/Command.js';
+import { sendMessageReplyDisappearingMessage, getRoleButtonsForSession, createPartyMemberEmbed } from '@discord/message.js';
+import { createSessionImage } from '@shared/messages/sessionImage.js';
+import { getImgAttachmentBuilder } from '@shared/files/attachmentBuilders.js';
 import {
   BotAttachmentFileNames,
   BotDialogs,
   BotPaths,
   getAddPartyMemberMsg,
-} from '../../utils/botDialogStrings.js';
-import { processRoleSelection } from '../../controllers/session.js';
-import { PartyMember } from '../../models/party.js';
-import { getRoleByString } from '../../models/role.js';
-import { getSessionById, getParty } from '../../db/session.js';
-import { updateUserTimezone } from '../../db/user.js';
-import { TIMEZONES } from '../../utils/timezoneUtils.js';
+} from '@shared/messages/botDialogStrings.js';
+import { processRoleSelection } from '@modules/session/controller/session.controller.js';
+import { PartyMember } from '@modules/party/domain/party.types.js';
+import { getRoleByString } from '@models/role.js';
+import { getSessionById, getParty } from '@modules/session/repository/session.repository.js';
+import { updateUserTimezone } from '@modules/user/repository/user.repository.js';
+import { TIMEZONES } from '@shared/datetime/timezoneUtils.js';
 
 const partyMemberJoined = async (
   userId: string,
@@ -144,7 +144,7 @@ const processButton = async (
   await sendMessageReplyDisappearingMessage(interaction, result);
 
   try {
-    const { getPartyInfoForImg } = await import('../../controllers/session.js');
+    const { getPartyInfoForImg } = await import('@modules/session/controller/session.controller.js');
     const partyForImg = await getPartyInfoForImg(session.id);
     await createSessionImage(session, partyForImg);
 

@@ -1,11 +1,11 @@
 import { ChannelType, Guild, TextChannel } from 'discord.js';
-import { client } from '../index.js';
+import { client } from '@app/index.js';
 import {
   safeChannelFetch,
   safeChannelCreate,
   safeChannelDelete,
   safeChannelEdit,
-} from '../utils/discordErrorHandler.js';
+} from '@shared/discord/discordErrorHandler.js';
 
 export const createChannel = async (
   campaign: Guild,

@@ -4,15 +4,15 @@ import {
   BotCommandOptionInfo,
   BotDialogs,
   BotPaths,
-} from '../../utils/botDialogStrings.js';
-import { getTxtAttachmentBuilder } from '../../utils/attachmentBuilders.js';
-import { ExtendedInteraction } from '../../models/Command.js';
-import { sendEphemeralReply } from '../../discord/message.js';
+} from '@shared/messages/botDialogStrings.js';
+import { getTxtAttachmentBuilder } from '@shared/files/attachmentBuilders.js';
+import { ExtendedInteraction } from '@models/Command.js';
+import { sendEphemeralReply } from '@discord/message.js';
 import { SlashCommandBuilder } from 'discord.js';
 import {
   formatSessionPartyAsStr,
   listPartyForSession,
-} from '../../controllers/party.js';
+} from '@modules/party/controller/party.controller.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -20,8 +20,8 @@ export default {
     .setDescription(BotCommandInfo.GetAllUsersInASession_Description)
     .addStringOption((id) =>
       id
-        .setName(BotCommandOptionInfo.SessionId_Name)
-        .setDescription(BotCommandOptionInfo.SessionId_Description)
+        .setName(BotCommandOptionInfo.Session_Id_Name)
+        .setDescription(BotCommandOptionInfo.Session_Id_Description)
         .setRequired(true)
     )
     .addBooleanOption((userId) =>
@@ -51,7 +51,7 @@ export default {
         void interaction.reply('Only Admins can run this command!');
         return;
       }
-      const sessionId = interaction.options.getString(BotCommandOptionInfo.SessionId_Name, true);
+      const sessionId = interaction.options.getString(BotCommandOptionInfo.Session_Id_Name, true);
 
       const addUserId = interaction.options.getBoolean(BotCommandOptionInfo.UserId_Name) ?? false;
       const addUserRoleInThisSession = interaction.options.getBoolean(BotCommandOptionInfo.GetAllUsersInASession_UserRoleName) ?? false;

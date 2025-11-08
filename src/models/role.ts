@@ -1,5 +1,5 @@
 import { Role, RoleType } from '@prisma/client';
-import { getAbsolutePath } from '../utils/getAbsolutePath.js';
+import { getAbsolutePath } from '../shared/files/getAbsolutePath.js';
 
 // Role display images
 export const controlImage = "./resources/images/control-display.png";

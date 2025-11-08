@@ -1,8 +1,8 @@
 import { ActionRowBuilder, GuildMember, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } from 'discord.js';
-import { getAllUsers, upsertUser, getUserById, addUserToCampaign, isUserInCampaign } from '../db/user.js';
-import { ListUsersOptions, ListUsersResult } from '../models/user.js'; // listUsers overloads for type safety
-import { BotDialogs } from '../utils/botDialogStrings.js';
-import { TIMEZONES } from '../utils/timezoneUtils.js';
+import { getAllUsers, upsertUser, getUserById, addUserToCampaign, isUserInCampaign } from '../repository/user.repository.js';
+import { ListUsersOptions, ListUsersResult } from '../domain/user.types.js'; // listUsers overloads for type safety
+import { BotDialogs } from '../../../shared/messages/botDialogStrings.js';
+import { TIMEZONES } from '../../../shared/datetime/timezoneUtils.js';
 
 const ONBOARDING_SELECT_MENU_ID = 'onboarding-timezone-select';
 
