@@ -1,7 +1,7 @@
 import { SlashCommandBuilder, AutocompleteInteraction } from 'discord.js';
-import { monthOptionChoicesArray } from '@utils/genericInformation.js';
+import { monthOptionChoicesArray } from '@shared/constants/dateConstants.js';
 import { BotCommandOptionInfo } from '@shared/messages/botDialogStrings.js';
-import { ExtendedInteraction } from '@models/Command.js';
+import { ExtendedInteraction } from '@shared/types/discord.js';
 import { modifySession } from '@modules/session/controller/session.controller.js';
 import { handleTimezoneAutocomplete } from '@shared/datetime/timezoneUtils.js';
 

@@ -14,15 +14,11 @@
     "paths": {
       "@app/*": ["src/*"],
       "@commands/*": ["src/commands/*"],
-      "@discord/*": ["src/discord/*"],
       "@events/*": ["src/events/*"],
-      "@models/*": ["src/models/*"],
       "@modules/*": ["src/modules/*"],
       "@scripts/*": ["src/scripts/*"],
       "@services/*": ["src/services/*"],
-      "@shared/*": ["src/shared/*"],
-      "@structures/*": ["src/structures/*"],
-      "@utils/*": ["src/utils/*"]
+      "@shared/*": ["src/shared/*"]
     }
   },
   "include": ["../src/**/*", "../prisma/seed.ts"],

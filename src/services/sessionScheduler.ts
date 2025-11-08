@@ -2,7 +2,7 @@ import { CronJob } from 'cron';
 import { client } from '../index.js';
 import { getSessionById } from '../modules/session/repository/session.repository.js';
 import { SessionWithParty } from '../modules/session/domain/session.types.js';
-import { notifyGuild } from '../discord/message.js';
+import { notifyGuild } from '../shared/discord/messages.js';
 import {
   getHoursBefore,
   getMinutesBefore,

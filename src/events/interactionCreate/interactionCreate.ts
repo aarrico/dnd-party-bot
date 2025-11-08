@@ -14,9 +14,10 @@ import {
   MessageFlags,
 } from 'discord.js';
 import { client } from '@app/index.js';
-import { Event } from '@structures/Event.js';
-import { ExtendedInteraction } from '@models/Command.js';
-import { sendMessageReplyDisappearingMessage, getRoleButtonsForSession, createPartyMemberEmbed } from '@discord/message.js';
+import { Event } from '@shared/discord/Event.js';
+import { ExtendedInteraction } from '@shared/types/discord.js';
+import { sendMessageReplyDisappearingMessage } from '@shared/discord/messages.js';
+import { getRoleButtonsForSession, createPartyMemberEmbed } from '@modules/session/presentation/sessionMessages.js';
 import { createSessionImage } from '@shared/messages/sessionImage.js';
 import { getImgAttachmentBuilder } from '@shared/files/attachmentBuilders.js';
 import {
@@ -27,7 +28,7 @@ import {
 } from '@shared/messages/botDialogStrings.js';
 import { processRoleSelection } from '@modules/session/controller/session.controller.js';
 import { PartyMember } from '@modules/party/domain/party.types.js';
-import { getRoleByString } from '@models/role.js';
+import { getRoleByString } from '@modules/role/domain/roleManager.js';
 import { getSessionById, getParty } from '@modules/session/repository/session.repository.js';
 import { updateUserTimezone } from '@modules/user/repository/user.repository.js';
 import { TIMEZONES } from '@shared/datetime/timezoneUtils.js';

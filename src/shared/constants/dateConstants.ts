@@ -1,3 +1,7 @@
+/**
+ * Month selection choices for Discord slash command options
+ * Maps month names to their zero-indexed values (0 = January, 11 = December)
+ */
 export const monthOptionChoicesArray = [
   {
     name: 'January',

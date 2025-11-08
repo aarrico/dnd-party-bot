@@ -1,11 +1,11 @@
 import 'dotenv/config';
 import 'source-map-support/register.js';
-import { ExtendedClient } from './structures/ExtendedClient.js';
+import { ExtendedClient } from './shared/discord/ExtendedClient.js';
 import { PrismaClient } from '@prisma/client';
 import { getRoles } from './modules/role/repository/role.repository.js';
 import { createActionRowOfButtons } from './shared/discord/buttons.js';
 import { ActionRowBuilder, ButtonBuilder, Events } from 'discord.js';
-import { setRoleCache } from './models/role.js';
+import { setRoleCache } from './modules/role/domain/roleManager.js';
 import { sessionScheduler } from './services/sessionScheduler.js';
 
 export const client = new ExtendedClient();

@@ -4,11 +4,11 @@ import {
   BotCommandOptionInfo,
   BotDialogs,
 } from '@shared/messages/botDialogStrings.js';
-import { monthOptionChoicesArray } from '@utils/genericInformation.js';
-import { ExtendedInteraction } from '@models/Command.js';
+import { monthOptionChoicesArray } from '@shared/constants/dateConstants.js';
+import { ExtendedInteraction } from '@shared/types/discord.js';
 import { initSession } from '@modules/session/controller/session.controller.js';
 import DateChecker from '@shared/datetime/dateChecker.js';
-import { notifyGuild, sendEphemeralReply } from '@discord/message.js';
+import { notifyGuild, sendEphemeralReply } from '@shared/discord/messages.js';
 import { inspect } from 'util';
 import { getUserTimezone } from '@modules/user/repository/user.repository.js';
 import { handleTimezoneAutocomplete } from '@shared/datetime/timezoneUtils.js';

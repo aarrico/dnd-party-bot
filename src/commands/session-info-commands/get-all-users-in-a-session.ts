@@ -6,8 +6,8 @@ import {
   BotPaths,
 } from '@shared/messages/botDialogStrings.js';
 import { getTxtAttachmentBuilder } from '@shared/files/attachmentBuilders.js';
-import { ExtendedInteraction } from '@models/Command.js';
-import { sendEphemeralReply } from '@discord/message.js';
+import { ExtendedInteraction } from '@shared/types/discord.js';
+import { sendEphemeralReply } from '@shared/discord/messages.js';
 import { SlashCommandBuilder } from 'discord.js';
 import {
   formatSessionPartyAsStr,

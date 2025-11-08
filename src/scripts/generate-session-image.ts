@@ -14,8 +14,8 @@
 import { PrismaClient } from '@prisma/client';
 import { createSessionImage } from '../shared/messages/sessionImage.js';
 import { Session } from '../modules/session/domain/session.types.js';
-import { PartyMemberImgInfo } from '../models/discord.js';
-import { setRoleCache } from '../models/role.js';
+import { PartyMemberImgInfo } from '../modules/session/domain/session.types.js';
+import { setRoleCache } from '../modules/role/domain/roleManager.js';
 import { getRoles } from '../modules/role/repository/role.repository.js';
 
 // Initialize Prisma client

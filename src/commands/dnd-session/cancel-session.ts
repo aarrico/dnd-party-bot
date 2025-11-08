@@ -1,8 +1,8 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { BotCommandOptionInfo } from '@shared/messages/botDialogStrings.js';
-import { ExtendedInteraction } from '@models/Command.js';
+import { ExtendedInteraction } from '@shared/types/discord.js';
 import { cancelSession } from '@modules/session/controller/session.controller.js';
-import { sendEphemeralReply } from '@discord/message.js';
+import { sendEphemeralReply } from '@shared/discord/messages.js';
 import { sanitizeUserInput } from '@shared/validation/sanitizeUserInput.js';
 
 export default {

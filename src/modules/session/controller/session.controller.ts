@@ -11,14 +11,13 @@ import {
 } from '@modules/session/repository/session.repository.js';
 import {
   sendNewSessionMessage,
-  sendEphemeralReply,
-  notifyGuild,
   getRoleButtonsForSession,
   createPartyMemberEmbed,
-} from '@discord/message.js';
+} from '@modules/session/presentation/sessionMessages.js';
+import { sendEphemeralReply, notifyGuild } from '@shared/discord/messages.js';
 import { client } from '@app/index.js';
-import { ExtendedInteraction } from '@models/Command.js';
-import { AvatarOptions, PartyMemberImgInfo } from '@models/discord.js';
+import { ExtendedInteraction } from '@shared/types/discord.js';
+import { AvatarOptions, PartyMemberImgInfo } from '@modules/session/domain/session.types.js';
 import { PartyMember, RoleSelectionStatus } from '@modules/party/domain/party.types.js';
 import { ListSessionsOptions, ListSessionsResult, Session } from '@modules/session/domain/session.types.js';
 import { BotCommandOptionInfo, BotDialogs, BotAttachmentFileNames, BotPaths } from '@shared/messages/botDialogStrings.js';
@@ -27,8 +26,8 @@ import DateChecker from '@shared/datetime/dateChecker.js';
 import { addUserToParty, updatePartyMemberRole, upsertUser, getUserTimezone } from '@modules/user/repository/user.repository.js';
 import { deletePartyMember } from '@modules/party/repository/partyMember.repository.js';
 import { ChannelType, Guild } from 'discord.js';
-import { createChannel, renameChannel } from '@discord/channel.js';
-import { createScheduledEvent, updateScheduledEvent, deleteScheduledEvent } from '@discord/scheduledEvent.js';
+import { createChannel, renameChannel } from '@modules/session/services/channelService.js';
+import { createScheduledEvent, updateScheduledEvent, deleteScheduledEvent } from '@modules/session/services/scheduledEventService.js';
 import { RoleType } from '@prisma/client';
 import { sessionScheduler } from '@services/sessionScheduler.js';
 import { CreateSessionData } from '@modules/session/domain/session.types.js';

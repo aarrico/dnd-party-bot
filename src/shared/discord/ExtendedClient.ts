@@ -10,7 +10,7 @@ import {
   Events,
 } from 'discord.js';
 import { Event } from './Event.js';
-import { DiscordCommand } from '@models/Command.js';
+import { DiscordCommand } from '@shared/types/discord.js';
 import path from 'path';
 import { getAllFiles, getAllFolders } from '@shared/files/getAllFiles.js';
 import * as fs from 'node:fs';
@@ -140,7 +140,10 @@ export class ExtendedClient extends Client {
     }
   };
 
-  importFile = async (filePath: string) => (await import(filePath))?.default;
+  importFile = async <T = any>(filePath: string): Promise<T> => {
+    const module = await import(filePath);
+    return module?.default as T;
+  };
 
   loadCommands = async () => {
     const foldersPath = path.join(__dirname, '..', 'commands');

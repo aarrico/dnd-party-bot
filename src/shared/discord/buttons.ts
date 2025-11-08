@@ -1,6 +1,6 @@
 import { Role } from '@prisma/client';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
-import { RoleType } from '@models/role.js';
+import { RoleType } from '@modules/role/domain/roleManager.js';
 
 // Map role types to appropriate Unicode emojis
 const roleEmojiMap: Record<RoleType, string> = {

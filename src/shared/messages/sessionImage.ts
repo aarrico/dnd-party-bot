@@ -3,13 +3,10 @@ import sharp, { OverlayOptions } from 'sharp';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { BotAttachmentFileNames, BotPaths } from './botDialogStrings.js';
-import {
-  getRoleByString,
-  getRoleImage,
-  RoleType,
-} from '@models/role.js';
+import { getRoleByString, RoleType } from '@modules/role/domain/roleManager.js';
+import { getRoleImage } from '@modules/role/domain/role.types.js';
 import { Session } from '@modules/session/domain/session.types.js';
-import { PartyMemberImgInfo } from '@models/discord.js';
+import { PartyMemberImgInfo } from '@modules/session/domain/session.types.js';
 import { formatSessionDate } from '../datetime/dateUtils.js';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));

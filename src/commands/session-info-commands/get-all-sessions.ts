@@ -6,13 +6,13 @@ import {
   BotDialogs,
   BotPaths,
 } from '@shared/messages/botDialogStrings.js';
-import { ExtendedInteraction } from '@models/Command.js';
+import { ExtendedInteraction } from '@shared/types/discord.js';
 import {
   formatSessionsAsStr,
   listSessions,
 } from '@modules/session/controller/session.controller.js';
 import { getTxtAttachmentBuilder } from '@shared/files/attachmentBuilders.js';
-import { sendEphemeralReply } from '@discord/message.js';
+import { sendEphemeralReply } from '@shared/discord/messages.js';
 import { ListSessionsOptions } from '@modules/session/domain/session.types.js';
 
 export default {
