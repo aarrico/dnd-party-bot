@@ -1,5 +1,5 @@
 import {
-  createSession,
+  createSession as createSessionInDb,
   getParty,
   getSession,
   getSessionById,
@@ -25,7 +25,7 @@ import { getImgAttachmentBuilder } from '@shared/files/attachmentBuilders.js';
 import DateChecker from '@shared/datetime/dateChecker.js';
 import { addUserToParty, updatePartyMemberRole, upsertUser, getUserTimezone } from '@modules/user/repository/user.repository.js';
 import { deletePartyMember } from '@modules/party/repository/partyMember.repository.js';
-import { ChannelType, Guild } from 'discord.js';
+import { ChannelType, Guild, TextChannel } from 'discord.js';
 import { createChannel, renameChannel } from '@modules/session/services/channelService.js';
 import { createScheduledEvent, updateScheduledEvent, deleteScheduledEvent } from '@modules/session/services/scheduledEventService.js';
 import { RoleType } from '@prisma/client';
@@ -43,25 +43,20 @@ import {
   safePermissionOverwritesEdit
 } from '@shared/discord/discordErrorHandler.js';
 
+/**
+ * Core function to initialize a session with all required data.
+ * This function performs the actual session creation without database lookups.
+ * Use createSession or continueSession wrapper functions instead of calling this directly.
+ */
 export const initSession = async (
   campaign: Guild,
+  sessionChannel: TextChannel,
   sessionName: string,
   date: Date,
-  username: string,
   userId: string,
   timezone: string,
+  party: PartyMember[]
 ): Promise<Session> => {
-
-  const validationError = await isSessionValid(campaign, date, userId, timezone);
-  if (validationError) {
-    throw new Error(validationError);
-  }
-
-  const sessionChannel = await createChannel(
-    campaign,
-    sessionName
-  );
-
   const newSession: CreateSessionData = {
     id: sessionChannel.id,
     name: sessionName,
@@ -71,16 +66,14 @@ export const initSession = async (
     timezone,
   };
 
-  const user = await safeUserFetch(client, userId);
-  const dmChannel = await safeCreateDM(user);
-  await upsertUser(userId, username, dmChannel.id);
-
   await safePermissionOverwritesEdit(sessionChannel, userId, {
     ViewChannel: true,
     SendMessages: true
   });
 
-  const session = await createSession(newSession, userId);
+  // Create session with all party members in a single transaction
+  const session = await createSessionInDb(newSession, userId, party);
+
 
   const sessionForMessage: Session = {
     id: session.id,
@@ -91,8 +84,6 @@ export const initSession = async (
     status: session.status as 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED',
     timezone: session.timezone ?? 'America/Los_Angeles',
   };
-
-  const party = await getParty(session.id);
 
   // Send the session message (with retry logic)
   let partyMessageId: string = '';
@@ -140,6 +131,102 @@ export const initSession = async (
   return sessionForMessage;
 };
 
+/**
+ * Creates a new session from scratch.
+ * Performs validation, database calls, and user setup before initializing the session.
+ */
+export const createSession = async (
+  campaign: Guild,
+  sessionName: string,
+  date: Date,
+  username: string,
+  userId: string,
+  timezone: string,
+): Promise<Session> => {
+  // Validate session parameters
+  const validationError = await isSessionValid(campaign, date, userId, timezone);
+  if (validationError) {
+    throw new Error(validationError);
+  }
+
+  // Create Discord channel for the session
+  const sessionChannel = await createChannel(campaign, sessionName);
+
+  // Fetch user and create DM channel
+  const user = await safeUserFetch(client, userId);
+  const dmChannel = await safeCreateDM(user);
+  await upsertUser(userId, username, dmChannel.id);
+
+  // Initialize party with just the game master
+  const party: PartyMember[] = [{
+    userId,
+    username,
+    channelId: dmChannel.id,
+    role: RoleType.GAME_MASTER,
+  }];
+
+  // Initialize the session with all data
+  return await initSession(
+    campaign,
+    sessionChannel,
+    sessionName,
+    date,
+    userId,
+    timezone,
+    party
+  );
+};
+
+/**
+ * Continues an existing session by creating a new session with copied party members.
+ * Performs validation, copies party data, and creates the new session.
+ */
+export const continueSession = async (
+  campaign: Guild,
+  existingSession: Session & { partyMembers: PartyMember[] },
+  newSessionName: string,
+  date: Date,
+  username: string,
+  userId: string,
+  timezone: string,
+): Promise<Session> => {
+  // Validate session parameters
+  const validationError = await isSessionValid(campaign, date, userId, timezone);
+  if (validationError) {
+    throw new Error(validationError);
+  }
+
+  // Create Discord channel for the new session
+  const sessionChannel = await createChannel(campaign, newSessionName);
+
+  // Fetch user and ensure DM channel exists
+  const user = await safeUserFetch(client, userId);
+  const dmChannel = await safeCreateDM(user);
+  await upsertUser(userId, username, dmChannel.id);
+
+  // Copy party from existing session (Game Master will be added by initSession)
+  const party: PartyMember[] = [{
+    userId,
+    username,
+    channelId: dmChannel.id,
+    role: RoleType.GAME_MASTER,
+  }];
+
+  // Initialize the session
+  const session = await initSession(
+    campaign,
+    sessionChannel,
+    newSessionName,
+    date,
+    userId,
+    timezone,
+    party
+  );
+
+
+  return session;
+};
+
 export const cancelSession = async (sessionId: string, reason: string) => {
   const session = await getSession(sessionId);
 
@@ -167,28 +254,11 @@ export const cancelSession = async (sessionId: string, reason: string) => {
     throw error; // Re-throw since this is critical
   }
 
-  // Try to regenerate the session image with red border
+  // Try to regenerate the session message with canceled status
   try {
-    const party = await getPartyInfoForImg(sessionId);
-    const sessionData: Session = {
-      id: session.id,
-      name: session.name,
-      date: session.date,
-      campaignId: session.campaignId,
-      partyMessageId: session.partyMessageId ?? '',
-      eventId: session.eventId,
-      status: 'CANCELED',
-      timezone: session.timezone ?? 'America/Los_Angeles',
-    };
-    await createSessionImage(sessionData, party);
-    console.log(`Regenerated session image with CANCELED status border`);
-  } catch (error) {
-    console.error(`Failed to regenerate session image for ${sessionId}:`, error);
-    // Don't throw - image generation failure shouldn't prevent cancellation
-  }
+    await regenerateSessionMessage(sessionId, session.campaignId);
 
-  // Try to update the Discord message with the new canceled image
-  try {
+    // Update the embed description to include the cancellation reason
     const channel = await safeChannelFetch(client, sessionId);
     if (channel && channel.type === ChannelType.GuildText) {
       const message = await safeMessageFetch(channel, session.partyMessageId);
@@ -305,6 +375,17 @@ export const modifySession = async (interaction: ExtendedInteraction) => {
       } catch (error) {
         console.error(`Failed to update scheduled event for session ${sessionId}:`, error);
         // Continue - event update is optional
+      }
+    }
+
+    // Regenerate session message if name or date changed
+    if (dateChanged || nameChanged) {
+      try {
+        await regenerateSessionMessage(sessionId, session.campaignId);
+        console.log(`Regenerated session message for modified session ${sessionId}`);
+      } catch (error) {
+        console.error(`Failed to regenerate session message for ${sessionId}:`, error);
+        // Continue - message update failure shouldn't prevent modification
       }
     }
 
@@ -494,4 +575,32 @@ const isSessionValid = async (campaign: Guild, date: Date, userId: string, timez
   }
 
   return '';
+};
+
+export const regenerateSessionMessage = async (sessionId: string, guildId: string): Promise<void> => {
+  const session = await getSessionById(sessionId);
+  const sessionChannel = await safeChannelFetch(client, sessionId);
+
+  if (!sessionChannel || sessionChannel.type !== ChannelType.GuildText) {
+    throw new Error('Session channel not found or is not a text channel');
+  }
+
+  const partyForImg = await getPartyInfoForImg(sessionId);
+  await createSessionImage(session, partyForImg);
+
+  const attachment = getImgAttachmentBuilder(
+    `${BotPaths.TempDir}/${BotAttachmentFileNames.CurrentSession}`,
+    BotAttachmentFileNames.CurrentSession
+  );
+
+  const party = await getParty(sessionId);
+  const embed = createPartyMemberEmbed(party, guildId, session.name, session.status);
+  embed.setDescription(BotDialogs.sessions.scheduled(session.date, session.timezone ?? 'America/Los_Angeles'));
+
+  const message = await safeMessageFetch(sessionChannel, session.partyMessageId);
+  await safeMessageEdit(message, {
+    embeds: [embed],
+    files: [attachment],
+    components: getRoleButtonsForSession(session.status),
+  });
 };

@@ -14,11 +14,26 @@ import { DiscordCommand } from '@shared/types/discord.js';
 import path from 'path';
 import { getAllFiles, getAllFolders } from '@shared/files/getAllFiles.js';
 import * as fs from 'node:fs';
-import { URL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { inspect } from 'node:util';
 import { syncGuildsFromDiscord } from '@modules/guild/repository/guild.repository.js';
 
-const __dirname = new URL('../events', import.meta.url).pathname;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const findProjectRoot = (startPath: string): string => {
+  let currentPath = startPath;
+  while (currentPath !== path.parse(currentPath).root) {
+    if (fs.existsSync(path.join(currentPath, 'package.json'))) {
+      return currentPath;
+    }
+    currentPath = path.dirname(currentPath);
+  }
+  throw new Error('Could not find project root (package.json not found)');
+};
+
+const PROJECT_ROOT = findProjectRoot(__dirname);
+const SRC_DIR = path.join(PROJECT_ROOT, 'src');
 
 export class ExtendedClient extends Client {
   commands: Collection<string, DiscordCommand> = new Collection();
@@ -39,7 +54,6 @@ export class ExtendedClient extends Client {
     };
     super(options);
 
-    // Set up error handlers for better resilience
     this.setupErrorHandlers();
   }
 
@@ -123,7 +137,7 @@ export class ExtendedClient extends Client {
       await this.registerCommands();
     }
 
-    await this.getEvents(getAllFolders(path.join(__dirname, '..', 'events')));
+    await this.getEvents(getAllFolders(path.join(SRC_DIR, 'events')));
 
     try {
       console.log('Syncing guilds from Discord...');
@@ -146,7 +160,7 @@ export class ExtendedClient extends Client {
   };
 
   loadCommands = async () => {
-    const foldersPath = path.join(__dirname, '..', 'commands');
+    const foldersPath = path.join(SRC_DIR, 'commands');
     const commandFolders = fs.readdirSync(foldersPath);
     for (const folder of commandFolders) {
       const commandsPath = path.join(foldersPath, folder);

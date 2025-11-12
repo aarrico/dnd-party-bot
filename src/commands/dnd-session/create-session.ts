@@ -6,7 +6,7 @@ import {
 } from '@shared/messages/botDialogStrings.js';
 import { monthOptionChoicesArray } from '@shared/constants/dateConstants.js';
 import { ExtendedInteraction } from '@shared/types/discord.js';
-import { initSession } from '@modules/session/controller/session.controller.js';
+import { createSession } from '@modules/session/controller/session.controller.js';
 import DateChecker from '@shared/datetime/dateChecker.js';
 import { notifyGuild, sendEphemeralReply } from '@shared/discord/messages.js';
 import { inspect } from 'util';
@@ -48,8 +48,8 @@ export default {
     )
     .addStringOption((time) =>
       time
-        .setName(BotCommandOptionInfo.Session_DateTime_Name)
-        .setDescription(BotCommandOptionInfo.Session_DateTime_Description)
+        .setName(BotCommandOptionInfo.Session_Time_Name)
+        .setDescription(BotCommandOptionInfo.Session_Time_Description)
         .setRequired(true)
     )
     .addStringOption((timezone) =>
@@ -97,7 +97,7 @@ export default {
       const creatorDisplayName =
         sanitizeUserInput(interaction.user.displayName) || interaction.user.username;
 
-      const session = await initSession(
+      const session = await createSession(
         campaign,
         sessionName,
         date,
@@ -106,7 +106,7 @@ export default {
         timezone,
       );
 
-      const normalizedChannelName = sessionName.replace(' ', '-').toLowerCase();
+      const normalizedChannelName = sessionName.replace(/\s+/g, '-').toLowerCase();
 
       const createdChannel = campaign.channels.cache.find(channel =>
         channel.name === normalizedChannelName

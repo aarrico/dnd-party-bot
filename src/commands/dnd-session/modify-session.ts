@@ -46,9 +46,9 @@ export default {
     )
     .addStringOption((time) =>
       time
-        .setName(BotCommandOptionInfo.Session_DateTime_Name)
-        .setDescription(BotCommandOptionInfo.Session_DateTime_Description)
-        .setRequired(true)
+        .setName(BotCommandOptionInfo.Session_Time_Name)
+        .setDescription(BotCommandOptionInfo.Session_Time_Description)
+        .setRequired(false)
     )
     .addStringOption((timezone) =>
       timezone

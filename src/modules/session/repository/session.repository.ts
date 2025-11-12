@@ -11,18 +11,36 @@ import { RoleType, Session } from '@prisma/client';
 export const createSession = async (
   sessionData: CreateSessionData,
   userId: string,
+  party?: PartyMember[],
 ): Promise<Session> => {
   const { campaignId, ...session } = sessionData;
+
+  // Build party members to create - always include the GM, then add any provided party members
+  const partyMembersToCreate: { userId: string; roleId: RoleType }[] = [
+    {
+      userId,
+      roleId: RoleType.GAME_MASTER,
+    },
+  ];
+
+  // Add additional party members if provided (excluding GM)
+  if (party && party.length > 0) {
+    party.forEach((member) => {
+      if (member.role !== RoleType.GAME_MASTER) {
+        partyMembersToCreate.push({
+          userId: member.userId,
+          roleId: member.role,
+        });
+      }
+    });
+  }
 
   return await prisma.session.create({
     data: {
       ...session,
       campaign: { connect: { id: campaignId } },
       partyMembers: {
-        create: {
-          user: { connect: { id: userId } },
-          role: { connect: { id: RoleType.GAME_MASTER } },
-        },
+        create: partyMembersToCreate,
       },
     },
   });

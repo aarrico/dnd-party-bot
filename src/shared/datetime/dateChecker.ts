@@ -10,7 +10,7 @@ export default function DateChecker(interaction: ExtendedInteraction, timezone?:
   const month = interaction.options.getInteger(BotCommandOptionInfo.Session_Month_Name, true);
   const day = interaction.options.getInteger(BotCommandOptionInfo.Session_Day_Name, true);
   const year = interaction.options.getInteger(BotCommandOptionInfo.Session_Year_Name, true);
-  const time = interaction.options.getString(BotCommandOptionInfo.Session_DateTime_Name, true);
+  const time = interaction.options.getString(BotCommandOptionInfo.Session_Time_Name, true);
 
   const parsedTime = parseTime(time);
   if (!parsedTime) {

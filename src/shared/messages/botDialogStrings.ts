@@ -31,6 +31,15 @@ export const BotDialogs = {
   createSessionDateMustBeFuture: '❌ Session date must be in the future.',
   createSessionInvalidUserId: '❌ Invalid user ID provided.',
 
+  continueSessionInvalidChannel: '❌ Invalid channel selected. Please select a text channel.',
+  continueSessionChannelNotSession: '❌ The selected channel is not a session channel. Session channels must not be in a category.',
+  continueSessionNotFound: '❌ The selected channel is not a valid session.',
+  continueSessionSuccess: (originalName: string, newName: string, date: Date, channelId: string) =>
+    `✅ Session continued from **${originalName}** to **${newName}**!\n📅 Scheduled for: ${format(date, 'PPP')}\n🎲 Join the session: <#${channelId}>`,
+  continueSessionSuccessFallback: (originalName: string, newName: string, date: Date, channelName: string) =>
+    `✅ Session continued from **${originalName}** to **${newName}**!\n📅 Scheduled for: ${format(date, 'PPP')}\n🎲 Join the session: #${channelName}`,
+  continueSessionError: '❌ There was an error continuing the session. Please try again.',
+
   sessions: {
     listAllResult: '🤖🎉 Report for all scheduled sessions is ready!',
     forUserResult: (username: string) =>
@@ -134,6 +143,8 @@ export enum BotAttachmentFileNames {
 export enum BotCommandInfo {
   CreateSessionName = 'create-session',
   CreateSessionDescription = 'creates an session in the session stack.',
+  ContinueSessionName = 'continue-session',
+  ContinueSessionDescription = 'Creates a new session based on an existing one with an incremented Roman numeral.',
   GetAllUserSessions_Name = 'get-all-sessions-a-user-is-in',
   GetAllUserSessions_Description = 'Retrieves a list of all sessions that a user has signed up for from the db.',
   GetAllSessions_Name = 'get-all-sessions',
@@ -149,8 +160,6 @@ export enum BotCommandOptionInfo {
   Session_Id_Description = 'Channel ID of the session - found by right-clicking channel.',
   UserId_Name = 'user-id',
   UserId_Description = 'User ID of the session - found by right-clicking user.',
-  Session_DateTime_Name = 'session-date-time',
-  Session_DateTime_Description = 'Date/Time of session in DB',
   CampaignName_Name = 'campaign-name',
   CampaignId_Name = 'campaign-id',
   CampaignId_Description = 'Campaign ID of the session - found by right-clicking campaign channel. Defaults to active campaign.',
@@ -164,6 +173,8 @@ export enum BotCommandOptionInfo {
   Session_Year_Description = 'Year of session',
   Session_Time_Name = 'time',
   Session_Time_Description = 'Time in 12-hour (7:00 PM) or 24-hour (19:00) format',
+  Session_IncludeTime_Name = 'include-time',
+  Session_IncludeTime_Description = 'Include scheduled time in the output',
   GetAllUserSessions_UserIDDescription = 'User ID that you are finding the sessions for.',
   GetAllUserSessions_SessionIDDescription = 'UUID of session in DB(unique identifier)',
   GetAllUserSessions_UserRoleName = 'user-role-in-user-session',
@@ -186,4 +197,6 @@ export enum BotCommandOptionInfo {
   Campaign_Description = 'Include campaign name in the output.',
   CreateSession_TimezoneName = "timezone",
   CreateSession_TimezoneDescription = "Timezone for the session (defaults to your saved timezone)",
+  ContinueSession_ChannelName = "session-channel",
+  ContinueSession_ChannelDescription = "Select the session channel to continue",
 }

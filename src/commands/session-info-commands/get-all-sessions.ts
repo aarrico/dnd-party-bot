@@ -26,8 +26,8 @@ export default {
     )
     .addBooleanOption((includeTime) =>
       includeTime
-        .setName(BotCommandOptionInfo.Session_DateTime_Name)
-        .setDescription('Include scheduled time in the output.')
+        .setName(BotCommandOptionInfo.Session_IncludeTime_Name)
+        .setDescription(BotCommandOptionInfo.Session_IncludeTime_Description)
     )
     .addBooleanOption((includeCampaign) =>
       includeCampaign
@@ -37,7 +37,7 @@ export default {
   async execute(interaction: ExtendedInteraction) {
     try {
       const includeId = interaction.options.getBoolean(BotCommandOptionInfo.Session_Id_Name) ?? false;
-      const includeTime = interaction.options.getBoolean(BotCommandOptionInfo.Session_DateTime_Name) ?? false;
+      const includeTime = interaction.options.getBoolean(BotCommandOptionInfo.Session_IncludeTime_Name) ?? false;
       const includeCampaign = interaction.options.getBoolean(BotCommandOptionInfo.CampaignName_Name) ?? false;
 
       const options: ListSessionsOptions = {

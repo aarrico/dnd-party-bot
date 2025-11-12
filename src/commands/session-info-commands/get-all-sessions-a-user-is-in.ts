@@ -41,8 +41,8 @@ export default {
     )
     .addBooleanOption((includeTime) =>
       includeTime
-        .setName(BotCommandOptionInfo.Session_DateTime_Name)
-        .setDescription(BotCommandOptionInfo.Session_DateTime_Description)
+        .setName(BotCommandOptionInfo.Session_IncludeTime_Name)
+        .setDescription(BotCommandOptionInfo.Session_IncludeTime_Description)
     )
     .addBooleanOption((includeCampaign) =>
       includeCampaign
@@ -51,7 +51,7 @@ export default {
     ),
   async execute(interaction: ExtendedInteraction) {
     const includeSessionId = interaction.options.getBoolean(BotCommandOptionInfo.Session_Id_Name) ?? false;
-    const includeTime = interaction.options.getBoolean(BotCommandOptionInfo.Session_DateTime_Name) ?? false;
+    const includeTime = interaction.options.getBoolean(BotCommandOptionInfo.Session_IncludeTime_Name) ?? false;
     const includeCampaign = interaction.options.getBoolean(BotCommandOptionInfo.CampaignName_Name) ?? false;
     const includeUserRole = interaction.options.getBoolean(BotCommandOptionInfo.GetAllUserSessions_UserRoleName) ?? false;
     const userId = interaction.options.getString(BotCommandOptionInfo.UserId_Name, true);
