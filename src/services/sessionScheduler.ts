@@ -1,14 +1,14 @@
 import { CronJob } from 'cron';
 import { client } from '../index.js';
-import { getSessionById } from '../db/session.js';
-import { SessionWithParty } from '../models/session.js';
-import { notifyGuild } from '../discord/message.js';
+import { getSessionById } from '../modules/session/repository/session.repository.js';
+import { SessionWithParty } from '../modules/session/domain/session.types.js';
+import { notifyGuild } from '../shared/discord/messages.js';
 import {
   getHoursBefore,
   getMinutesBefore,
   formatSessionDateLong,
   isFutureDate
-} from '../utils/dateUtils.js';
+} from '../shared/datetime/dateUtils.js';
 
 interface ScheduledTask {
   sessionId: string;
@@ -135,7 +135,7 @@ class SessionScheduler {
         console.log(`Session ${sessionId} has a full party (${session.partyMembers.length}/6), no cancellation needed`);
 
         try {
-          const { updateSession } = await import('../db/session.js');
+          const { updateSession } = await import('../modules/session/repository/session.repository.js');
           await updateSession(session.id, { status: 'ACTIVE' });
           console.log(`Updated session ${session.id} status to ACTIVE`);
         } catch (error) {
@@ -143,8 +143,8 @@ class SessionScheduler {
         }
 
         try {
-          const { createSessionImage } = await import('../utils/sessionImage.js');
-          const { getPartyInfoForImg } = await import('../controllers/session.js');
+          const { createSessionImage } = await import('../shared/messages/sessionImage.js');
+          const { getPartyInfoForImg } = await import('../modules/session/controller/session.controller.js');
           const party = await getPartyInfoForImg(session.id);
           const sessionData = {
             id: session.id,
@@ -178,7 +178,7 @@ class SessionScheduler {
 
       for (const member of session.partyMembers) {
         try {
-          const { getUserTimezone } = await import('../db/user.js');
+          const { getUserTimezone } = await import('../modules/user/repository/user.repository.js');
           const userTimezone = await getUserTimezone(member.userId);
           const reminderMessage = this.createReminderMessage(session, userTimezone);
 
@@ -194,7 +194,7 @@ class SessionScheduler {
 
       console.log(`Reminder summary for session ${session.id}: ${successCount} sent, ${failureCount} failed`);
     } else {
-      const { getUserTimezone } = await import('../db/user.js');
+      const { getUserTimezone } = await import('../modules/user/repository/user.repository.js');
       await notifyGuild(session.campaignId, async (userId: string) => {
         const userTimezone = await getUserTimezone(userId);
         return this.createReminderMessage(session, userTimezone);
@@ -210,7 +210,7 @@ class SessionScheduler {
     const cancellationReason = `Insufficient players (${session.partyMembers.length}/6)`;
 
     try {
-      const { cancelSession } = await import('../controllers/session.js');
+      const { cancelSession } = await import('../modules/session/controller/session.controller.js');
       await cancelSession(session.id, cancellationReason);
       console.log(`Successfully canceled unfilled session ${session.id}`);
     } catch (error) {
@@ -218,7 +218,7 @@ class SessionScheduler {
 
       // Try direct database update as fallback
       try {
-        const { updateSession } = await import('../db/session.js');
+        const { updateSession } = await import('../modules/session/repository/session.repository.js');
         await updateSession(session.id, { status: 'CANCELED' });
         console.log(`Fallback: Updated session ${session.id} status to CANCELED directly`);
       } catch (fallbackError) {
@@ -254,7 +254,7 @@ class SessionScheduler {
     try {
       console.log('Initializing session scheduler...');
 
-      const { getSessions } = await import('../db/session.js');
+      const { getSessions } = await import('../modules/session/repository/session.repository.js');
 
       const allSessions = await getSessions({
         includeId: true,

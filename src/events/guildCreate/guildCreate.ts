@@ -1,7 +1,7 @@
 import { Events, Guild } from 'discord.js';
-import { Event } from '../../structures/Event.js';
-import { ExtendedClient } from '../../structures/ExtendedClient.js';
-import { upsertGuild } from '../../db/guild.js';
+import { Event } from '@shared/discord/Event.js';
+import { ExtendedClient } from '@shared/discord/ExtendedClient.js';
+import { upsertGuild } from '@modules/guild/repository/guild.repository.js';
 
 export default new Event(Events.GuildCreate, async (guild: Guild) => {
   const client = guild.client as ExtendedClient;

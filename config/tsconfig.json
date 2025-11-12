@@ -1,19 +1,29 @@
 {
-    "extends": "@tsconfig/node22/tsconfig.json",
-    "compilerOptions": {
-      "outDir": "../dist",
-      "rootDir": "..",
-      "sourceMap": true,
-      "resolveJsonModule": true,
-      "module": "ES2022",
-      "moduleResolution": "node",
-      "target": "ES2022",
-      "allowSyntheticDefaultImports": true,
-      "esModuleInterop": true
-    },
-    "include": ["../src/**/*", "../prisma/seed.ts"],
-    "exclude": ["../node_modules", "../dist", "../resources", "../.idea"],
-    "ts-node": {
-      "esm": true
+  "extends": "@tsconfig/node22/tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../dist",
+    "rootDir": "..",
+    "sourceMap": true,
+    "resolveJsonModule": true,
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "target": "esnext",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "baseUrl": "..",
+    "paths": {
+      "@app/*": ["src/*"],
+      "@commands/*": ["src/commands/*"],
+      "@events/*": ["src/events/*"],
+      "@modules/*": ["src/modules/*"],
+      "@scripts/*": ["src/scripts/*"],
+      "@services/*": ["src/services/*"],
+      "@shared/*": ["src/shared/*"]
     }
+  },
+  "include": ["../src/**/*", "../prisma/seed.ts"],
+  "exclude": ["../node_modules", "../dist", "../resources", "../.idea"],
+  "ts-node": {
+    "esm": true
+  }
 }

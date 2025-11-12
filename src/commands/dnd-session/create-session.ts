@@ -3,17 +3,17 @@ import {
   BotCommandInfo,
   BotCommandOptionInfo,
   BotDialogs,
-} from '../../utils/botDialogStrings.js';
-import { monthOptionChoicesArray } from '../../utils/genericInformation.js';
-import { ExtendedInteraction } from '../../models/Command.js';
-import { initSession } from '../../controllers/session.js';
-import DateChecker from '../../utils/dateChecker.js';
-import { notifyGuild, sendEphemeralReply } from '../../discord/message.js';
+} from '@shared/messages/botDialogStrings.js';
+import { monthOptionChoicesArray } from '@shared/constants/dateConstants.js';
+import { ExtendedInteraction } from '@shared/types/discord.js';
+import { createSession } from '@modules/session/controller/session.controller.js';
+import DateChecker from '@shared/datetime/dateChecker.js';
+import { notifyGuild, sendEphemeralReply } from '@shared/discord/messages.js';
 import { inspect } from 'util';
-import { getUserTimezone } from '../../db/user.js';
-import { handleTimezoneAutocomplete } from '../../utils/timezoneUtils.js';
-import { formatSessionCreationDM } from '../../utils/sessionNotifications.js';
-import { sanitizeUserInput } from '../../utils/sanitizeUserInput.js';
+import { getUserTimezone } from '@modules/user/repository/user.repository.js';
+import { handleTimezoneAutocomplete } from '@shared/datetime/timezoneUtils.js';
+import { formatSessionCreationDM } from '@shared/messages/sessionNotifications.js';
+import { sanitizeUserInput } from '@shared/validation/sanitizeUserInput.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -21,35 +21,35 @@ export default {
     .setDescription(BotCommandInfo.CreateSessionDescription)
     .addStringOption((name) =>
       name
-        .setName(BotCommandOptionInfo.CreateSession_SessionName)
+        .setName(BotCommandOptionInfo.Session_Name)
         .setDescription(
-          BotCommandOptionInfo.CreateSession_SessionName_Description
+          BotCommandOptionInfo.Session_Name_Description
         )
         .setRequired(true)
     )
     .addIntegerOption((month) =>
       month
-        .setName(BotCommandOptionInfo.CreateSession_MonthName)
-        .setDescription(BotCommandOptionInfo.CreateSession_MonthDescription)
+        .setName(BotCommandOptionInfo.Session_Month_Name)
+        .setDescription(BotCommandOptionInfo.Session_Month_Description)
         .setChoices(monthOptionChoicesArray)
         .setRequired(true)
     )
     .addIntegerOption((day) =>
       day
-        .setName(BotCommandOptionInfo.CreateSession_DayName)
-        .setDescription(BotCommandOptionInfo.CreateSession_DayDescription)
+        .setName(BotCommandOptionInfo.Session_Day_Name)
+        .setDescription(BotCommandOptionInfo.Session_Day_Description)
         .setRequired(true)
     )
     .addIntegerOption((year) =>
       year
-        .setName(BotCommandOptionInfo.CreateSession_YearName)
-        .setDescription(BotCommandOptionInfo.CreateSession_YearDescription)
+        .setName(BotCommandOptionInfo.Session_Year_Name)
+        .setDescription(BotCommandOptionInfo.Session_Year_Description)
         .setRequired(true)
     )
     .addStringOption((time) =>
       time
-        .setName(BotCommandOptionInfo.CreateSession_TimeName)
-        .setDescription(BotCommandOptionInfo.CreateSession_TimeDescription)
+        .setName(BotCommandOptionInfo.Session_Time_Name)
+        .setDescription(BotCommandOptionInfo.Session_Time_Description)
         .setRequired(true)
     )
     .addStringOption((timezone) =>
@@ -69,7 +69,7 @@ export default {
         throw new Error('Command must be run in a server!');
       }
 
-      const rawSessionName = interaction.options.getString(BotCommandOptionInfo.CreateSession_SessionName, true);
+      const rawSessionName = interaction.options.getString(BotCommandOptionInfo.Session_Name, true);
       const sessionName = sanitizeUserInput(rawSessionName);
 
       if (!sessionName) {
@@ -97,7 +97,7 @@ export default {
       const creatorDisplayName =
         sanitizeUserInput(interaction.user.displayName) || interaction.user.username;
 
-      const session = await initSession(
+      const session = await createSession(
         campaign,
         sessionName,
         date,
@@ -106,7 +106,7 @@ export default {
         timezone,
       );
 
-      const normalizedChannelName = sessionName.replace(' ', '-').toLowerCase();
+      const normalizedChannelName = sessionName.replace(/\s+/g, '-').toLowerCase();
 
       const createdChannel = campaign.channels.cache.find(channel =>
         channel.name === normalizedChannelName
@@ -126,7 +126,7 @@ export default {
       const payload = {
         content: (error as Error).message || BotDialogs.createSessionError
       };
-      
+
       if (interaction.deferred) {
         await interaction.editReply(payload);
       } else {

@@ -13,24 +13,20 @@ import {
   StringSelectMenuOptionBuilder,
   MessageFlags,
 } from 'discord.js';
-import { client } from '../../index.js';
-import { Event } from '../../structures/Event.js';
-import { ExtendedInteraction } from '../../models/Command.js';
-import { sendMessageReplyDisappearingMessage, getRoleButtonsForSession, createPartyMemberEmbed } from '../../discord/message.js';
-import { createSessionImage } from '../../utils/sessionImage.js';
-import { getImgAttachmentBuilder } from '../../utils/attachmentBuilders.js';
+import { client } from '@app/index.js';
+import { Event } from '@shared/discord/Event.js';
+import { ExtendedInteraction } from '@shared/types/discord.js';
+import { sendMessageReplyDisappearingMessage } from '@shared/discord/messages.js';
 import {
-  BotAttachmentFileNames,
   BotDialogs,
-  BotPaths,
   getAddPartyMemberMsg,
-} from '../../utils/botDialogStrings.js';
-import { processRoleSelection } from '../../controllers/session.js';
-import { PartyMember } from '../../models/party.js';
-import { getRoleByString } from '../../models/role.js';
-import { getSessionById, getParty } from '../../db/session.js';
-import { updateUserTimezone } from '../../db/user.js';
-import { TIMEZONES } from '../../utils/timezoneUtils.js';
+} from '@shared/messages/botDialogStrings.js';
+import { processRoleSelection } from '@modules/session/controller/session.controller.js';
+import { PartyMember } from '@modules/party/domain/party.types.js';
+import { getRoleByString } from '@modules/role/domain/roleManager.js';
+import { getSessionById } from '@modules/session/repository/session.repository.js';
+import { updateUserTimezone } from '@modules/user/repository/user.repository.js';
+import { TIMEZONES } from '@shared/datetime/timezoneUtils.js';
 
 const partyMemberJoined = async (
   userId: string,
@@ -65,6 +61,12 @@ const partyMemberJoined = async (
 const processCommand = async (
   interaction: ChatInputCommandInteraction<CacheType>
 ): Promise<void> => {
+  // If GUILD_ID is set, only process commands from that guild
+  if (process.env.GUILD_ID && interaction.guildId !== process.env.GUILD_ID) {
+    console.log(`Ignoring command from guild ${interaction.guildId} (only processing ${process.env.GUILD_ID})`);
+    return;
+  }
+
   const command = client.commands.get(interaction.commandName);
   if (!command) {
     await interaction.reply(BotDialogs.interactionCreateNonexistentCommand);
@@ -144,36 +146,10 @@ const processButton = async (
   await sendMessageReplyDisappearingMessage(interaction, result);
 
   try {
-    const { getPartyInfoForImg } = await import('../../controllers/session.js');
-    const partyForImg = await getPartyInfoForImg(session.id);
-    await createSessionImage(session, partyForImg);
-
-    const attachment = getImgAttachmentBuilder(
-      `${BotPaths.TempDir}/${BotAttachmentFileNames.CurrentSession}`,
-      BotAttachmentFileNames.CurrentSession
-    );
-
-    const party = await getParty(session.id);
-    const embed = createPartyMemberEmbed(party, interaction.guildId ?? '', session.name, session.status);
-    embed.setDescription(BotDialogs.sessions.scheduled(session.date, session.timezone ?? 'America/Los_Angeles'));
-
-    await message.edit({
-      embeds: [embed],
-      files: [attachment],
-      components: getRoleButtonsForSession(session.status),
-    });
+    const { regenerateSessionMessage } = await import('@modules/session/controller/session.controller.js');
+    await regenerateSessionMessage(session.id, interaction.guildId ?? '');
   } catch (error) {
-    console.error('Failed to update session image:', error);
-
-    // Fallback: update without image but with embed
-    const party = await getParty(session.id);
-    const embed = createPartyMemberEmbed(party, interaction.guildId ?? '', session.name, session.status);
-    embed.setDescription(BotDialogs.sessions.scheduled(session.date, session.timezone ?? 'America/Los_Angeles'));
-
-    await message.edit({
-      embeds: [embed],
-      components: getRoleButtonsForSession(session.status),
-    });
+    console.error('Failed to update session message:', error);
   }
 };
 
