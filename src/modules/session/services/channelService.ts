@@ -1,11 +1,11 @@
 import { ChannelType, Guild, TextChannel } from 'discord.js';
-import { client } from '@app/index.js';
+import { client } from '#app/index.js';
 import {
   safeChannelFetch,
   safeChannelCreate,
   safeChannelDelete,
   safeChannelEdit,
-} from '@shared/discord/discordErrorHandler.js';
+} from '#shared/discord/discordErrorHandler.js';
 
 /**
  * Create a new text channel for a session

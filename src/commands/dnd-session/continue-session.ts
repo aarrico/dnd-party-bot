@@ -3,18 +3,19 @@ import {
   BotCommandInfo,
   BotCommandOptionInfo,
   BotDialogs,
-} from '@shared/messages/botDialogStrings.js';
-import { monthOptionChoicesArray } from '@shared/constants/dateConstants.js';
-import { ExtendedInteraction } from '@shared/types/discord.js';
-import { continueSession } from '@modules/session/controller/session.controller.js';
-import DateChecker from '@shared/datetime/dateChecker.js';
-import { notifyGuild, sendEphemeralReply } from '@shared/discord/messages.js';
+} from '#shared/messages/botDialogStrings.js';
+import { monthOptionChoicesArray } from '#shared/constants/dateConstants.js';
+import { ExtendedInteraction } from '#shared/types/discord.js';
+import { continueSession } from '#modules/session/controller/session.controller.js';
+import DateChecker from '#shared/datetime/dateChecker.js';
+import { notifyGuild, notifyParty, sendEphemeralReply } from '#shared/discord/messages.js';
 import { inspect } from 'util';
-import { getUserTimezone } from '@modules/user/repository/user.repository.js';
-import { handleTimezoneAutocomplete } from '@shared/datetime/timezoneUtils.js';
-import { formatSessionCreationDM } from '@shared/messages/sessionNotifications.js';
-import { sanitizeUserInput } from '@shared/validation/sanitizeUserInput.js';
-import { getSessionById } from '@modules/session/repository/session.repository.js';
+import { getUserTimezone, upsertUser } from '#modules/user/repository/user.repository.js';
+import { handleTimezoneAutocomplete } from '#shared/datetime/timezoneUtils.js';
+import { client } from '#app/index.js';
+import { formatSessionContinueDM, formatSessionCreationDM } from '#shared/messages/sessionNotifications.js';
+import { sanitizeUserInput } from '#shared/validation/sanitizeUserInput.js';
+import { getSessionById } from '#modules/session/repository/session.repository.js';
 
 // Helper function to convert number to Roman numerals
 function toRomanNumeral(num: number): string {
@@ -142,7 +143,6 @@ export default {
         true
       );
 
-      // Validate that the selected channel is a session channel
       if (!selectedChannel || selectedChannel.type !== ChannelType.GuildText) {
         await sendEphemeralReply(
           BotDialogs.continueSessionInvalidChannel,
@@ -151,9 +151,7 @@ export default {
         return;
       }
 
-      // Fetch the full channel to access parentId
       const fullChannel = await campaign.channels.fetch(selectedChannel.id);
-
       if (!fullChannel || fullChannel.type !== ChannelType.GuildText) {
         await sendEphemeralReply(
           BotDialogs.continueSessionInvalidChannel,
@@ -162,7 +160,6 @@ export default {
         return;
       }
 
-      // Validate that the channel has no parent (not in a category)
       if (fullChannel.parentId !== null) {
         await sendEphemeralReply(
           BotDialogs.continueSessionChannelNotSession,
@@ -171,7 +168,6 @@ export default {
         return;
       }
 
-      // Get the existing session data
       let existingSession;
       try {
         existingSession = await getSessionById(fullChannel.id, true);
@@ -183,13 +179,21 @@ export default {
         return;
       }
 
-      // Get timezone
+      await interaction.deferReply();
+
+      const creatorDisplayName =
+        sanitizeUserInput(interaction.user.displayName) || interaction.user.username;
+
+      // Ensure user exists in database before getting their timezone
+      const user = await client.users.fetch(interaction.user.id);
+      const dmChannel = await user.createDM();
+      await upsertUser(interaction.user.id, creatorDisplayName, dmChannel.id);
+
       let timezone = interaction.options.getString(BotCommandOptionInfo.CreateSession_TimezoneName);
       if (!timezone) {
         timezone = existingSession.timezone || await getUserTimezone(interaction.user.id);
       }
 
-      // Get and validate the new date
       const date = DateChecker(interaction, timezone);
       if (!date) {
         await sendEphemeralReply(
@@ -199,16 +203,9 @@ export default {
         return;
       }
 
-      await interaction.deferReply();
-
-      // Generate the new session name with incremented Roman numeral
       const newSessionName = getNextSessionName(existingSession.name);
 
-      const creatorDisplayName =
-        sanitizeUserInput(interaction.user.displayName) || interaction.user.username;
-
-      // Create the new session with copied party members from the original
-      const session = await continueSession(
+      const { session, party } = await continueSession(
         campaign,
         existingSession,
         newSessionName,
@@ -240,9 +237,9 @@ export default {
           )
       });
 
-      await notifyGuild(
-        campaign.id,
-        (userId: string) => formatSessionCreationDM(campaign, session, userId)
+      await notifyParty(
+        party.map(member => member.userId),
+        (userId: string) => formatSessionContinueDM(campaign, session, userId)
       );
     } catch (error) {
       const payload = {

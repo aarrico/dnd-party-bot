@@ -1,4 +1,4 @@
-import { prisma } from '@app/index.js';
+import { prisma } from '#app/index.js';
 
 export const deletePartyMember = async (
   userId: string,

@@ -1,4 +1,4 @@
-import { ExtendedInteraction } from '@shared/types/discord.js';
+import { ExtendedInteraction } from '#shared/types/discord.js';
 import { BotCommandOptionInfo } from '../messages/botDialogStrings.js';
 import { TZDate } from '@date-fns/tz';
 import { isFutureDate } from './dateUtils.js';

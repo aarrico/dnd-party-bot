@@ -11,7 +11,8 @@
  *   npm run generate-image 1234567890
  */
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../generated/prisma/client.js';
+import { PrismaPg } from '@prisma/adapter-pg';
 import { createSessionImage } from '../shared/messages/sessionImage.js';
 import { Session } from '../modules/session/domain/session.types.js';
 import { PartyMemberImgInfo } from '../modules/session/domain/session.types.js';
@@ -19,7 +20,10 @@ import { setRoleCache } from '../modules/role/domain/roleManager.js';
 import { getRoles } from '../modules/role/repository/role.repository.js';
 
 // Initialize Prisma client
-const prisma = new PrismaClient();
+const adapter = new PrismaPg({
+  connectionString: process.env.DATABASE_URL!,
+});
+const prisma = new PrismaClient({ adapter });
 
 /**
  * Mock function to get user avatar URL

@@ -1,5 +1,5 @@
-import { Session } from '@prisma/client';
-import { PartyMember, RoleSelectionStatus } from '@modules/party/domain/party.types.js';
+import { Session } from '#generated/prisma/client.js';
+import { PartyMember, RoleSelectionStatus } from '#modules/party/domain/party.types.js';
 import path from 'path';
 import os from 'os';
 import { Guild } from 'discord.js';
@@ -31,6 +31,12 @@ export const BotDialogs = {
   createSessionDateMustBeFuture: '❌ Session date must be in the future.',
   createSessionInvalidUserId: '❌ Invalid user ID provided.',
 
+  continueSessionDMSessionTime: (
+    campaign: Guild,
+    session: Pick<Session, 'name' | 'id' | 'partyMessageId' | 'date'>,
+    timezone: string,
+  ) =>
+    `🥳 Get ready to continue your session for [${campaign.name}](https://discord.com/channels/${campaign.id})!\n🎲 [${session.name}](https://discord.com/channels/${campaign.id}/${session.id}/${session.partyMessageId})\n📅 ${formatSessionDateLong(session.date, timezone)}`,
   continueSessionInvalidChannel: '❌ Invalid channel selected. Please select a text channel.',
   continueSessionChannelNotSession: '❌ The selected channel is not a session channel. Session channels must not be in a category.',
   continueSessionNotFound: '❌ The selected channel is not a valid session.',

@@ -280,6 +280,27 @@ class SessionScheduler {
   public getScheduledTaskCount(): number {
     return this.scheduledTasks.size;
   }
+
+  public shutdown(): void {
+    console.log(`Shutting down session scheduler with ${this.scheduledTasks.size} active tasks...`);
+
+    for (const [sessionId, task] of this.scheduledTasks.entries()) {
+      try {
+        if (task.reminderJob) {
+          task.reminderJob.stop();
+        }
+        if (task.cancellationJob) {
+          task.cancellationJob.stop();
+        }
+        console.log(`Stopped tasks for session ${sessionId}`);
+      } catch (error) {
+        console.error(`Error stopping tasks for session ${sessionId}:`, error);
+      }
+    }
+
+    this.scheduledTasks.clear();
+    console.log('Session scheduler shutdown complete');
+  }
 }
 
 export const sessionScheduler = SessionScheduler.getInstance();

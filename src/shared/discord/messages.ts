@@ -6,13 +6,13 @@ import {
   MessagePayload,
   TextChannel
 } from 'discord.js';
-import { client } from '@app/index.js';
-import { ExtendedInteraction } from '@shared/types/discord.js';
+import { client } from '#app/index.js';
+import { ExtendedInteraction } from '#shared/types/discord.js';
 import {
   safeGuildFetch,
   safeGuildMembersFetch,
   safeUserSend,
-} from '@shared/discord/discordErrorHandler.js';
+} from '#shared/discord/discordErrorHandler.js';
 
 /**
  * Send a disappearing message to a channel
@@ -131,6 +131,24 @@ export const notifyGuild = async (
       });
     } catch (error) {
       console.warn(`Failed to send DM to user ${user.id}:`, error);
+      return null;
+    }
+  }));
+};
+
+export const notifyParty = async (
+  partyMemberIds: string[],
+  messageFormatter: (userId: string) => Promise<string>
+) => {
+  await Promise.allSettled(partyMemberIds.map(async userId => {
+    try {
+      const formattedMessage = await messageFormatter(userId);
+      const user = await client.users.fetch(userId);
+      return await safeUserSend(user, {
+        content: formattedMessage,
+      });
+    } catch (error) {
+      console.warn(`Failed to send DM to party member ${userId}:`, error);
       return null;
     }
   }));

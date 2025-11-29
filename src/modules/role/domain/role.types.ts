@@ -1,5 +1,5 @@
-import { Role } from '@prisma/client';
-import { getRoleImagePath } from '@shared/constants/roleImages.js';
+import { Role } from '#generated/prisma/client.js';
+import { getRoleImagePath } from '#shared/constants/roleImages.js';
 
 /**
  * Get the absolute path to a role's display image

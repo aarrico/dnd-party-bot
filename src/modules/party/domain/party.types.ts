@@ -1,4 +1,4 @@
-import { RoleType } from '@prisma/client';
+import { RoleType } from '#generated/prisma/client.js';
 
 export interface PartyMember {
   userId: string;

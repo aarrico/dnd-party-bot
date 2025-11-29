@@ -4,14 +4,14 @@ import {
   EmbedBuilder,
   TextChannel
 } from 'discord.js';
-import { SessionStatus, RoleType } from '@prisma/client';
-import { Session, PartyMemberImgInfo } from '@modules/session/domain/session.types.js';
-import { PartyMember } from '@modules/party/domain/party.types.js';
-import { BotAttachmentFileNames, BotDialogs, BotPaths } from '@shared/messages/botDialogStrings.js';
-import { getImgAttachmentBuilder } from '@shared/files/attachmentBuilders.js';
-import { createSessionImage } from '@shared/messages/sessionImage.js';
-import { safeChannelSend } from '@shared/discord/discordErrorHandler.js';
-import { roleButtons } from '@app/index.js';
+import { SessionStatus, RoleType } from '#generated/prisma/client.js';
+import { Session, PartyMemberImgInfo } from '#modules/session/domain/session.types.js';
+import { PartyMember } from '#modules/party/domain/party.types.js';
+import { BotAttachmentFileNames, BotDialogs, BotPaths } from '#shared/messages/botDialogStrings.js';
+import { getImgAttachmentBuilder } from '#shared/files/attachmentBuilders.js';
+import { createSessionImage } from '#shared/messages/sessionImage.js';
+import { safeChannelSend } from '#shared/discord/discordErrorHandler.js';
+import { roleButtons } from '#app/index.js';
 import fs from 'fs';
 
 /**
@@ -82,7 +82,7 @@ export const sendNewSessionMessage = async (
   try {
     console.log(`Creating session image...`);
     // Dynamic import to avoid circular dependencies
-    const sessionController = await import('@modules/session/controller/session.controller.js');
+    const sessionController = await import('#modules/session/controller/session.controller.js');
     const party = await sessionController.getPartyInfoForImg(session.id);
     await createSessionImage(session, party);
 

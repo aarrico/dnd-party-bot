@@ -1,14 +1,14 @@
 {
   "scripts": {
-    "build": "npx prisma generate && npm run tsc && tsc-alias -p config/tsconfig.json && copyfiles -u 1 src/resources/**/* dist/src",
+    "build": "npx prisma generate && npm run tsc && tsc-alias -p config/tsconfig.json && copyfiles -u 1 src/resources/**/* dist/src && mkdir -p dist/prisma && cp prisma/schema.prisma dist/prisma/ && cp prisma/prisma.config.ts dist/prisma/ && tsc dist/prisma/prisma.config.ts --module nodenext --moduleResolution nodenext --target esnext --esModuleInterop && rm dist/prisma/prisma.config.ts && cp -r prisma/migrations dist/prisma/",
     "tsc": "tsc --project config/tsconfig.json",
-    "dev": "tsx watch src/index.ts",
+    "dev": "cross-env NODE_OPTIONS=--conditions=development tsx watch src/index.ts",
     "dev:docker": "docker compose -f docker/docker-compose.dev.yml up --build --detach",
     "dev:docker:down": "docker compose -f docker/docker-compose.dev.yml down",
     "dev:fresh": "docker compose -f docker/docker-compose.dev.yml down --volumes --remove-orphans",
     "local": "npm run build && node dist/src/index.js",
     "start": "docker compose -f docker/docker-compose.prod.yml up --build --detach",
-    "start:prod": "npx prisma migrate deploy && node dist/src/index.js",
+    "start:prod": "prisma migrate deploy --config dist/prisma/prisma.config.js && node dist/src/index.js",
     "start:fresh": "docker compose -f docker/docker-compose.prod.yml down --volumes --remove-orphans && docker volume rm postgres-data 2>/dev/null || true && npm run start",
     "stop": "docker compose -f docker/docker-compose.prod.yml down",
     "stop:clean": "docker compose -f docker/docker-compose.prod.yml down --volumes --remove-orphans",
@@ -28,6 +28,40 @@
   "description": "",
   "type": "module",
   "main": "dist/src/index.js",
+  "imports": {
+    "#app/*": {
+      "development": "./src/*",
+      "default": "./dist/src/*"
+    },
+    "#commands/*": {
+      "development": "./src/commands/*",
+      "default": "./dist/src/commands/*"
+    },
+    "#events/*": {
+      "development": "./src/events/*",
+      "default": "./dist/src/events/*"
+    },
+    "#modules/*": {
+      "development": "./src/modules/*",
+      "default": "./dist/src/modules/*"
+    },
+    "#scripts/*": {
+      "development": "./src/scripts/*",
+      "default": "./dist/src/scripts/*"
+    },
+    "#services/*": {
+      "development": "./src/services/*",
+      "default": "./dist/src/services/*"
+    },
+    "#shared/*": {
+      "development": "./src/shared/*",
+      "default": "./dist/src/shared/*"
+    },
+    "#generated/*": {
+      "development": "./src/generated/*",
+      "default": "./dist/src/generated/*"
+    }
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -35,8 +69,8 @@
     "@date-fns/tz": "^1.4.1",
     "@date-fns/utc": "^2.1.1",
     "@napi-rs/canvas": "^0.1.78",
-    "@prisma/adapter-pg": "^5.22.0",
-    "@prisma/client": "^6.18.0",
+    "@prisma/adapter-pg": "^6.0.0",
+    "@prisma/client": "^7.0.0",
     "cron": "^3.5.0",
     "date-fns": "^4.1.0",
     "discord.js": "^14.22.1",
@@ -50,27 +84,26 @@
     "@eslint/eslintrc": "^3.3.1",
     "@eslint/js": "^9.16.0",
     "@jimp/types": "^1.6.0",
-    "@tsconfig/node22": "^22.0.2",
+    "@tsconfig/node24": "^24.0.3",
     "@types/glob": "^8.1.0",
     "@types/jimp": "^0.2.1",
     "@types/merge-images": "^1.2.4",
-    "@types/node": "^22.18.0",
+    "@types/node": "^24.0.0",
     "@types/pg": "^8.15.5",
     "copyfiles": "^2.4.1",
+    "cross-env": "^7.0.3",
     "discord-api-types": "^0.37.120",
     "eslint": "^9.34.0",
     "eslint-config-prettier": "^9.1.2",
     "eslint-plugin-prettier": "^5.5.4",
     "globals": "^15.15.0",
     "prettier": "^3.6.2",
-    "prisma": "^6.18.0",
+    "prisma": "^7.0.0",
+    "ts-loader": "^9.5.4",
     "ts-node": "^10.9.2",
     "tsc-alias": "^1.8.16",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.42.0"
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
   }
 }

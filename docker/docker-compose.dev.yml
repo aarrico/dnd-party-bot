@@ -2,12 +2,12 @@ services:
   api-dev:
     container_name: api-dev
     restart: unless-stopped
-    build: 
+    build:
       context: ..
       dockerfile: docker/Dockerfile.dev
     ports:
       - ${PORT:-3000}:${PORT:-3000}
-      - 9229:9229  # Debug port
+      - 9229:9229 # Debug port
     networks:
       - app-network
     depends_on:
@@ -23,6 +23,7 @@ services:
       - node_modules_dev:/usr/src/app/node_modules
       - postgres-data:/app/postgres-data
     environment:
+      NODE_OPTIONS: --conditions=development
       NODE_ENV: development
       DB_HOST: db
       DB_PORT: 5432
@@ -44,7 +45,7 @@ services:
     networks:
       - app-network
     healthcheck:
-      test: [ "CMD-SHELL", "sh -c 'pg_isready -U ${DB_USER} -d ${DB_NAME}'" ]
+      test: ["CMD-SHELL", "sh -c 'pg_isready -U ${DB_USER} -d ${DB_NAME}'"]
       interval: 10s
       timeout: 3s
       retries: 3
@@ -54,7 +55,6 @@ services:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-
 
 volumes:
   postgres-data:
