@@ -1,4 +1,4 @@
-import { User, RoleType } from '@prisma/client';
+import { User, RoleType } from '#generated/prisma/client.js';
 import { prisma } from '../../../index.js';
 import {
   ListUsersOptions,

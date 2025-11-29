@@ -14,8 +14,17 @@ RUN npm ci && npm cache clean --force
 COPY config/tsconfig.json ./config/tsconfig.json
 COPY src ./src
 
-# Build the application
-RUN npx prisma generate && npx tsc --project config/tsconfig.json
+# Build the application with tsc
+RUN mkdir -p src/generated && \
+    npx prisma generate && \
+    npx tsc --project config/tsconfig.json && \
+    npx tsc-alias -p config/tsconfig.json && \
+    mkdir -p dist/prisma && \
+    cp prisma/schema.prisma dist/prisma/schema.prisma && \
+    cp prisma/prisma.config.ts dist/prisma/prisma.config.ts && \
+    npx tsc dist/prisma/prisma.config.ts --module nodenext --moduleResolution nodenext --target esnext --esModuleInterop && \
+    rm dist/prisma/prisma.config.ts && \
+    cp -r prisma/migrations dist/prisma/migrations
 
 # PRODUCTION STAGE
 FROM node:24-alpine AS production
@@ -33,7 +42,6 @@ RUN addgroup -g 1001 -S nodejs && \
 COPY --from=build --chown=partybot:nodejs /usr/src/app/dist ./dist
 COPY --from=build --chown=partybot:nodejs /usr/src/app/node_modules ./node_modules
 COPY --from=build --chown=partybot:nodejs /usr/src/app/package.json ./package.json
-COPY --chown=partybot:nodejs prisma ./prisma
 
 # Install and configure Vecna font
 COPY resources/fonts/*.ttf /usr/share/fonts/truetype/

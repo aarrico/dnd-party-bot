@@ -8,32 +8,32 @@ import {
   isUserInActiveSession,
   isUserHostingOnDate,
   isUserMemberOnDate,
-} from '@modules/session/repository/session.repository.js';
+} from '#modules/session/repository/session.repository.js';
 import {
   sendNewSessionMessage,
   getRoleButtonsForSession,
   createPartyMemberEmbed,
-} from '@modules/session/presentation/sessionMessages.js';
-import { sendEphemeralReply, notifyGuild } from '@shared/discord/messages.js';
-import { client } from '@app/index.js';
-import { ExtendedInteraction } from '@shared/types/discord.js';
-import { AvatarOptions, PartyMemberImgInfo } from '@modules/session/domain/session.types.js';
-import { PartyMember, RoleSelectionStatus } from '@modules/party/domain/party.types.js';
-import { ListSessionsOptions, ListSessionsResult, Session } from '@modules/session/domain/session.types.js';
-import { BotCommandOptionInfo, BotDialogs, BotAttachmentFileNames, BotPaths } from '@shared/messages/botDialogStrings.js';
-import { getImgAttachmentBuilder } from '@shared/files/attachmentBuilders.js';
-import DateChecker from '@shared/datetime/dateChecker.js';
-import { addUserToParty, updatePartyMemberRole, upsertUser, getUserTimezone } from '@modules/user/repository/user.repository.js';
-import { deletePartyMember } from '@modules/party/repository/partyMember.repository.js';
+} from '#modules/session/presentation/sessionMessages.js';
+import { sendEphemeralReply, notifyGuild } from '#shared/discord/messages.js';
+import { client } from '#app/index.js';
+import { ExtendedInteraction } from '#shared/types/discord.js';
+import { AvatarOptions, PartyMemberImgInfo } from '#modules/session/domain/session.types.js';
+import { PartyMember, RoleSelectionStatus } from '#modules/party/domain/party.types.js';
+import { ListSessionsOptions, ListSessionsResult, Session } from '#modules/session/domain/session.types.js';
+import { BotCommandOptionInfo, BotDialogs, BotAttachmentFileNames, BotPaths } from '#shared/messages/botDialogStrings.js';
+import { getImgAttachmentBuilder } from '#shared/files/attachmentBuilders.js';
+import DateChecker from '#shared/datetime/dateChecker.js';
+import { addUserToParty, updatePartyMemberRole, upsertUser, getUserTimezone } from '#modules/user/repository/user.repository.js';
+import { deletePartyMember } from '#modules/party/repository/partyMember.repository.js';
 import { ChannelType, Guild, TextChannel } from 'discord.js';
-import { createChannel, renameChannel } from '@modules/session/services/channelService.js';
-import { createScheduledEvent, updateScheduledEvent, deleteScheduledEvent } from '@modules/session/services/scheduledEventService.js';
-import { RoleType } from '@prisma/client';
-import { sessionScheduler } from '@services/sessionScheduler.js';
-import { CreateSessionData } from '@modules/session/domain/session.types.js';
-import { createSessionImage } from '@shared/messages/sessionImage.js';
-import { areDatesEqual, isFutureDate } from '@shared/datetime/dateUtils.js';
-import { sanitizeUserInput } from '@shared/validation/sanitizeUserInput.js';
+import { createChannel, renameChannel } from '#modules/session/services/channelService.js';
+import { createScheduledEvent, updateScheduledEvent, deleteScheduledEvent } from '#modules/session/services/scheduledEventService.js';
+import { RoleType } from '#generated/prisma/client.js';
+import { sessionScheduler } from '#services/sessionScheduler.js';
+import { CreateSessionData } from '#modules/session/domain/session.types.js';
+import { createSessionImage } from '#shared/messages/sessionImage.js';
+import { areDatesEqual, isFutureDate } from '#shared/datetime/dateUtils.js';
+import { sanitizeUserInput } from '#shared/validation/sanitizeUserInput.js';
 import {
   safeChannelFetch,
   safeMessageFetch,
@@ -41,7 +41,7 @@ import {
   safeUserFetch,
   safeCreateDM,
   safePermissionOverwritesEdit
-} from '@shared/discord/discordErrorHandler.js';
+} from '#shared/discord/discordErrorHandler.js';
 
 /**
  * Core function to initialize a session with all required data.
@@ -189,17 +189,15 @@ export const continueSession = async (
   username: string,
   userId: string,
   timezone: string,
-): Promise<Session> => {
-  // Validate session parameters
+): Promise<{ session: Session; party: PartyMember[] }> => {
   const validationError = await isSessionValid(campaign, date, userId, timezone);
   if (validationError) {
     throw new Error(validationError);
   }
 
-  // Create Discord channel for the new session
   const sessionChannel = await createChannel(campaign, newSessionName);
 
-  // Fetch user and ensure DM channel exists
+  // Fetch GM user and ensure DM channel exists
   const user = await safeUserFetch(client, userId);
   const dmChannel = await safeCreateDM(user);
   await upsertUser(userId, username, dmChannel.id);
@@ -212,7 +210,17 @@ export const continueSession = async (
     role: RoleType.GAME_MASTER,
   }];
 
-  // Initialize the session
+  existingSession.partyMembers.forEach((member) => {
+    if (member.userId !== userId) {
+      party.push({
+        userId: member.userId,
+        username: member.username,
+        channelId: member.channelId,
+        role: member.role,
+      });
+    }
+  });
+
   const session = await initSession(
     campaign,
     sessionChannel,
@@ -223,8 +231,7 @@ export const continueSession = async (
     party
   );
 
-
-  return session;
+  return { session, party };
 };
 
 export const cancelSession = async (sessionId: string, reason: string) => {
@@ -323,6 +330,14 @@ export const modifySession = async (interaction: ExtendedInteraction) => {
       return;
     }
 
+    const session = await getSessionById(sessionId);
+
+    // Ensure user exists in database before getting their timezone
+    const user = await safeUserFetch(client, interaction.user.id);
+    const dmChannel = await safeCreateDM(user);
+    const username = sanitizeUserInput(interaction.user.displayName) || interaction.user.username;
+    await upsertUser(interaction.user.id, username, dmChannel.id);
+
     // Get timezone from command or user's stored timezone
     let timezone = interaction.options.getString(BotCommandOptionInfo.CreateSession_TimezoneName);
 
@@ -331,8 +346,6 @@ export const modifySession = async (interaction: ExtendedInteraction) => {
     }
 
     const newProposedDate = DateChecker(interaction, timezone);
-
-    const session = await getSessionById(sessionId);
     let dateChanged = false;
     let nameChanged = false;
 

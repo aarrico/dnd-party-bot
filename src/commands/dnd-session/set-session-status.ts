@@ -1,9 +1,9 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { BotCommandOptionInfo } from '@shared/messages/botDialogStrings.js';
-import { ExtendedInteraction } from '@shared/types/discord.js';
-import { updateSession } from '@modules/session/repository/session.repository.js';
-import { sendEphemeralReply } from '@shared/discord/messages.js';
-import { createSessionImage } from '@shared/messages/sessionImage.js';
+import { BotCommandOptionInfo } from '#shared/messages/botDialogStrings.js';
+import { ExtendedInteraction } from '#shared/types/discord.js';
+import { updateSession } from '#modules/session/repository/session.repository.js';
+import { sendEphemeralReply } from '#shared/discord/messages.js';
+import { createSessionImage } from '#shared/messages/sessionImage.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -43,8 +43,8 @@ export default {
       await updateSession(sessionId, { status: newStatus });
 
       // Get session and party data for image generation
-      const { getSessionById } = await import('@modules/session/repository/session.repository.js');
-      const { getPartyInfoForImg } = await import('@modules/session/controller/session.controller.js');
+      const { getSessionById } = await import('#modules/session/repository/session.repository.js');
+      const { getPartyInfoForImg } = await import('#modules/session/controller/session.controller.js');
       const session = await getSessionById(sessionId);
       const party = await getPartyInfoForImg(sessionId);
 

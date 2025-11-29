@@ -4,15 +4,15 @@ import {
   BotCommandOptionInfo,
   BotDialogs,
   BotPaths,
-} from '@shared/messages/botDialogStrings.js';
-import { getTxtAttachmentBuilder } from '@shared/files/attachmentBuilders.js';
-import { ExtendedInteraction } from '@shared/types/discord.js';
-import { sendEphemeralReply } from '@shared/discord/messages.js';
+} from '#shared/messages/botDialogStrings.js';
+import { getTxtAttachmentBuilder } from '#shared/files/attachmentBuilders.js';
+import { ExtendedInteraction } from '#shared/types/discord.js';
+import { sendEphemeralReply } from '#shared/discord/messages.js';
 import { SlashCommandBuilder } from 'discord.js';
 import {
   formatSessionPartyAsStr,
   listPartyForSession,
-} from '@modules/party/controller/party.controller.js';
+} from '#modules/party/controller/party.controller.js';
 
 export default {
   data: new SlashCommandBuilder()

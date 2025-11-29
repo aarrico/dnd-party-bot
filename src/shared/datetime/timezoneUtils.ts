@@ -1,5 +1,5 @@
 import { AutocompleteInteraction } from 'discord.js';
-import { getUserTimezone } from '@modules/user/repository/user.repository.js';
+import { getUserTimezone } from '#modules/user/repository/user.repository.js';
 
 export interface TimezoneOption {
   name: string;

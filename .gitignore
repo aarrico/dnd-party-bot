@@ -5,6 +5,7 @@
 /tmp
 /out-tsc
 /src/resources/temp
+/src/generated
 # Runtime data
 pids
 *.pid

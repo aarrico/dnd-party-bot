@@ -8,7 +8,9 @@ export default [
     ignores: [
       '**/node_modules/**',
       'dist/**',
-      'resources/**'
+      'resources/**',
+      'src/generated/**',
+      'prisma/prisma.config.ts'
     ]
   },
   js.configs.recommended,

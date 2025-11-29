@@ -1,12 +1,12 @@
-import { prisma } from '@app/index.js';
-import { PartyMember } from '@modules/party/domain/party.types.js';
+import { prisma } from '#app/index.js';
+import { PartyMember } from '#modules/party/domain/party.types.js';
 import {
   ListSessionsOptions,
   ListSessionsResult,
   SessionWithParty,
   CreateSessionData,
-} from '@modules/session/domain/session.types.js';
-import { RoleType, Session } from '@prisma/client';
+} from '#modules/session/domain/session.types.js';
+import { RoleType, Session } from '#generated/prisma/client.js';
 
 export const createSession = async (
   sessionData: CreateSessionData,

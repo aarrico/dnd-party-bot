@@ -8,7 +8,7 @@ import {
   PermissionResolvable,
   SlashCommandBuilder,
 } from 'discord.js';
-import { ExtendedClient } from '@shared/discord/ExtendedClient.js';
+import { ExtendedClient } from '#shared/discord/ExtendedClient.js';
 
 /**
  * Extended interaction type that ensures a guild member is present

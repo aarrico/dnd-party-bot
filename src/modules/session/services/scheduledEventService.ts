@@ -3,9 +3,9 @@ import {
   GuildScheduledEventEntityType,
   GuildScheduledEvent,
 } from 'discord.js';
-import { client } from '@app/index.js';
-import { safeGuildFetch } from '@shared/discord/discordErrorHandler.js';
-import { retryWithBackoff } from '@shared/discord/retryWithBackoff.js';
+import { client } from '#app/index.js';
+import { safeGuildFetch } from '#shared/discord/discordErrorHandler.js';
+import { retryWithBackoff } from '#shared/discord/retryWithBackoff.js';
 
 /**
  * Default session duration in hours

@@ -3,17 +3,18 @@ import {
   BotCommandInfo,
   BotCommandOptionInfo,
   BotDialogs,
-} from '@shared/messages/botDialogStrings.js';
-import { monthOptionChoicesArray } from '@shared/constants/dateConstants.js';
-import { ExtendedInteraction } from '@shared/types/discord.js';
-import { createSession } from '@modules/session/controller/session.controller.js';
-import DateChecker from '@shared/datetime/dateChecker.js';
-import { notifyGuild, sendEphemeralReply } from '@shared/discord/messages.js';
+} from '#shared/messages/botDialogStrings.js';
+import { monthOptionChoicesArray } from '#shared/constants/dateConstants.js';
+import { ExtendedInteraction } from '#shared/types/discord.js';
+import { createSession } from '#modules/session/controller/session.controller.js';
+import DateChecker from '#shared/datetime/dateChecker.js';
+import { notifyGuild, sendEphemeralReply } from '#shared/discord/messages.js';
 import { inspect } from 'util';
-import { getUserTimezone } from '@modules/user/repository/user.repository.js';
-import { handleTimezoneAutocomplete } from '@shared/datetime/timezoneUtils.js';
-import { formatSessionCreationDM } from '@shared/messages/sessionNotifications.js';
-import { sanitizeUserInput } from '@shared/validation/sanitizeUserInput.js';
+import { getUserTimezone, upsertUser } from '#modules/user/repository/user.repository.js';
+import { handleTimezoneAutocomplete } from '#shared/datetime/timezoneUtils.js';
+import { formatSessionCreationDM } from '#shared/messages/sessionNotifications.js';
+import { sanitizeUserInput } from '#shared/validation/sanitizeUserInput.js';
+import { client } from '#app/index.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -77,8 +78,19 @@ export default {
         return;
       }
 
+      await interaction.deferReply();
+
+      const creatorDisplayName =
+        sanitizeUserInput(interaction.user.displayName) || interaction.user.username;
+
+      // Ensure user exists in database before getting their timezone
+      const user = await client.users.fetch(interaction.user.id);
+      const dmChannel = await user.createDM();
+      await upsertUser(interaction.user.id, creatorDisplayName, dmChannel.id);
+
       let timezone = interaction.options.getString(BotCommandOptionInfo.CreateSession_TimezoneName);
 
+      // If no timezone specified, get the user's default timezone (now that we know they exist)
       if (!timezone) {
         timezone = await getUserTimezone(interaction.user.id);
       }
@@ -91,11 +103,6 @@ export default {
         );
         return;
       }
-
-      await interaction.deferReply();
-
-      const creatorDisplayName =
-        sanitizeUserInput(interaction.user.displayName) || interaction.user.username;
 
       const session = await createSession(
         campaign,

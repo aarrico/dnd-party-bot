@@ -5,13 +5,13 @@ import {
   BotCommandOptionInfo,
   BotDialogs,
   BotPaths,
-} from '@shared/messages/botDialogStrings.js';
-import { getTxtAttachmentBuilder } from '@shared/files/attachmentBuilders.js';
-import { ExtendedInteraction } from '@shared/types/discord.js';
-import { sendEphemeralReply } from '@shared/discord/messages.js';
-import { ListSessionsOptions } from '@modules/session/domain/session.types.js';
-import { getSessionsForUser } from '@modules/user/repository/user.repository.js';
-import { formatSessionsAsStr } from '@modules/session/controller/session.controller.js';
+} from '#shared/messages/botDialogStrings.js';
+import { getTxtAttachmentBuilder } from '#shared/files/attachmentBuilders.js';
+import { ExtendedInteraction } from '#shared/types/discord.js';
+import { sendEphemeralReply } from '#shared/discord/messages.js';
+import { ListSessionsOptions } from '#modules/session/domain/session.types.js';
+import { getSessionsForUser } from '#modules/user/repository/user.repository.js';
+import { formatSessionsAsStr } from '#modules/session/controller/session.controller.js';
 
 export default {
   data: new SlashCommandBuilder()

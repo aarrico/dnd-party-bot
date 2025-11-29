@@ -1,5 +1,5 @@
 {
-  "extends": "@tsconfig/node22/tsconfig.json",
+  "extends": "@tsconfig/node24/tsconfig.json",
   "compilerOptions": {
     "outDir": "../dist",
     "rootDir": "..",
@@ -10,18 +10,28 @@
     "target": "esnext",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
+    "rewriteRelativeImportExtensions": true,
     "baseUrl": "..",
     "paths": {
-      "@app/*": ["src/*"],
-      "@commands/*": ["src/commands/*"],
-      "@events/*": ["src/events/*"],
-      "@modules/*": ["src/modules/*"],
-      "@scripts/*": ["src/scripts/*"],
-      "@services/*": ["src/services/*"],
-      "@shared/*": ["src/shared/*"]
+      "#app/*": ["src/*"],
+      "#commands/*": ["src/commands/*"],
+      "#events/*": ["src/events/*"],
+      "#modules/*": ["src/modules/*"],
+      "#scripts/*": ["src/scripts/*"],
+      "#services/*": ["src/services/*"],
+      "#shared/*": ["src/shared/*"],
+      "#generated/*": ["src/generated/*"]
     }
   },
-  "include": ["../src/**/*", "../prisma/seed.ts"],
+  "tsc-alias": {
+    "resolveFullPaths": true,
+    "replacers": {
+      "fileContent": {
+        "ignore": ["../dist/src/generated/**/*"]
+      }
+    }
+  },
+  "include": ["../src/**/*", "../prisma/seed.ts", "../prisma/prisma.config.ts"],
   "exclude": ["../node_modules", "../dist", "../resources", "../.idea"],
   "ts-node": {
     "esm": true

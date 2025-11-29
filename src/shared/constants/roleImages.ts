@@ -1,4 +1,4 @@
-import { RoleType } from '@prisma/client';
+import { RoleType } from '#generated/prisma/client.js';
 import { getAbsolutePath } from '../files/getAbsolutePath.js';
 
 // Role display image paths

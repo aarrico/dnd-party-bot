@@ -13,20 +13,20 @@ import {
   StringSelectMenuOptionBuilder,
   MessageFlags,
 } from 'discord.js';
-import { client } from '@app/index.js';
-import { Event } from '@shared/discord/Event.js';
-import { ExtendedInteraction } from '@shared/types/discord.js';
-import { sendMessageReplyDisappearingMessage } from '@shared/discord/messages.js';
+import { client } from '#app/index.js';
+import { Event } from '#shared/discord/Event.js';
+import { ExtendedInteraction } from '#shared/types/discord.js';
+import { sendMessageReplyDisappearingMessage } from '#shared/discord/messages.js';
 import {
   BotDialogs,
   getAddPartyMemberMsg,
-} from '@shared/messages/botDialogStrings.js';
-import { processRoleSelection } from '@modules/session/controller/session.controller.js';
-import { PartyMember } from '@modules/party/domain/party.types.js';
-import { getRoleByString } from '@modules/role/domain/roleManager.js';
-import { getSessionById } from '@modules/session/repository/session.repository.js';
-import { updateUserTimezone } from '@modules/user/repository/user.repository.js';
-import { TIMEZONES } from '@shared/datetime/timezoneUtils.js';
+} from '#shared/messages/botDialogStrings.js';
+import { processRoleSelection } from '#modules/session/controller/session.controller.js';
+import { PartyMember } from '#modules/party/domain/party.types.js';
+import { getRoleByString } from '#modules/role/domain/roleManager.js';
+import { getSessionById } from '#modules/session/repository/session.repository.js';
+import { updateUserTimezone } from '#modules/user/repository/user.repository.js';
+import { TIMEZONES } from '#shared/datetime/timezoneUtils.js';
 
 const partyMemberJoined = async (
   userId: string,
@@ -146,7 +146,7 @@ const processButton = async (
   await sendMessageReplyDisappearingMessage(interaction, result);
 
   try {
-    const { regenerateSessionMessage } = await import('@modules/session/controller/session.controller.js');
+    const { regenerateSessionMessage } = await import('#modules/session/controller/session.controller.js');
     await regenerateSessionMessage(session.id, interaction.guildId ?? '');
   } catch (error) {
     console.error('Failed to update session message:', error);

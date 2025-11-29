@@ -10,13 +10,13 @@ import {
   Events,
 } from 'discord.js';
 import { Event } from './Event.js';
-import { DiscordCommand } from '@shared/types/discord.js';
+import { DiscordCommand } from '#shared/types/discord.js';
 import path from 'path';
-import { getAllFiles, getAllFolders } from '@shared/files/getAllFiles.js';
+import { getAllFiles, getAllFolders } from '#shared/files/getAllFiles.js';
 import * as fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { inspect } from 'node:util';
-import { syncGuildsFromDiscord } from '@modules/guild/repository/guild.repository.js';
+import { syncGuildsFromDiscord } from '#modules/guild/repository/guild.repository.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,7 +33,12 @@ const findProjectRoot = (startPath: string): string => {
 };
 
 const PROJECT_ROOT = findProjectRoot(__dirname);
-const SRC_DIR = path.join(PROJECT_ROOT, 'src');
+
+// Detect if running from dist or src
+const isCompiledCode = __dirname.includes('/dist/');
+const SRC_DIR = isCompiledCode
+  ? path.join(PROJECT_ROOT, 'dist', 'src')
+  : path.join(PROJECT_ROOT, 'src');
 
 export class ExtendedClient extends Client {
   commands: Collection<string, DiscordCommand> = new Collection();

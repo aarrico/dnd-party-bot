@@ -1,4 +1,4 @@
-import { Role, RoleType } from '@prisma/client';
+import { Role, RoleType } from '#generated/prisma/client.js';
 
 /**
  * RoleManager - Singleton class for managing role cache and queries
