@@ -196,8 +196,9 @@ export const createSessionImage = async (
   session: Session,
   partyMembers: PartyMemberImgInfo[]
 ): Promise<void> => {
-  console.log(`Starting createSessionImage for session: ${session.name}`);
-  console.log(`Retrieved ${partyMembers.length} users for session:`, partyMembers.map(u => ({ username: u.username, role: u.role })));
+  // Create a snapshot of the data for logging to avoid race conditions
+  const memberSnapshot = partyMembers.map(u => ({ userId: u.userId, username: u.username, role: u.role }));
+  console.log(`[${session.id}] createSessionImage - session: ${session.name}, members (${memberSnapshot.length}): ${JSON.stringify(memberSnapshot)}`);
 
   // Ensure temp directory exists
   const tempDir = BotPaths.TempDir;

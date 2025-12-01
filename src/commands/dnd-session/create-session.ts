@@ -61,7 +61,8 @@ export default {
         .setAutocomplete(true)
     ),
   async autocomplete(interaction: AutocompleteInteraction) {
-    await handleTimezoneAutocomplete(interaction);
+    const userTimezone = await getUserTimezone(interaction.user.id);
+    await handleTimezoneAutocomplete(interaction, userTimezone);
   },
   async execute(interaction: ExtendedInteraction) {
     try {

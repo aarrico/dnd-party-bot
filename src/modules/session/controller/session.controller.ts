@@ -316,9 +316,10 @@ export const cancelSession = async (sessionId: string, reason: string) => {
 
 export const modifySession = async (interaction: ExtendedInteraction) => {
   try {
-    const sessionId = interaction?.options?.get(
-      BotCommandOptionInfo.Session_Id_Name
-    )?.value as string;
+    const sessionId = interaction.options.getString(
+      BotCommandOptionInfo.ModifySession_ChannelName,
+      true
+    );
     const rawNewSessionName = interaction?.options?.get('new-session-name')
       ?.value as string;
     const newSessionName = rawNewSessionName
@@ -422,21 +423,56 @@ export const processRoleSelection = async (
   const session = await getSession(sessionId);
   const { date, partyMembers: party, status, campaignId, timezone } = session;
 
+  console.log(`[${sessionId}] processRoleSelection - user: ${newPartyMember.username} (${newPartyMember.userId}), role: ${newPartyMember.role}, current party size: ${party.length}`);
+
   if (status && status !== 'SCHEDULED') {
+    console.log(`[${sessionId}] Rejected: session locked (status: ${status})`);
     return RoleSelectionStatus.LOCKED;
   }
 
   if (!isFutureDate(date)) {
+    console.log(`[${sessionId}] Rejected: session expired`);
     return RoleSelectionStatus.EXPIRED;
   }
 
+  if (newPartyMember.role === RoleType.GAME_MASTER) {
+    console.log(`[${sessionId}] Rejected: cannot select GM role`);
+    return RoleSelectionStatus.INVALID;
+  }
+
+  // Check if user is already in this party BEFORE other checks
+  const existingMember = party.find(
+    (member) => member.userId === newPartyMember.userId
+  );
+
+  // If user is already in the party, handle role change/removal
+  if (existingMember) {
+    if (existingMember.role === newPartyMember.role) {
+      console.log(`[${sessionId}] Removing user from party (clicked same role)`);
+      await deletePartyMember(existingMember.userId, sessionId);
+      return RoleSelectionStatus.REMOVED_FROM_PARTY;
+    }
+
+    console.log(`[${sessionId}] Changing user role from ${existingMember.role} to ${newPartyMember.role}`);
+    await updatePartyMemberRole(
+      newPartyMember.userId,
+      sessionId,
+      newPartyMember.role
+    );
+    return RoleSelectionStatus.ROLE_CHANGED;
+  }
+
+  // User is NOT in the party - check if they can join
   const isInAnotherSession = await isUserInActiveSession(
     newPartyMember.userId,
     sessionId
   );
+
   if (isInAnotherSession) {
+    console.log(`[${sessionId}] Rejected: user already in another session`);
     return RoleSelectionStatus.ALREADY_IN_SESSION;
   }
+
   const isHostingOnSameDay = await isUserHostingOnDate(
     newPartyMember.userId,
     date,
@@ -445,37 +481,18 @@ export const processRoleSelection = async (
   );
 
   if (isHostingOnSameDay) {
+    console.log(`[${sessionId}] Rejected: user hosting on same day`);
     return RoleSelectionStatus.HOSTING_SAME_DAY;
   }
 
   if (party.length >= 6) {
+    console.log(`[${sessionId}] Rejected: party full (${party.length} members)`);
     return RoleSelectionStatus.PARTY_FULL;
   }
 
-  const existingMember = party.find(
-    (member) => member.userId === newPartyMember.userId
-  );
-
-  if (newPartyMember.role === RoleType.GAME_MASTER) {
-    return RoleSelectionStatus.INVALID;
-  }
-
-  if (!existingMember) {
-    await addUserToParty(newPartyMember.userId, sessionId, newPartyMember.role, newPartyMember.username);
-    return RoleSelectionStatus.ADDED_TO_PARTY;
-  }
-
-  if (existingMember.role === newPartyMember.role) {
-    await deletePartyMember(existingMember.userId, sessionId);
-    return RoleSelectionStatus.REMOVED_FROM_PARTY;
-  }
-
-  await updatePartyMemberRole(
-    newPartyMember.userId,
-    sessionId,
-    newPartyMember.role
-  );
-  return RoleSelectionStatus.ROLE_CHANGED;
+  console.log(`[${sessionId}] Adding user to party`);
+  await addUserToParty(newPartyMember.userId, sessionId, newPartyMember.role, newPartyMember.username);
+  return RoleSelectionStatus.ADDED_TO_PARTY;
 };
 
 export const getPartyInfoForImg = async (

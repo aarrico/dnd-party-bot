@@ -61,6 +61,13 @@ export const getSession = async (
     },
   });
 
+  const partyMembers = session.partyMembers.map((member) => ({
+    userId: member.user.id,
+    username: member.user.username,
+    channelId: member.user.channelId,
+    role: member.role.id,
+  }));
+
   return {
     id: session.id,
     name: session.name,
@@ -70,12 +77,7 @@ export const getSession = async (
     eventId: session.eventId ?? undefined,
     timezone: session.timezone ?? 'America/Los_Angeles',
     status: session.status as 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED',
-    partyMembers: session.partyMembers.map((member) => ({
-      userId: member.user.id,
-      username: member.user.username,
-      channelId: member.user.channelId,
-      role: member.role.id,
-    })),
+    partyMembers: partyMembers,
   };
 };
 
@@ -89,12 +91,15 @@ export const getParty = async (sessionId: string): Promise<PartyMember[]> => {
     throw new Error(`Cannot find party for ${sessionId}`);
   }
 
-  return session.partyMembers.map((partyMember) => ({
+  const partyMembers = session.partyMembers.map((partyMember) => ({
     userId: partyMember.user.id,
     username: partyMember.user.username,
     channelId: partyMember.user.channelId,
     role: partyMember.role.id,
   }));
+
+
+  return partyMembers;
 };
 
 export const getSessions = async (

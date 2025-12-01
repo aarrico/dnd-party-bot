@@ -1,9 +1,12 @@
-import { SlashCommandBuilder, AutocompleteInteraction } from 'discord.js';
+import { SlashCommandBuilder, AutocompleteInteraction, ChannelType } from 'discord.js';
 import { monthOptionChoicesArray } from '#shared/constants/dateConstants.js';
-import { BotCommandOptionInfo } from '#shared/messages/botDialogStrings.js';
+import { BotCommandOptionInfo, BotDialogs } from '#shared/messages/botDialogStrings.js';
 import { ExtendedInteraction } from '#shared/types/discord.js';
 import { modifySession } from '#modules/session/controller/session.controller.js';
 import { handleTimezoneAutocomplete } from '#shared/datetime/timezoneUtils.js';
+import { getUserTimezone } from '#modules/user/repository/user.repository.js';
+import { sendEphemeralReply } from '#shared/discord/messages.js';
+import { getSessionById } from '#modules/session/repository/session.repository.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -11,10 +14,11 @@ export default {
     .setDescription(
       'Makes changes to an existing session. Also updates photos to reflect changes.'
     )
-    .addStringOption((id) =>
-      id
-        .setName(BotCommandOptionInfo.Session_Id_Name)
-        .setDescription(BotCommandOptionInfo.Session_Id_Description)
+    .addStringOption((channel) =>
+      channel
+        .setName(BotCommandOptionInfo.ModifySession_ChannelName)
+        .setDescription(BotCommandOptionInfo.ModifySession_ChannelDescription)
+        .setAutocomplete(true)
         .setRequired(true)
     )
     .addStringOption((name) =>
@@ -58,9 +62,67 @@ export default {
         .setAutocomplete(true)
     ),
   async autocomplete(interaction: AutocompleteInteraction) {
-    await handleTimezoneAutocomplete(interaction);
+    const focusedOption = interaction.options.getFocused(true);
+    
+    if (focusedOption.name === String(BotCommandOptionInfo.ModifySession_ChannelName)) {
+      if (!interaction.guild) return;
+      
+      const channels = await interaction.guild.channels.fetch();
+      const topLevelTextChannels = channels
+        .filter(channel => 
+          channel?.type === ChannelType.GuildText && 
+          channel.parentId === null
+        )
+        .map(channel => ({
+          name: channel!.name,
+          value: channel!.id
+        }))
+        .slice(0, 25); // Discord limits to 25 choices
+
+      await interaction.respond(topLevelTextChannels);
+    } else if (focusedOption.name === String(BotCommandOptionInfo.CreateSession_TimezoneName)) {
+      const userTimezone = await getUserTimezone(interaction.user.id);
+      await handleTimezoneAutocomplete(interaction, userTimezone);
+    }
   },
   async execute(interaction: ExtendedInteraction) {
+    const campaign = interaction.guild;
+    if (!campaign) {
+      throw new Error('Command must be run in a server!');
+    }
+
+    const channelId = interaction.options.getString(
+      BotCommandOptionInfo.ModifySession_ChannelName,
+      true
+    );
+
+    const fullChannel = await campaign.channels.fetch(channelId);
+    if (!fullChannel || fullChannel.type !== ChannelType.GuildText) {
+      await sendEphemeralReply(
+        BotDialogs.continueSessionInvalidChannel,
+        interaction
+      );
+      return;
+    }
+
+    if (fullChannel.parentId !== null) {
+      await sendEphemeralReply(
+        BotDialogs.continueSessionChannelNotSession,
+        interaction
+      );
+      return;
+    }
+
+    try {
+      await getSessionById(fullChannel.id, true);
+    } catch {
+      await sendEphemeralReply(
+        BotDialogs.continueSessionNotFound,
+        interaction
+      );
+      return;
+    }
+
     await modifySession(interaction);
   },
 };

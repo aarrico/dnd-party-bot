@@ -83,10 +83,19 @@ export const addUserToParty = async (
     });
   }
 
-  await prisma.partyMember.create({
-    data: {
+  await prisma.partyMember.upsert({
+    where: {
+      party_member_id: {
+        userId,
+        sessionId,
+      },
+    },
+    create: {
       userId,
       sessionId,
+      roleId,
+    },
+    update: {
       roleId,
     },
   });

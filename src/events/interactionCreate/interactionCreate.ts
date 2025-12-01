@@ -10,7 +10,6 @@ import {
   ButtonBuilder,
   ButtonStyle,
   StringSelectMenuBuilder,
-  StringSelectMenuOptionBuilder,
   MessageFlags,
 } from 'discord.js';
 import { client } from '#app/index.js';
@@ -22,18 +21,18 @@ import {
   getAddPartyMemberMsg,
 } from '#shared/messages/botDialogStrings.js';
 import { processRoleSelection } from '#modules/session/controller/session.controller.js';
-import { PartyMember } from '#modules/party/domain/party.types.js';
+import { PartyMember, RoleSelectionStatus } from '#modules/party/domain/party.types.js';
 import { getRoleByString } from '#modules/role/domain/roleManager.js';
 import { getSessionById } from '#modules/session/repository/session.repository.js';
 import { updateUserTimezone } from '#modules/user/repository/user.repository.js';
-import { TIMEZONES } from '#shared/datetime/timezoneUtils.js';
+import { buildRegionSelectMenu, buildTimezoneSelectMenu, TIMEZONE_REGIONS } from '#shared/datetime/timezoneUtils.js';
 
 const partyMemberJoined = async (
   userId: string,
   username: string,
   role: string,
   channelId: string
-): Promise<string> => {
+): Promise<{ message: string; status: RoleSelectionStatus }> => {
   const roleType = getRoleByString(role);
   const newPartyMember: PartyMember = {
     userId,
@@ -42,20 +41,26 @@ const partyMemberJoined = async (
     role: roleType.id,
   };
 
-  const channel = await client.channels.fetch(channelId);
-  if (channel && channel.type === ChannelType.GuildText) {
-    await channel.permissionOverwrites.edit(userId, {
-      ViewChannel: true,
-      SendMessages: true
-    });
-  }
-
   const roleSelectionStatus = await processRoleSelection(
     newPartyMember,
     channelId
   );
 
-  return getAddPartyMemberMsg(roleSelectionStatus, newPartyMember);
+  // Only grant channel permissions if the user was successfully added to the party
+  if (roleSelectionStatus === RoleSelectionStatus.ADDED_TO_PARTY) {
+    const channel = await client.channels.fetch(channelId);
+    if (channel && channel.type === ChannelType.GuildText) {
+      await channel.permissionOverwrites.edit(userId, {
+        ViewChannel: true,
+        SendMessages: true
+      });
+    }
+  }
+
+  return {
+    message: getAddPartyMemberMsg(roleSelectionStatus, newPartyMember),
+    status: roleSelectionStatus
+  };
 };
 
 const processCommand = async (
@@ -94,23 +99,12 @@ const processButton = async (
 ): Promise<void> => {
   // Handle "Change Timezone" button in DMs
   if (interaction.customId === 'change-timezone-button') {
-    // Create timezone select menu
-    const timezoneSelect = new StringSelectMenuBuilder()
-      .setCustomId('change-timezone-select')
-      .setPlaceholder('Select your timezone')
-      .addOptions(
-        TIMEZONES.map((tz) =>
-          new StringSelectMenuOptionBuilder()
-            .setLabel(tz.name)
-            .setDescription(tz.value)
-            .setValue(tz.value)
-        )
-      );
-
-    const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(timezoneSelect);
+    // Create region select menu (first step)
+    const regionSelect = buildRegionSelectMenu('change-region-select');
+    const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(regionSelect);
 
     await interaction.reply({
-      content: '🕐 Please select your new timezone:',
+      content: '🌍 Please select your region first:',
       components: [row],
       flags: MessageFlags.Ephemeral,
     });
@@ -143,19 +137,47 @@ const processButton = async (
     interaction.channelId
   );
 
-  await sendMessageReplyDisappearingMessage(interaction, result);
+  await sendMessageReplyDisappearingMessage(interaction, result.message);
 
-  try {
-    const { regenerateSessionMessage } = await import('#modules/session/controller/session.controller.js');
-    await regenerateSessionMessage(session.id, interaction.guildId ?? '');
-  } catch (error) {
-    console.error('Failed to update session message:', error);
+  // Only regenerate the session message if the party actually changed
+  const partyChangedStatuses = [
+    RoleSelectionStatus.ADDED_TO_PARTY,
+    RoleSelectionStatus.REMOVED_FROM_PARTY,
+    RoleSelectionStatus.ROLE_CHANGED,
+  ];
+
+  if (partyChangedStatuses.includes(result.status)) {
+    try {
+      const { regenerateSessionMessage } = await import('#modules/session/controller/session.controller.js');
+      await regenerateSessionMessage(session.id, interaction.guildId ?? '');
+    } catch (error) {
+      console.error('Failed to update session message:', error);
+    }
   }
 };
 
 const processStringSelectMenu = async (interaction: StringSelectMenuInteraction<CacheType>) => {
   const { customId, values, user } = interaction;
 
+  // Handle region selection (step 1) - show timezone options for that region
+  if (customId === 'onboarding-region-select' || customId === 'change-region-select') {
+    const selectedRegion = values[0];
+    const region = TIMEZONE_REGIONS.find((r) => r.value === selectedRegion);
+    const timezoneSelectId = customId === 'onboarding-region-select' ? 'onboarding-timezone-select' : 'change-timezone-select';
+
+    const timezoneSelect = buildTimezoneSelectMenu(timezoneSelectId, selectedRegion);
+    const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(timezoneSelect);
+
+    await interaction.reply({
+      content: `🕐 Select your timezone in ${region?.emoji} ${region?.name}:`,
+      components: [row],
+      flags: MessageFlags.Ephemeral,
+    });
+
+    return;
+  }
+
+  // Handle timezone selection (step 2) - save the timezone
   if (customId === 'onboarding-timezone-select' || customId === 'change-timezone-select') {
     const selectedTimezone = values[0];
 
