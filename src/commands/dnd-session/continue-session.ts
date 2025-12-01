@@ -89,11 +89,11 @@ export default {
   data: new SlashCommandBuilder()
     .setName(BotCommandInfo.ContinueSessionName)
     .setDescription(BotCommandInfo.ContinueSessionDescription)
-    .addChannelOption((channel) =>
+    .addStringOption((channel) =>
       channel
         .setName(BotCommandOptionInfo.ContinueSession_ChannelName)
         .setDescription(BotCommandOptionInfo.ContinueSession_ChannelDescription)
-        .addChannelTypes(ChannelType.GuildText)
+        .setAutocomplete(true)
         .setRequired(true)
     )
     .addIntegerOption((month) =>
@@ -129,7 +129,28 @@ export default {
         .setAutocomplete(true)
     ),
   async autocomplete(interaction: AutocompleteInteraction) {
-    await handleTimezoneAutocomplete(interaction);
+    const focusedOption = interaction.options.getFocused(true);
+    
+    if (focusedOption.name === String(BotCommandOptionInfo.ContinueSession_ChannelName)) {
+      if (!interaction.guild) return;
+      
+      const channels = await interaction.guild.channels.fetch();
+      const topLevelTextChannels = channels
+        .filter(channel => 
+          channel?.type === ChannelType.GuildText && 
+          channel.parentId === null
+        )
+        .map(channel => ({
+          name: channel!.name,
+          value: channel!.id
+        }))
+        .slice(0, 25); // Discord limits to 25 choices
+
+      await interaction.respond(topLevelTextChannels);
+    } else if (focusedOption.name === String(BotCommandOptionInfo.CreateSession_TimezoneName)) {
+      const userTimezone = await getUserTimezone(interaction.user.id);
+      await handleTimezoneAutocomplete(interaction, userTimezone);
+    }
   },
   async execute(interaction: ExtendedInteraction) {
     try {
@@ -138,20 +159,12 @@ export default {
         throw new Error('Command must be run in a server!');
       }
 
-      const selectedChannel = interaction.options.getChannel(
+      const channelId = interaction.options.getString(
         BotCommandOptionInfo.ContinueSession_ChannelName,
         true
       );
 
-      if (!selectedChannel || selectedChannel.type !== ChannelType.GuildText) {
-        await sendEphemeralReply(
-          BotDialogs.continueSessionInvalidChannel,
-          interaction
-        );
-        return;
-      }
-
-      const fullChannel = await campaign.channels.fetch(selectedChannel.id);
+      const fullChannel = await campaign.channels.fetch(channelId);
       if (!fullChannel || fullChannel.type !== ChannelType.GuildText) {
         await sendEphemeralReply(
           BotDialogs.continueSessionInvalidChannel,

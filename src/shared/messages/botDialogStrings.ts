@@ -205,4 +205,8 @@ export enum BotCommandOptionInfo {
   CreateSession_TimezoneDescription = "Timezone for the session (defaults to your saved timezone)",
   ContinueSession_ChannelName = "session-channel",
   ContinueSession_ChannelDescription = "Select the session channel to continue",
+  CancelSession_ChannelName = "cancel-session-channel",
+  CancelSession_ChannelDescription = "Select the session channel to cancel",
+  ModifySession_ChannelName = "modify-session-channel",
+  ModifySession_ChannelDescription = "Select the session channel to modify",
 }
