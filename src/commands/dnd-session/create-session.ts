@@ -15,6 +15,9 @@ import { handleTimezoneAutocomplete } from '#shared/datetime/timezoneUtils.js';
 import { formatSessionCreationDM } from '#shared/messages/sessionNotifications.js';
 import { sanitizeUserInput } from '#shared/validation/sanitizeUserInput.js';
 import { client } from '#app/index.js';
+import { createScopedLogger } from '#shared/logging/logger.js';
+
+const logger = createScopedLogger('CreateSessionCommand');
 
 export default {
   data: new SlashCommandBuilder()
@@ -120,6 +123,15 @@ export default {
         channel.name === normalizedChannelName
       );
 
+      logger.info('Session created successfully', {
+        sessionId: session.id,
+        sessionName: sessionName,
+        campaignId: campaign.id,
+        userId: interaction.user.id,
+        scheduledDate: date.toISOString(),
+        timezone,
+      });
+
       await interaction.editReply({
         content: createdChannel
           ? BotDialogs.createSessionSuccess(sessionName, date, createdChannel.id)
@@ -140,7 +152,9 @@ export default {
       } else {
         await interaction.reply(payload);
       }
-      console.error(`Error creating session:`, inspect(error, { depth: null, colors: true }))
+      logger.error('Error creating session', {
+        error: inspect(error, { depth: null, colors: true })
+      });
     }
   },
 };

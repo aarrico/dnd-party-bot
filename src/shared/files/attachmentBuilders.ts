@@ -2,6 +2,9 @@ import { AttachmentBuilder } from 'discord.js';
 import { writeFileSync } from 'fs';
 import path from 'path';
 import { getAbsolutePath } from './getAbsolutePath.js';
+import { createScopedLogger } from '#shared/logging/logger.js';
+
+const logger = createScopedLogger('AttachmentBuilders');
 
 export function getTxtAttachmentBuilder(
   pathStr: string,
@@ -27,7 +30,7 @@ function getAttachmentBuilder(pathStr: string, attachmentName: string) {
   // Otherwise, resolve it using getAbsolutePath
   const finalPath = path.isAbsolute(pathStr) ? pathStr : getAbsolutePath(pathStr);
 
-  console.log(`Creating attachment builder with path: ${finalPath}`);
+  logger.debug('Creating attachment builder', { finalPath, attachmentName });
 
   return new AttachmentBuilder(finalPath, {
     name: attachmentName,

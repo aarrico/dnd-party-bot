@@ -27,7 +27,7 @@ export default {
     if (!interaction.guild) return;
 
     const focusedOption = interaction.options.getFocused(true);
-    if (focusedOption.name === BotCommandOptionInfo.CancelSession_ChannelName) {
+    if (focusedOption.name === String(BotCommandOptionInfo.CancelSession_ChannelName)) {
       const channels = await interaction.guild.channels.fetch();
       const topLevelTextChannels = channels
         .filter(channel => 
@@ -71,9 +71,8 @@ export default {
       return;
     }
 
-    let existingSession;
     try {
-      existingSession = await getSessionById(fullChannel.id, true);
+      await getSessionById(fullChannel.id, true);
     } catch {
       await sendEphemeralReply(
         BotDialogs.continueSessionNotFound,

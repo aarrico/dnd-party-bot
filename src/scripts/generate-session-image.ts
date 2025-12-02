@@ -18,6 +18,16 @@ import { Session } from '../modules/session/domain/session.types.js';
 import { PartyMemberImgInfo } from '../modules/session/domain/session.types.js';
 import { setRoleCache } from '../modules/role/domain/roleManager.js';
 import { getRoles } from '../modules/role/repository/role.repository.js';
+import { createLogger, format, transports } from 'winston';
+
+// Script-specific logger with console-only transport (no file logging for CLI output)
+const logger = createLogger({
+  level: 'info',
+  format: format.combine(
+    format.printf(({ message }) => String(message)),
+  ),
+  transports: [new transports.Console()],
+});
 
 // Initialize Prisma client
 const adapter = new PrismaPg({
@@ -64,31 +74,31 @@ const getPartyInfoForImg = async (sessionId: string): Promise<PartyMemberImgInfo
  * Main function to generate session image
  */
 async function generateSessionImage(sessionId: string): Promise<void> {
-  console.log(`\n🎨 Generating session image for session: ${sessionId}\n`);
+  logger.info(`\n🎨 Generating session image for session: ${sessionId}\n`);
 
   const roles = await getRoles();
   setRoleCache(roles);
   try {
     // Fetch session data
-    console.log('📊 Fetching session data from database...');
+    logger.info('📊 Fetching session data from database...');
     const sessionData = await prisma.session.findUniqueOrThrow({
       where: { id: sessionId },
     });
 
     // Fetch party members
-    console.log('👥 Fetching party members...');
+    logger.info('👥 Fetching party members...');
     const partyMembers = await getPartyInfoForImg(sessionId);
 
     if (partyMembers.length === 0) {
-      console.warn('⚠️  No party members found for this session');
+      logger.warn('⚠️  No party members found for this session');
       return;
     }
 
     // Check for Game Master
     const hasGM = partyMembers.some(member => member.role === 'GAME_MASTER');
     if (!hasGM) {
-      console.error('❌ Error: No Game Master found in party members');
-      console.log('Party members:', partyMembers.map(p => ({ username: p.username, role: p.role })));
+      logger.error('❌ Error: No Game Master found in party members');
+      logger.info('Party members:', partyMembers.map(p => ({ username: p.username, role: p.role })));
       return;
     }
 
@@ -104,32 +114,32 @@ async function generateSessionImage(sessionId: string): Promise<void> {
       timezone: sessionData.timezone ?? 'America/Los_Angeles',
     };
 
-    console.log(`📝 Session: ${session.name}`);
-    console.log(`📅 Date: ${session.date.toLocaleDateString()} at ${session.date.toLocaleTimeString()}`);
-    console.log(`🌍 Timezone: ${session.timezone}`);
-    console.log(`📊 Status: ${session.status}`);
-    console.log(`👥 Party size: ${partyMembers.length}`);
-    console.log('Party members:');
+    logger.info(`📝 Session: ${session.name}`);
+    logger.info(`📅 Date: ${session.date.toLocaleDateString()} at ${session.date.toLocaleTimeString()}`);
+    logger.info(`🌍 Timezone: ${session.timezone}`);
+    logger.info(`📊 Status: ${session.status}`);
+    logger.info(`👥 Party size: ${partyMembers.length}`);
+    logger.info('Party members:');
     partyMembers.forEach(member => {
-      console.log(`  - ${member.username} (${member.role})`);
+      logger.info(`  - ${member.username} (${member.role})`);
     });
 
     // Generate the image
-    console.log('\n🖼️  Generating session image...');
+    logger.info('\n🖼️  Generating session image...');
     await createSessionImage(session, partyMembers);
 
-    console.log('\n✅ Session image generated successfully!');
-    console.log('📂 Output location: resources/temp/current-session.png\n');
+    logger.info('\n✅ Session image generated successfully!');
+    logger.info('📂 Output location: resources/temp/current-session.png\n');
   } catch (error) {
     if (error instanceof Error) {
       if (error.message.includes('No') && error.message.includes('found')) {
-        console.error(`\n❌ Error: Session with ID "${sessionId}" not found in database\n`);
+        logger.error(`\n❌ Error: Session with ID "${sessionId}" not found in database\n`);
       } else {
-        console.error(`\n❌ Error generating session image:`, error.message);
-        console.error(error);
+        logger.error(`\n❌ Error generating session image: ${error.message}`);
+        logger.error(error);
       }
     } else {
-      console.error(`\n❌ Unknown error:`, error);
+      logger.error(`\n❌ Unknown error: ${String(error)}`);
     }
     process.exit(1);
   } finally {
@@ -141,7 +151,7 @@ async function generateSessionImage(sessionId: string): Promise<void> {
 const sessionId = process.argv[2];
 
 if (!sessionId) {
-  console.error(`
+  logger.error(`
 ❌ Usage: npm run generate-image <sessionId>
 
 Example:

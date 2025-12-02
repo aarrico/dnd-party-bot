@@ -1,6 +1,9 @@
 import { Event } from '#shared/discord/Event.js';
 import { Events } from 'discord.js';
+import { createScopedLogger } from '#shared/logging/logger.js';
+
+const logger = createScopedLogger('ReadyEvent');
 
 export default new Event(Events.ClientReady, () => {
-  console.log('Bot is online!');
+  logger.info('Bot is online!');
 });

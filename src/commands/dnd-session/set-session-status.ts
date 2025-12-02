@@ -4,6 +4,9 @@ import { ExtendedInteraction } from '#shared/types/discord.js';
 import { updateSession } from '#modules/session/repository/session.repository.js';
 import { sendEphemeralReply } from '#shared/discord/messages.js';
 import { createSessionImage } from '#shared/messages/sessionImage.js';
+import { createScopedLogger } from '#shared/logging/logger.js';
+
+const logger = createScopedLogger('SetSessionStatusCommand');
 
 export default {
   data: new SlashCommandBuilder()
@@ -78,7 +81,7 @@ export default {
         interaction
       );
     } catch (error) {
-      console.error('Error setting session status:', error);
+      logger.error('Error setting session status', { error });
       await sendEphemeralReply(
         'An error occurred while updating the session status.',
         interaction

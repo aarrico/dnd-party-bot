@@ -7,6 +7,9 @@ import {
   Client,
   IntentsBitField,
 } from 'discord.js';
+import { createScopedLogger } from '#shared/logging/logger.js';
+
+const logger = createScopedLogger('SendMessageScript');
 
 const client = new Client({
   intents: [
@@ -54,7 +57,7 @@ client.on('ready', async () => {
     });
     process.exit();
   } catch (error) {
-    console.log(error);
+    logger.error('Failed to send role selection message', { error });
   }
 });
 

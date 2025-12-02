@@ -42,6 +42,9 @@ import {
   safeCreateDM,
   safePermissionOverwritesEdit
 } from '#shared/discord/discordErrorHandler.js';
+import { createScopedLogger } from '#shared/logging/logger.js';
+
+const logger = createScopedLogger('SessionController');
 
 /**
  * Core function to initialize a session with all required data.
@@ -57,6 +60,17 @@ export const initSession = async (
   timezone: string,
   party: PartyMember[]
 ): Promise<Session> => {
+  logger.info('Initializing new session', {
+    campaignId: campaign.id,
+    campaignName: campaign.name,
+    sessionName,
+    channelId: sessionChannel.id,
+    scheduledDate: date.toISOString(),
+    timezone,
+    creatorUserId: userId,
+    initialPartySize: party.length,
+  });
+
   const newSession: CreateSessionData = {
     id: sessionChannel.id,
     name: sessionName,
@@ -89,9 +103,9 @@ export const initSession = async (
   let partyMessageId: string = '';
   try {
     partyMessageId = await sendNewSessionMessage(sessionForMessage, sessionChannel, party);
-    console.log(`Received partyMessageId from sendNewSessionMessage: ${partyMessageId}`);
+    logger.info('Session message created', { sessionId: session.id, partyMessageId });
   } catch (error) {
-    console.error(`Failed to send new session message for session ${session.id}:`, error);
+    logger.error('Failed to send new session message', { sessionId: session.id, error });
     // Continue - we still want to create the session even if message sending fails
     // The message can be resent later or users can access via the channel directly
   }
@@ -106,27 +120,45 @@ export const initSession = async (
       sessionChannel.id
     );
     if (eventId) {
-      console.log(`✓ Created scheduled event ${eventId} for session ${session.id}`);
+      logger.info('Created scheduled event for session', { sessionId: session.id, eventId });
     }
   } catch (error) {
-    console.error(`Failed to create scheduled event for session ${session.id}:`, error);
+    logger.error('Failed to create scheduled event', { sessionId: session.id, error });
     // Continue - event creation is optional
   }
 
   // Update session with partyMessageId and eventId
   try {
-    console.log(`Attempting to update session ${session.id} with partyMessageId: ${partyMessageId}, eventId: ${eventId}`);
+    logger.debug('Updating session with party message/event metadata', {
+      sessionId: session.id,
+      partyMessageId,
+      eventId,
+    });
     const updatedSession = await updateSession(session.id, { partyMessageId, eventId });
-    console.log(`✓ Successfully updated session with partyMessageId: ${updatedSession.partyMessageId}`);
+    logger.info('Session metadata updated', {
+      sessionId: session.id,
+      partyMessageId: updatedSession.partyMessageId,
+    });
   } catch (error) {
-    console.error(`Failed to update session ${session.id} with partyMessageId and eventId:`, error);
+    logger.error('Failed to update session with party message/event metadata', {
+      sessionId: session.id,
+      error,
+    });
     // This is a critical error but we've already created the session
     // Log it prominently for investigation
-    console.error(`⚠️ SESSION ${session.id} CREATED BUT NOT UPDATED WITH MESSAGE ID ${partyMessageId}`);
+    logger.error('Session created without party message ID set', {
+      sessionId: session.id,
+      partyMessageId,
+    });
   }
 
   sessionScheduler.scheduleSessionTasks(session.id, session.date);
-  console.log(`Scheduled tasks for session ${session.id} at ${session.date.toISOString()}`);
+  logger.info('Session initialization complete', {
+    sessionId: session.id,
+    sessionName: session.name,
+    scheduledDate: session.date.toISOString(),
+    partySize: party.length,
+  });
 
   return sessionForMessage;
 };
@@ -143,9 +175,22 @@ export const createSession = async (
   userId: string,
   timezone: string,
 ): Promise<Session> => {
+  logger.debug('createSession called', {
+    campaignId: campaign.id,
+    sessionName,
+    userId,
+    username,
+  });
+
   // Validate session parameters
   const validationError = await isSessionValid(campaign, date, userId, timezone);
   if (validationError) {
+    logger.warn('Session validation failed', {
+      campaignId: campaign.id,
+      sessionName,
+      userId,
+      validationError,
+    });
     throw new Error(validationError);
   }
 
@@ -190,8 +235,22 @@ export const continueSession = async (
   userId: string,
   timezone: string,
 ): Promise<{ session: Session; party: PartyMember[] }> => {
+  logger.info('Continuing session', {
+    previousSessionId: existingSession.id,
+    previousSessionName: existingSession.name,
+    newSessionName,
+    campaignId: campaign.id,
+    userId,
+    carryOverPartySize: existingSession.partyMembers.length,
+  });
+
   const validationError = await isSessionValid(campaign, date, userId, timezone);
   if (validationError) {
+    logger.warn('Session continuation validation failed', {
+      previousSessionId: existingSession.id,
+      userId,
+      validationError,
+    });
     throw new Error(validationError);
   }
 
@@ -235,19 +294,30 @@ export const continueSession = async (
 };
 
 export const cancelSession = async (sessionId: string, reason: string) => {
+  logger.info('Canceling session', { sessionId, reason });
+
   const session = await getSession(sessionId);
+  logger.debug('Session to cancel', {
+    sessionId,
+    sessionName: session.name,
+    status: session.status,
+    partySize: session.partyMembers.length,
+  });
 
   // Cancel any scheduled tasks first
   sessionScheduler.cancelSessionTasks(sessionId);
-  console.log(`Canceled scheduled tasks for session ${sessionId}`);
+  logger.info('Canceled scheduled tasks for session', { sessionId });
 
   // Delete Discord scheduled event if it exists (non-blocking)
   if (session.eventId) {
     try {
       await deleteScheduledEvent(session.campaignId, session.eventId);
-      console.log(`✓ Deleted scheduled event ${session.eventId} for canceled session ${sessionId}`);
+      logger.info('Deleted scheduled event for canceled session', {
+        sessionId,
+        eventId: session.eventId,
+      });
     } catch (error) {
-      console.error(`Failed to delete scheduled event for session ${sessionId}:`, error);
+      logger.error('Failed to delete scheduled event for session', { sessionId, error });
       // Continue - event deletion is optional
     }
   }
@@ -255,9 +325,9 @@ export const cancelSession = async (sessionId: string, reason: string) => {
   // Update database status - this should happen regardless of other failures
   try {
     await updateSession(sessionId, { status: 'CANCELED' });
-    console.log(`Updated session ${sessionId} status to CANCELED in database`);
+    logger.info('Updated session status to CANCELED', { sessionId });
   } catch (error) {
-    console.error(`Failed to update session ${sessionId} status to CANCELED:`, error);
+    logger.error('Failed to update session status to CANCELED', { sessionId, error });
     throw error; // Re-throw since this is critical
   }
 
@@ -285,10 +355,13 @@ export const cancelSession = async (sessionId: string, reason: string) => {
         components: getRoleButtonsForSession('CANCELED'),
       });
 
-      console.log(`Updated Discord message for canceled session ${sessionId}`);
+      logger.info('Updated Discord message for canceled session', { sessionId });
     }
   } catch (error) {
-    console.error(`Failed to update Discord message for canceled session ${sessionId}:`, error);
+    logger.error('Failed to update Discord message for canceled session', {
+      sessionId,
+      error,
+    });
     // Don't throw - message update failure shouldn't prevent cancellation
   }
 
@@ -307,11 +380,17 @@ export const cancelSession = async (sessionId: string, reason: string) => {
         `❗ **Reason:** ${reason}\n\n` +
         `We apologize for any inconvenience. 🎯`;
     });
-    console.log(`Notified guild members about session ${sessionId} cancellation`);
+    logger.info('Notified guild members about session cancellation', { sessionId });
   } catch (error) {
-    console.error(`Failed to notify guild about session ${sessionId} cancellation:`, error);
+    logger.error('Failed to notify guild about session cancellation', { sessionId, error });
     // Don't throw - notification failure shouldn't prevent cancellation
   }
+
+  logger.info('Session cancellation complete', {
+    sessionId,
+    sessionName: session.name,
+    reason,
+  });
 };
 
 export const modifySession = async (interaction: ExtendedInteraction) => {
@@ -367,7 +446,10 @@ export const modifySession = async (interaction: ExtendedInteraction) => {
 
     if (dateChanged) {
       sessionScheduler.scheduleSessionTasks(sessionId, session.date);
-      console.log(`Rescheduled tasks for session ${sessionId} to new date: ${session.date.toISOString()}`);
+      logger.info('Rescheduled session tasks', {
+        sessionId,
+        date: session.date.toISOString(),
+      });
     }
 
     // Update Discord scheduled event if it exists and something changed
@@ -384,10 +466,16 @@ export const modifySession = async (interaction: ExtendedInteraction) => {
           updates
         );
         if (success) {
-          console.log(`✓ Updated scheduled event ${eventIdString} for session ${sessionId}`);
+          logger.info('Updated scheduled event for session', {
+            sessionId,
+            eventId: eventIdString,
+          });
         }
       } catch (error) {
-        console.error(`Failed to update scheduled event for session ${sessionId}:`, error);
+        logger.error('Failed to update scheduled event for session', {
+          sessionId,
+          error,
+        });
         // Continue - event update is optional
       }
     }
@@ -396,19 +484,26 @@ export const modifySession = async (interaction: ExtendedInteraction) => {
     if (dateChanged || nameChanged) {
       try {
         await regenerateSessionMessage(sessionId, session.campaignId);
-        console.log(`Regenerated session message for modified session ${sessionId}`);
+        logger.info('Regenerated session message after modification', { sessionId });
       } catch (error) {
-        console.error(`Failed to regenerate session message for ${sessionId}:`, error);
+        logger.error('Failed to regenerate session message', { sessionId, error });
         // Continue - message update failure shouldn't prevent modification
       }
     }
+
+    logger.info('Session modification complete', {
+      sessionId,
+      sessionName: session.name,
+      dateChanged,
+      nameChanged,
+    });
 
     await sendEphemeralReply(
       BotDialogs.sessions.updated(session.name),
       interaction
     );
   } catch (error) {
-    console.error('Error modifying session:', error);
+    logger.error('Error modifying session', { error });
     await sendEphemeralReply(
       'An error occurred while modifying the session.',
       interaction
@@ -423,20 +518,26 @@ export const processRoleSelection = async (
   const session = await getSession(sessionId);
   const { date, partyMembers: party, status, campaignId, timezone } = session;
 
-  console.log(`[${sessionId}] processRoleSelection - user: ${newPartyMember.username} (${newPartyMember.userId}), role: ${newPartyMember.role}, current party size: ${party.length}`);
+  logger.debug('Processing role selection', {
+    sessionId,
+    userId: newPartyMember.userId,
+    username: newPartyMember.username,
+    role: newPartyMember.role,
+    partySize: party.length,
+  });
 
   if (status && status !== 'SCHEDULED') {
-    console.log(`[${sessionId}] Rejected: session locked (status: ${status})`);
+    logger.info('Rejected role selection: session locked', { sessionId, status });
     return RoleSelectionStatus.LOCKED;
   }
 
   if (!isFutureDate(date)) {
-    console.log(`[${sessionId}] Rejected: session expired`);
+    logger.info('Rejected role selection: session expired', { sessionId });
     return RoleSelectionStatus.EXPIRED;
   }
 
   if (newPartyMember.role === RoleType.GAME_MASTER) {
-    console.log(`[${sessionId}] Rejected: cannot select GM role`);
+    logger.info('Rejected role selection: GM role not allowed', { sessionId, userId: newPartyMember.userId });
     return RoleSelectionStatus.INVALID;
   }
 
@@ -448,12 +549,20 @@ export const processRoleSelection = async (
   // If user is already in the party, handle role change/removal
   if (existingMember) {
     if (existingMember.role === newPartyMember.role) {
-      console.log(`[${sessionId}] Removing user from party (clicked same role)`);
+      logger.info('Removing user from party (same role selected)', {
+        sessionId,
+        userId: existingMember.userId,
+      });
       await deletePartyMember(existingMember.userId, sessionId);
       return RoleSelectionStatus.REMOVED_FROM_PARTY;
     }
 
-    console.log(`[${sessionId}] Changing user role from ${existingMember.role} to ${newPartyMember.role}`);
+    logger.info('Changing user role', {
+      sessionId,
+      userId: existingMember.userId,
+      fromRole: existingMember.role,
+      toRole: newPartyMember.role,
+    });
     await updatePartyMemberRole(
       newPartyMember.userId,
       sessionId,
@@ -469,7 +578,10 @@ export const processRoleSelection = async (
   );
 
   if (isInAnotherSession) {
-    console.log(`[${sessionId}] Rejected: user already in another session`);
+    logger.info('Rejected role selection: user already in another session', {
+      sessionId,
+      userId: newPartyMember.userId,
+    });
     return RoleSelectionStatus.ALREADY_IN_SESSION;
   }
 
@@ -481,16 +593,26 @@ export const processRoleSelection = async (
   );
 
   if (isHostingOnSameDay) {
-    console.log(`[${sessionId}] Rejected: user hosting on same day`);
+    logger.info('Rejected role selection: user hosting on same day', {
+      sessionId,
+      userId: newPartyMember.userId,
+    });
     return RoleSelectionStatus.HOSTING_SAME_DAY;
   }
 
   if (party.length >= 6) {
-    console.log(`[${sessionId}] Rejected: party full (${party.length} members)`);
+    logger.info('Rejected role selection: party full', {
+      sessionId,
+      partySize: party.length,
+    });
     return RoleSelectionStatus.PARTY_FULL;
   }
 
-  console.log(`[${sessionId}] Adding user to party`);
+  logger.info('Adding user to party', {
+    sessionId,
+    userId: newPartyMember.userId,
+    role: newPartyMember.role,
+  });
   await addUserToParty(newPartyMember.userId, sessionId, newPartyMember.role, newPartyMember.username);
   return RoleSelectionStatus.ADDED_TO_PARTY;
 };
@@ -515,7 +637,10 @@ export const getPartyInfoForImg = async (
           role: member.role,
         };
       } catch (error) {
-        console.warn(`Could not fetch avatar for user ${member.userId}:`, error);
+        logger.warn('Could not fetch avatar for user avatar rendering', {
+          userId: member.userId,
+          error,
+        });
         return {
           userId: member.userId,
           username: member.username,
@@ -536,7 +661,7 @@ export const listSessions = async (
   try {
     sessions = await getSessions(options);
   } catch (error) {
-    console.error(error);
+    logger.error('Failed to list sessions', { error, options });
   }
 
   return sessions;
@@ -608,6 +733,8 @@ const isSessionValid = async (campaign: Guild, date: Date, userId: string, timez
 };
 
 export const regenerateSessionMessage = async (sessionId: string, guildId: string): Promise<void> => {
+  logger.debug('Regenerating session message', { sessionId, guildId });
+
   const session = await getSessionById(sessionId);
   const sessionChannel = await safeChannelFetch(client, sessionId);
 
@@ -632,5 +759,10 @@ export const regenerateSessionMessage = async (sessionId: string, guildId: strin
     embeds: [embed],
     files: [attachment],
     components: getRoleButtonsForSession(session.status),
+  });
+
+  logger.debug('Session message regenerated', {
+    sessionId,
+    messageId: session.partyMessageId,
   });
 };

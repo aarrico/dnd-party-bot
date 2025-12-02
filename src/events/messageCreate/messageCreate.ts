@@ -6,6 +6,9 @@ import {
   ButtonStyle
 } from 'discord.js';
 import { Event } from '#shared/discord/Event.js';
+import { createScopedLogger } from '#shared/logging/logger.js';
+
+const logger = createScopedLogger('MessageCreateEvent');
 
 const handleDMMessage = async (message: Message) => {
   // Ignore messages from bots (including our own)
@@ -31,7 +34,10 @@ const handleDMMessage = async (message: Message) => {
         components: [row],
       });
 
-      console.log(`[DM Handler] Sent timezone button to ${message.author.username}`);
+      logger.info('Sent timezone change button via DM', {
+        userId: message.author.id,
+        username: message.author.username,
+      });
     }
   }
 };

@@ -1,5 +1,8 @@
 import { ActionRowBuilder, AutocompleteInteraction, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, User } from 'discord.js';
 import { BotDialogs } from '#shared/messages/botDialogStrings.js';
+import { createScopedLogger } from '#shared/logging/logger.js';
+
+const logger = createScopedLogger('TimezoneUtils');
 
 export interface TimezoneOption {
   name: string;
@@ -179,7 +182,7 @@ export const sendTimezoneOnboardingDM = async (user: User): Promise<void> => {
     components: [row],
   });
 
-  console.log(`Sent onboarding DM to ${user.displayName}`);
+  logger.info('Sent onboarding DM', { userId: user.id, username: user.username });
 };
 
 /**

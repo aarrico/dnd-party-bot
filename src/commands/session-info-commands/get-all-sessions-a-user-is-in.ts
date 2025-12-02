@@ -50,7 +50,6 @@ export default {
         .setDescription(BotCommandOptionInfo.Campaign_Description)
     ),
   async execute(interaction: ExtendedInteraction) {
-    const includeSessionId = interaction.options.getBoolean(BotCommandOptionInfo.Session_Id_Name) ?? false;
     const includeTime = interaction.options.getBoolean(BotCommandOptionInfo.Session_IncludeTime_Name) ?? false;
     const includeCampaign = interaction.options.getBoolean(BotCommandOptionInfo.CampaignName_Name) ?? false;
     const includeUserRole = interaction.options.getBoolean(BotCommandOptionInfo.GetAllUserSessions_UserRoleName) ?? false;

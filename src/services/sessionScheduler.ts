@@ -9,6 +9,9 @@ import {
   formatSessionDateLong,
   isFutureDate
 } from '../shared/datetime/dateUtils.js';
+import { createScopedLogger } from '#shared/logging/logger.js';
+
+const logger = createScopedLogger('SessionSchedulerService');
 
 interface ScheduledTask {
   sessionId: string;
@@ -46,9 +49,15 @@ class SessionScheduler {
         'UTC'
       );
       task.reminderJob = reminderJob;
-      console.log(`Scheduled reminder for session ${sessionId} at ${reminderTime.toISOString()} (UTC)`);
+      logger.info('Scheduled reminder', {
+        sessionId,
+        reminderTime: reminderTime.toISOString(),
+      });
     } else {
-      console.log(`Session ${sessionId} reminder time has already passed (${reminderTime.toISOString()})`);
+      logger.debug('Reminder time already passed', {
+        sessionId,
+        reminderTime: reminderTime.toISOString(),
+      });
     }
 
     if (isFutureDate(cancelTime)) {
@@ -60,15 +69,21 @@ class SessionScheduler {
         'UTC'
       );
       task.cancellationJob = cancellationJob;
-      console.log(`Scheduled cancellation check for session ${sessionId} at ${cancelTime.toISOString()} (UTC)`);
+      logger.info('Scheduled cancellation check', {
+        sessionId,
+        cancelTime: cancelTime.toISOString(),
+      });
     } else {
-      console.log(`Session ${sessionId} cancellation time has already passed (${cancelTime.toISOString()})`);
+      logger.debug('Cancellation time already passed', {
+        sessionId,
+        cancelTime: cancelTime.toISOString(),
+      });
     }
 
     if (task.reminderJob || task.cancellationJob) {
       this.scheduledTasks.set(sessionId, task);
     } else {
-      console.log(`No tasks scheduled for session ${sessionId} - all times have passed`);
+      logger.info('No tasks scheduled, all times passed', { sessionId });
     }
   }
 
@@ -82,7 +97,7 @@ class SessionScheduler {
         task.cancellationJob.stop();
       }
       this.scheduledTasks.delete(sessionId);
-      console.log(`Canceled scheduled tasks for session ${sessionId}`);
+      logger.info('Canceled scheduled tasks', { sessionId });
     }
   }
 
@@ -95,51 +110,75 @@ class SessionScheduler {
     try {
       task.reminderJob.stop();
     } catch (error) {
-      console.error(`Failed to stop reminder job for session ${sessionId}:`, error);
+      logger.error('Failed to stop reminder job', { sessionId, error });
     }
 
     task.reminderJob = undefined;
 
     if (!task.cancellationJob) {
       this.scheduledTasks.delete(sessionId);
-      console.log(`Cleared reminder task for session ${sessionId}; no cancellation job remained`);
+      logger.info('Cleared reminder task; no cancellation job remained', { sessionId });
     } else {
       this.scheduledTasks.set(sessionId, task);
-      console.log(`Cleared reminder task for session ${sessionId}; cancellation job still scheduled`);
+      logger.info('Cleared reminder task; cancellation job still scheduled', { sessionId });
     }
   }
 
   private async handleReminder(sessionId: string): Promise<void> {
+    logger.info('Handling session reminder', { sessionId });
+
     try {
       const session = await getSessionById(sessionId, true);
 
       const isPartyFull = session.partyMembers.length >= 6;
+      logger.debug('Session reminder context', {
+        sessionId,
+        sessionName: session.name,
+        partySize: session.partyMembers.length,
+        isPartyFull,
+      });
 
       await this.sendSessionReminders(session, isPartyFull);
+      logger.info('Session reminder completed', { sessionId });
     } catch (error) {
-      console.error(`Error handling reminder/cancellation for session ${sessionId}:`, error);
+      logger.error('Error handling reminder for session', { sessionId, error });
     } finally {
       this.clearReminderTask(sessionId);
     }
   }
 
   private async handleCancellation(sessionId: string): Promise<void> {
+    logger.info('Handling session cancellation check', { sessionId });
+
     try {
       const session = await getSessionById(sessionId, true);
 
       const isPartyFull = session.partyMembers.length >= 6;
+      logger.debug('Session cancellation context', {
+        sessionId,
+        sessionName: session.name,
+        partySize: session.partyMembers.length,
+        isPartyFull,
+        willCancel: !isPartyFull,
+      });
 
       if (!isPartyFull) {
         await this.cancelUnfilledSession(session);
       } else {
-        console.log(`Session ${sessionId} has a full party (${session.partyMembers.length}/6), no cancellation needed`);
+        logger.info('Session has full party; skipping cancellation', {
+          sessionId,
+          partySize: session.partyMembers.length,
+        });
 
         try {
           const { updateSession } = await import('../modules/session/repository/session.repository.js');
           await updateSession(session.id, { status: 'ACTIVE' });
-          console.log(`Updated session ${session.id} status to ACTIVE`);
+          logger.info('Updated session status to ACTIVE after full party', { sessionId: session.id });
         } catch (error) {
-          console.error(`CRITICAL: Failed to update session ${session.id} status to ACTIVE:`, error);
+          logger.error('Failed to update session status to ACTIVE', {
+            sessionId: session.id,
+            error,
+          });
         }
 
         try {
@@ -157,20 +196,29 @@ class SessionScheduler {
             timezone: session.timezone ?? 'America/Los_Angeles',
           };
           await createSessionImage(sessionData, party);
-          console.log(`Regenerated session image with ACTIVE status border`);
+          logger.info('Regenerated session image with ACTIVE status', { sessionId: session.id });
         } catch (error) {
-          console.error(`Failed to regenerate session image:`, error);
+          logger.error('Failed to regenerate session image during cancellation handling', { error });
         }
       }
 
       this.cancelSessionTasks(sessionId);
+      logger.info('Session cancellation check completed', {
+        sessionId,
+        wasCanceled: !isPartyFull,
+      });
     } catch (error) {
-      console.error(`Error handling cancellation for session ${sessionId}:`, error);
+      logger.error('Error handling cancellation for session', { sessionId, error });
     }
   }
 
   private async sendSessionReminders(session: SessionWithParty, sendToPartyOnly: boolean): Promise<void> {
-    console.log(`Sending reminders for session ${session.name} to ${session.partyMembers.length} members`);
+    logger.info('Sending session reminders', {
+      sessionId: session.id,
+      sessionName: session.name,
+      partySize: session.partyMembers.length,
+      sendToPartyOnly,
+    });
 
     if (sendToPartyOnly) {
       let successCount = 0;
@@ -184,15 +232,26 @@ class SessionScheduler {
 
           const user = await client.users.fetch(member.userId);
           await user.send(reminderMessage);
-          console.log(`Sent reminder to ${member.username} (${member.userId})`);
+          logger.debug('Sent reminder DM', {
+            sessionId: session.id,
+            userId: member.userId,
+          });
           successCount++;
         } catch (error) {
-          console.error(`Failed to send reminder to ${member.username} (${member.userId}):`, error);
+          logger.error('Failed to send reminder DM', {
+            sessionId: session.id,
+            userId: member.userId,
+            error,
+          });
           failureCount++;
         }
       }
 
-      console.log(`Reminder summary for session ${session.id}: ${successCount} sent, ${failureCount} failed`);
+      logger.info('Reminder summary', {
+        sessionId: session.id,
+        successCount,
+        failureCount,
+      });
     } else {
       const { getUserTimezone } = await import('../modules/user/repository/user.repository.js');
       await notifyGuild(session.campaignId, async (userId: string) => {
@@ -203,7 +262,11 @@ class SessionScheduler {
   }
 
   private async cancelUnfilledSession(session: SessionWithParty): Promise<void> {
-    console.log(`Cancelling unfilled session ${session.name} - only ${session.partyMembers.length}/6 members`);
+    logger.warn('Cancelling unfilled session', {
+      sessionId: session.id,
+      sessionName: session.name,
+      partySize: session.partyMembers.length,
+    });
 
     // Note: The cancellation message will be formatted per-user in the notifyGuild call
     // For now we use session timezone as the reason string, but notifyGuild doesn't use it directly for user messages
@@ -212,17 +275,22 @@ class SessionScheduler {
     try {
       const { cancelSession } = await import('../modules/session/controller/session.controller.js');
       await cancelSession(session.id, cancellationReason);
-      console.log(`Successfully canceled unfilled session ${session.id}`);
+      logger.info('Successfully canceled unfilled session', { sessionId: session.id });
     } catch (error) {
-      console.error(`CRITICAL: Failed to cancel unfilled session ${session.id}:`, error);
+      logger.error('Failed to cancel unfilled session', { sessionId: session.id, error });
 
       // Try direct database update as fallback
       try {
         const { updateSession } = await import('../modules/session/repository/session.repository.js');
         await updateSession(session.id, { status: 'CANCELED' });
-        console.log(`Fallback: Updated session ${session.id} status to CANCELED directly`);
+        logger.warn('Fallback: updated session status to CANCELED directly', {
+          sessionId: session.id,
+        });
       } catch (fallbackError) {
-        console.error(`CRITICAL: Even fallback database update failed for session ${session.id}:`, fallbackError);
+        logger.error('Fallback cancellation update failed', {
+          sessionId: session.id,
+          error: fallbackError,
+        });
       }
     }
   }
@@ -252,7 +320,7 @@ class SessionScheduler {
 
   public async initializeExistingSessions(): Promise<void> {
     try {
-      console.log('Initializing session scheduler...');
+      logger.info('Initializing session scheduler...');
 
       const { getSessions } = await import('../modules/session/repository/session.repository.js');
 
@@ -265,15 +333,17 @@ class SessionScheduler {
 
       const futureSessions = allSessions.filter(session => isFutureDate(session.date));
 
-      console.log(`Found ${futureSessions.length} future sessions to schedule`);
+      logger.info('Future sessions found for scheduling', {
+        count: futureSessions.length,
+      });
 
       for (const session of futureSessions) {
         this.scheduleSessionTasks(session.id, session.date);
       }
 
-      console.log('Session scheduler initialization complete');
+      logger.info('Session scheduler initialization complete');
     } catch (error) {
-      console.error('Error initializing session scheduler:', error);
+      logger.error('Error initializing session scheduler', { error });
     }
   }
 
@@ -282,7 +352,9 @@ class SessionScheduler {
   }
 
   public shutdown(): void {
-    console.log(`Shutting down session scheduler with ${this.scheduledTasks.size} active tasks...`);
+    logger.info('Shutting down session scheduler', {
+      activeTasks: this.scheduledTasks.size,
+    });
 
     for (const [sessionId, task] of this.scheduledTasks.entries()) {
       try {
@@ -292,14 +364,14 @@ class SessionScheduler {
         if (task.cancellationJob) {
           task.cancellationJob.stop();
         }
-        console.log(`Stopped tasks for session ${sessionId}`);
+        logger.info('Stopped scheduled tasks for session', { sessionId });
       } catch (error) {
-        console.error(`Error stopping tasks for session ${sessionId}:`, error);
+        logger.error('Error stopping tasks for session', { sessionId, error });
       }
     }
 
     this.scheduledTasks.clear();
-    console.log('Session scheduler shutdown complete');
+    logger.info('Session scheduler shutdown complete');
   }
 }
 

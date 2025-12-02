@@ -5,7 +5,7 @@ import {
   TextChannel
 } from 'discord.js';
 import { SessionStatus, RoleType } from '#generated/prisma/client.js';
-import { Session, PartyMemberImgInfo } from '#modules/session/domain/session.types.js';
+import { Session } from '#modules/session/domain/session.types.js';
 import { PartyMember } from '#modules/party/domain/party.types.js';
 import { BotAttachmentFileNames, BotDialogs, BotPaths } from '#shared/messages/botDialogStrings.js';
 import { getImgAttachmentBuilder } from '#shared/files/attachmentBuilders.js';
@@ -13,6 +13,9 @@ import { createSessionImage } from '#shared/messages/sessionImage.js';
 import { safeChannelSend } from '#shared/discord/discordErrorHandler.js';
 import { roleButtons } from '#app/index.js';
 import fs from 'fs';
+import { createScopedLogger } from '#shared/logging/logger.js';
+
+const logger = createScopedLogger('SessionMessages');
 
 /**
  * Get role buttons for session based on status
@@ -77,17 +80,17 @@ export const sendNewSessionMessage = async (
   channel: TextChannel,
   partyMembers: PartyMember[] = []
 ) => {
-  console.log(`Sending new session message for session: ${session.id}`);
+  logger.info('Sending new session message', { sessionId: session.id, channelId: channel.id });
 
   try {
-    console.log(`Creating session image...`);
+    logger.debug('Creating session image for session message', { sessionId: session.id });
     // Dynamic import to avoid circular dependencies
     const sessionController = await import('#modules/session/controller/session.controller.js');
     const party = await sessionController.getPartyInfoForImg(session.id);
     await createSessionImage(session, party);
 
     const imagePath = `${BotPaths.TempDir}/${BotAttachmentFileNames.CurrentSession}`;
-    console.log(`Attempting to attach image from: ${imagePath}`);
+    logger.debug('Attempting to attach session image', { imagePath });
 
     // Check if the file exists before trying to attach it
     if (!fs.existsSync(imagePath)) {
@@ -95,7 +98,7 @@ export const sendNewSessionMessage = async (
     }
 
     const stats = fs.statSync(imagePath);
-    console.log(`Image file found. Size: ${stats.size} bytes`);
+    logger.debug('Session image file found', { imagePath, size: stats.size });
 
     const attachment = getImgAttachmentBuilder(
       imagePath,
@@ -106,20 +109,23 @@ export const sendNewSessionMessage = async (
 
     embed.setDescription(BotDialogs.sessions.scheduled(session.date, session.timezone ?? 'America/Los_Angeles'));
 
-    console.log(`Sending message with embed, image, and buttons to channel: ${channel.id}`);
+    logger.info('Sending session message with embed/image/buttons', { channelId: channel.id });
     const sentMessage = await safeChannelSend(channel, {
       embeds: [embed],
       files: [attachment],
       components: getRoleButtonsForSession(session.status),
     });
 
-    console.log(`Message sent successfully with ID: ${sentMessage.id}`);
+    logger.info('Session message sent', { messageId: sentMessage.id, channelId: channel.id });
     return sentMessage.id;
   } catch (error) {
-    console.error(`Error creating session image, falling back to message without image:`, error);
+    logger.error('Error creating session image, falling back to embed-only message', {
+      sessionId: session.id,
+      error,
+    });
 
     try {
-      console.log(`Sending fallback message without image to channel: ${channel.id}`);
+      logger.info('Sending fallback session message without image', { channelId: channel.id });
       const embed = createPartyMemberEmbed(partyMembers, channel.guildId, session.name, session.status);
       embed.setDescription(BotDialogs.sessions.scheduled(session.date, session.timezone ?? 'America/Los_Angeles'));
 
@@ -128,10 +134,10 @@ export const sendNewSessionMessage = async (
         components: getRoleButtonsForSession(session.status),
       });
 
-      console.log(`Fallback message sent successfully with ID: ${sentMessage.id}`);
+      logger.info('Fallback session message sent', { messageId: sentMessage.id });
       return sentMessage.id;
     } catch (fallbackError) {
-      console.error(`Failed to send fallback message:`, fallbackError);
+      logger.error('Failed to send fallback session message', { error: fallbackError });
       throw fallbackError;
     }
   }
