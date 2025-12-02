@@ -7,6 +7,9 @@ import {
   CreateSessionData,
 } from '#modules/session/domain/session.types.js';
 import { RoleType, Session } from '#generated/prisma/client.js';
+import { createScopedLogger } from '#shared/logging/logger.js';
+
+const logger = createScopedLogger('SessionRepository');
 
 export const createSession = async (
   sessionData: CreateSessionData,
@@ -14,6 +17,14 @@ export const createSession = async (
   party?: PartyMember[],
 ): Promise<Session> => {
   const { campaignId, ...session } = sessionData;
+
+  logger.debug('Creating session in database', {
+    sessionId: sessionData.id,
+    sessionName: sessionData.name,
+    campaignId,
+    creatorUserId: userId,
+    partySize: party?.length ?? 1,
+  });
 
   // Build party members to create - always include the GM, then add any provided party members
   const partyMembersToCreate: { userId: string; roleId: RoleType }[] = [
@@ -35,7 +46,7 @@ export const createSession = async (
     });
   }
 
-  return await prisma.session.create({
+  const createdSession = await prisma.session.create({
     data: {
       ...session,
       campaign: { connect: { id: campaignId } },
@@ -44,6 +55,14 @@ export const createSession = async (
       },
     },
   });
+
+  logger.info('Session created in database', {
+    sessionId: createdSession.id,
+    sessionName: createdSession.name,
+    partyMembersCreated: partyMembersToCreate.length,
+  });
+
+  return createdSession;
 };
 
 export const getSession = async (
@@ -217,14 +236,17 @@ export const updateSession = async (
     ...(data.status && { status: data.status }),
   };
 
-  console.log(`[DB] Updating session ${sessionId} with data:`, JSON.stringify(updateData, null, 2));
+  logger.debug('Updating session', { sessionId, updateData });
 
   const updatedSession = await prisma.session.update({
     where: { id: sessionId },
     data: updateData,
   });
 
-  console.log(`[DB] Updated session result - partyMessageId: ${updatedSession.partyMessageId}`);
+  logger.debug('Updated session result', {
+    sessionId,
+    partyMessageId: updatedSession.partyMessageId,
+  });
 
   return updatedSession;
 };

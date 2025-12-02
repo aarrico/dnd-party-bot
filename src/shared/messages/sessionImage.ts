@@ -8,6 +8,9 @@ import { getRoleImage } from '#modules/role/domain/role.types.js';
 import { Session } from '#modules/session/domain/session.types.js';
 import { PartyMemberImgInfo } from '#modules/session/domain/session.types.js';
 import { formatSessionDate } from '../datetime/dateUtils.js';
+import { createScopedLogger } from '#shared/logging/logger.js';
+
+const logger = createScopedLogger('SessionImage');
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 const defaultFontsDir = path.resolve(process.cwd(), 'resources/fonts');
@@ -198,12 +201,16 @@ export const createSessionImage = async (
 ): Promise<void> => {
   // Create a snapshot of the data for logging to avoid race conditions
   const memberSnapshot = partyMembers.map(u => ({ userId: u.userId, username: u.username, role: u.role }));
-  console.log(`[${session.id}] createSessionImage - session: ${session.name}, members (${memberSnapshot.length}): ${JSON.stringify(memberSnapshot)}`);
+  logger.debug('Creating session image', {
+    sessionId: session.id,
+    sessionName: session.name,
+    members: memberSnapshot,
+  });
 
   // Ensure temp directory exists
   const tempDir = BotPaths.TempDir;
   if (!fs.existsSync(tempDir)) {
-    console.log(`Creating temp directory: ${tempDir}`);
+    logger.debug('Creating temp directory for session image assets', { tempDir });
     fs.mkdirSync(tempDir, { recursive: true });
   }
 
@@ -218,11 +225,15 @@ export const createSessionImage = async (
   });
 
   if (!dm) {
-    console.error(`No dungeon master found! Available users:`, partyMembers);
+    logger.error('No dungeon master found while rendering session image', { sessionId: session.id, partyMembers });
     throw new Error('no dungeon master');
   }
 
-  console.log(`Found DM: ${dm.username} with role: ${dm.role}`);
+  logger.debug('Found DM for session image', {
+    sessionId: session.id,
+    username: dm.username,
+    role: dm.role,
+  });
 
   const dmOverlay = await placeUserAvatar(
     dm.userAvatarURL,
@@ -266,7 +277,11 @@ export const createSessionImage = async (
   // Verify the file was created
   if (fs.existsSync(outputPath)) {
     const stats = fs.statSync(outputPath);
-    console.log(`Session image created successfully at: ${outputPath}, Size: ${stats.size} bytes`);
+    logger.info('Session image created', {
+      sessionId: session.id,
+      outputPath,
+      sizeBytes: stats.size,
+    });
   } else {
     throw new Error(`Failed to create session image at: ${outputPath}`);
   }
@@ -360,7 +375,14 @@ const createTextOverlay = async (
     bold
   );
 
-  console.log(`Creating text overlay: "${text}" with fontSize: ${fontSize}, textWidth: ${textWidth}, maxWidth: ${maxWidth}, maxHeight: ${maxHeight}, bold: ${bold}`);
+  logger.debug('Creating text overlay', {
+    text,
+    fontSize,
+    textWidth,
+    maxWidth,
+    maxHeight,
+    bold,
+  });
 
   const effectiveWidth = textWidth || maxWidth * TEXT_WIDTH_RATIO;
   const paddedWidth = Math.min(
@@ -371,7 +393,7 @@ const createTextOverlay = async (
     )
   );
 
-  console.log(`Effective Width: ${effectiveWidth}, paddedWidth: ${paddedWidth}`);
+  logger.debug('Text overlay width calculation', { effectiveWidth, paddedWidth });
 
   const svgWidth = bold ? maxWidth : paddedWidth;
   const svgHeight = maxHeight;
@@ -381,7 +403,12 @@ const createTextOverlay = async (
   const baselineAdjustment = Math.ceil(fontSize * 0.12);
   const textY = Math.floor(svgHeight / 2) + baselineAdjustment;
 
-  console.log(`SVG Dimensions - Width: ${svgWidth}, Height: ${svgHeight}, TextX: ${textX}, TextY: ${textY}`);
+  logger.debug('Text overlay SVG dimensions', {
+    svgWidth,
+    svgHeight,
+    textX,
+    textY,
+  });
 
   const svg = buildTextSvg(text, {
     width: svgWidth,

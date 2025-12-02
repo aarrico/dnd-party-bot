@@ -1,4 +1,7 @@
 import { ApplicationCommandOptionType, REST, Routes } from 'discord.js';
+import { createScopedLogger } from '#shared/logging/logger.js';
+
+const logger = createScopedLogger('RegisterCommands');
 
 const commands = [
   {
@@ -53,7 +56,7 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN as s
   try {
     if (process.env.GUILD_ID) {
       // Register to specific guild (instant, for development)
-      console.log(`Registering slash commands to guild ${process.env.GUILD_ID}...`);
+      logger.info('Registering slash commands to guild', { guildId: process.env.GUILD_ID });
       await rest.put(
         Routes.applicationGuildCommands(
           process.env.DISCORD_CLIENT_ID as string,
@@ -61,17 +64,17 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN as s
         ),
         { body: commands }
       );
-      console.log('Slash commands registered to guild successfully!');
+      logger.info('Slash commands registered to guild successfully');
     } else {
       // Register globally (takes up to 1 hour to propagate)
-      console.log('Registering slash commands globally...');
+      logger.info('Registering slash commands globally...');
       await rest.put(
         Routes.applicationCommands(process.env.DISCORD_CLIENT_ID as string),
         { body: commands }
       );
-      console.log('Slash commands registered globally successfully! (May take up to 1 hour to appear)');
+      logger.info('Slash commands registered globally successfully (may take up to 1 hour to appear)');
     }
   } catch (error) {
-    console.log(`There was an error: ${error}`);
+    logger.error('Failed to register slash commands', { error });
   }
 })();

@@ -2,6 +2,9 @@ import { GuildMember } from 'discord.js';
 import { getAllUsers, upsertUser, getUserById, addUserToCampaign, isUserInCampaign } from '../repository/user.repository.js';
 import { ListUsersOptions, ListUsersResult } from '../domain/user.types.js';
 import { sendTimezoneOnboardingDM } from '../../../shared/datetime/timezoneUtils.js';
+import { createScopedLogger } from '#shared/logging/logger.js';
+
+const logger = createScopedLogger('UserController');
 
 // listUsers overloads for type safety
 export function listUsers(
@@ -54,17 +57,26 @@ export const newGuildMember = async (member: GuildMember) => {
   }
 
   try {
-    console.log(`New member joined: ${member.user.displayName} (${member.user.id})`);
+    logger.info('New guild member joined', {
+      userId: member.user.id,
+      username: member.user.username,
+      displayName: member.user.displayName,
+      guildId: member.guild.id,
+    });
 
     const dmChannel = await member.user.createDM();
     await upsertUser(member.user.id, member.user.username, dmChannel.id);
-    console.log(`Added user ${member.user.username} to database`);
+    logger.info('Added user to database', { userId: member.user.id });
 
     await sendTimezoneOnboardingDM(member.user);
 
     await addUserToCampaign(member.user.id, member.guild.id);
   } catch (error) {
-    console.error(`Failed to add new guild member ${member.user.displayName}:`, error);
+    logger.error('Failed to add new guild member', {
+      displayName: member.user.displayName,
+      userId: member.user.id,
+      error,
+    });
     // Don't throw - we don't want to break the bot if DMs are disabled
   }
 };
@@ -77,7 +89,11 @@ export const syncGuildMember = async (member: GuildMember, campaignId: string): 
   try {
     const existingUser = await getUserById(member.user.id);
     if (!existingUser) {
-      console.log(`  → New user detected: ${member.user.username} (${member.user.id})`);
+      logger.info('New user detected during sync', {
+        userId: member.user.id,
+        username: member.user.username,
+        campaignId,
+      });
       await newGuildMember(member);
       return;
     }
@@ -85,10 +101,19 @@ export const syncGuildMember = async (member: GuildMember, campaignId: string): 
     const isInCampaign = await isUserInCampaign(member.user.id, campaignId);
     if (!isInCampaign) {
       await addUserToCampaign(member.user.id, campaignId);
-      console.log(`  → Added ${member.user.username} to campaign`);
+      logger.info('Added user to campaign', {
+        userId: member.user.id,
+        username: member.user.username,
+        campaignId,
+      });
     }
   } catch (error) {
-    console.error(`  ✗ Failed to sync user: ${member.user.username} (${member.user.id})`, error);
+    logger.error('Failed to sync user', {
+      userId: member.user.id,
+      username: member.user.username,
+      campaignId,
+      error,
+    });
     throw error;
   }
 };

@@ -26,6 +26,9 @@ import { getRoleByString } from '#modules/role/domain/roleManager.js';
 import { getSessionById } from '#modules/session/repository/session.repository.js';
 import { updateUserTimezone } from '#modules/user/repository/user.repository.js';
 import { buildRegionSelectMenu, buildTimezoneSelectMenu, TIMEZONE_REGIONS } from '#shared/datetime/timezoneUtils.js';
+import { createScopedLogger } from '#shared/logging/logger.js';
+
+const logger = createScopedLogger('InteractionCreateEvent');
 
 const partyMemberJoined = async (
   userId: string,
@@ -68,16 +71,46 @@ const processCommand = async (
 ): Promise<void> => {
   // If GUILD_ID is set, only process commands from that guild
   if (process.env.GUILD_ID && interaction.guildId !== process.env.GUILD_ID) {
-    console.log(`Ignoring command from guild ${interaction.guildId} (only processing ${process.env.GUILD_ID})`);
+    logger.debug('Ignoring command from non-target guild', {
+      receivedGuildId: interaction.guildId,
+      targetGuildId: process.env.GUILD_ID,
+    });
     return;
   }
 
   const command = client.commands.get(interaction.commandName);
   if (!command) {
+    logger.warn('User invoked non-existent command', {
+      commandName: interaction.commandName,
+      userId: interaction.user.id,
+      guildId: interaction.guildId,
+    });
     await interaction.reply(BotDialogs.interactionCreateNonexistentCommand);
     return;
   }
-  await command.execute(interaction as ExtendedInteraction);
+
+  logger.info('Command invoked', {
+    command: interaction.commandName,
+    userId: interaction.user.id,
+    username: interaction.user.username,
+    guildId: interaction.guildId,
+    channelId: interaction.channelId,
+  });
+
+  try {
+    await command.execute(interaction as ExtendedInteraction);
+    logger.info('Command completed', {
+      command: interaction.commandName,
+      userId: interaction.user.id,
+    });
+  } catch (error) {
+    logger.error('Command execution failed', {
+      command: interaction.commandName,
+      userId: interaction.user.id,
+      error,
+    });
+    throw error;
+  }
 };
 
 const processAutocomplete = async (
@@ -99,6 +132,9 @@ const processButton = async (
 ): Promise<void> => {
   // Handle "Change Timezone" button in DMs
   if (interaction.customId === 'change-timezone-button') {
+    logger.debug('User clicked change timezone button', {
+      userId: interaction.user.id,
+    });
     // Create region select menu (first step)
     const regionSelect = buildRegionSelectMenu('change-region-select');
     const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(regionSelect);
@@ -112,6 +148,12 @@ const processButton = async (
     return;
   }
 
+  logger.debug('Processing role selection button', {
+    buttonId: interaction.customId,
+    userId: interaction.user.id,
+    channelId: interaction.channelId,
+  });
+
   const session = await getSessionById(interaction.channelId);
   if (!session) {
     throw new Error('something went wrong getting the session from the db');
@@ -121,12 +163,19 @@ const processButton = async (
     throw new Error('something went wrong getting the channel from discord');
   }
 
-  let message;
+  // Verify the session message exists before processing role selection
   try {
-    message = await interaction.channel.messages.fetch(session.partyMessageId);
-    console.log(`Fetched message ${message.content} successfully.`);
+    await interaction.channel.messages.fetch(session.partyMessageId);
+    logger.debug('Fetched session message successfully', {
+      sessionId: session.id,
+      channelId: interaction.channelId,
+    });
   } catch (error) {
-    console.error(`Failed to fetch message ${session.partyMessageId}:`, error);
+    logger.error('Failed to fetch session message', {
+      sessionId: session.id,
+      messageId: session.partyMessageId,
+      error,
+    });
     throw new Error('Could not find the session message to update');
   }
 
@@ -136,6 +185,13 @@ const processButton = async (
     interaction.customId,
     interaction.channelId
   );
+
+  logger.info('Role selection processed', {
+    sessionId: session.id,
+    userId: interaction.user.id,
+    role: interaction.customId,
+    result: result.status,
+  });
 
   await sendMessageReplyDisappearingMessage(interaction, result.message);
 
@@ -151,7 +207,10 @@ const processButton = async (
       const { regenerateSessionMessage } = await import('#modules/session/controller/session.controller.js');
       await regenerateSessionMessage(session.id, interaction.guildId ?? '');
     } catch (error) {
-      console.error('Failed to update session message:', error);
+      logger.error('Failed to update session message after party change', {
+        sessionId: session.id,
+        error,
+      });
     }
   }
 };
@@ -197,7 +256,11 @@ const processStringSelectMenu = async (interaction: StringSelectMenuInteraction<
       flags: MessageFlags.Ephemeral,
     });
 
-    console.log(`[Onboarding] Set timezone for user ${user.username} (${user.id}) to ${selectedTimezone}`);
+    logger.info('Updated user timezone via onboarding', {
+      userId: user.id,
+      username: user.username,
+      timezone: selectedTimezone,
+    });
   }
 };
 

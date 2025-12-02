@@ -19,6 +19,10 @@ export interface RetryOptions {
 /**
  * Default retry options
  */
+import { createScopedLogger } from '#shared/logging/logger.js';
+
+const logger = createScopedLogger('RetryWithBackoff');
+
 const DEFAULT_OPTIONS: Required<RetryOptions> = {
   maxRetries: 3,
   initialDelayMs: 1000,
@@ -26,9 +30,11 @@ const DEFAULT_OPTIONS: Required<RetryOptions> = {
   backoffMultiplier: 2,
   shouldRetry: isRetryableError,
   onRetry: (attempt, error, delayMs) => {
-    console.warn(
-      `Retry attempt ${attempt} after ${delayMs}ms due to error: ${error.message || error.code || 'Unknown error'}`
-    );
+    logger.warn('Retrying operation', {
+      attempt,
+      delayMs,
+      error: error?.message || error?.code || 'Unknown error',
+    });
   },
 };
 

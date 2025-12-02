@@ -17,6 +17,7 @@ import * as fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { inspect } from 'node:util';
 import { syncGuildsFromDiscord } from '#modules/guild/repository/guild.repository.js';
+import { createScopedLogger } from '#shared/logging/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -43,6 +44,7 @@ const SRC_DIR = isCompiledCode
 export class ExtendedClient extends Client {
   commands: Collection<string, DiscordCommand> = new Collection();
   commandData: any = [];
+  private readonly logger = createScopedLogger('DiscordClient');
 
   constructor() {
     const options: ClientOptions = {
@@ -68,61 +70,65 @@ export class ExtendedClient extends Client {
   private setupErrorHandlers(): void {
     // Handle WebSocket errors
     this.on(Events.Error, (error) => {
-      console.error('Discord client error:', error);
+      this.logger.error('Discord client error', { error });
     });
 
     // Handle WebSocket warnings
     this.on(Events.Warn, (warning) => {
-      console.warn('Discord client warning:', warning);
+      this.logger.warn('Discord client warning', { warning });
     });
 
     // Handle rate limit events
     this.on(Events.Debug, (info) => {
       // Only log rate limit related debug info
       if (info.includes('429') || info.toLowerCase().includes('rate limit')) {
-        console.warn('Rate limit debug:', info);
+        this.logger.warn('Rate limit debug', { info });
       }
     });
 
     // Handle disconnect events
     this.on(Events.ShardDisconnect, (event, shardId) => {
-      console.warn(`Shard ${shardId} disconnected (code: ${event.code}, reason: ${event.reason})`);
+      this.logger.warn('Shard disconnected', {
+        shardId,
+        code: event.code,
+        reason: event.reason,
+      });
     });
 
     // Handle reconnect events
     this.on(Events.ShardReconnecting, (shardId) => {
-      console.log(`Shard ${shardId} is reconnecting...`);
+      this.logger.info('Shard reconnecting', { shardId });
     });
 
     // Handle resume events
     this.on(Events.ShardResume, (shardId, replayedEvents) => {
-      console.log(`Shard ${shardId} resumed successfully (replayed ${replayedEvents} events)`);
+      this.logger.info('Shard resumed', { shardId, replayedEvents });
     });
 
     // Handle shard ready events
     this.on(Events.ShardReady, (shardId) => {
-      console.log(`Shard ${shardId} is ready`);
+      this.logger.info('Shard ready', { shardId });
     });
 
     // Handle process-level errors
     process.on('unhandledRejection', (error: Error) => {
-      console.error('Unhandled promise rejection:', error);
+      this.logger.error('Unhandled promise rejection', { error });
 
       // Check if it's a socket error
       if (error.message && error.message.includes('other side closed')) {
-        console.warn('Socket closed error detected - Discord.js will automatically retry');
+        this.logger.warn('Socket closed error detected - Discord.js will automatically retry');
       }
     });
 
     process.on('uncaughtException', (error: Error) => {
-      console.error('Uncaught exception:', error);
+      this.logger.error('Uncaught exception', { error });
 
       // For critical errors, we might want to restart
       // but for socket errors, just log and continue
       if (error.message && error.message.includes('other side closed')) {
-        console.warn('Socket closed exception detected - continuing operation');
+        this.logger.warn('Socket closed exception detected - continuing operation');
       } else {
-        console.error('Critical error - consider restarting the application');
+        this.logger.error('Critical error - consider restarting the application');
         // Optionally exit and let process manager restart
         // process.exit(1);
       }
@@ -135,7 +141,7 @@ export class ExtendedClient extends Client {
     // Register commands globally or to specific guild
     if (process.env.GUILD_ID) {
       // Development mode: register to specific guild for instant updates
-      console.log('GUILD_ID found - registering commands to specific guild for development');
+      this.logger.info('GUILD_ID found - registering commands to specific guild for development');
       await this.registerCommandsToGuild(process.env.GUILD_ID);
     } else {
       // Production mode: register globally (takes up to 1 hour to propagate)
@@ -145,7 +151,7 @@ export class ExtendedClient extends Client {
     await this.getEvents(getAllFolders(path.join(SRC_DIR, 'events')));
 
     try {
-      console.log('Syncing guilds from Discord...');
+      this.logger.info('Syncing guilds from Discord...');
       const discordGuilds = await this.guilds.fetch();
       const campaigns = discordGuilds.map(guild => ({
         id: guild.id,
@@ -153,9 +159,9 @@ export class ExtendedClient extends Client {
       }));
 
       await syncGuildsFromDiscord(campaigns);
-      console.log(`Successfully synced ${campaigns.length} guild(s) to database`);
+      this.logger.info('Successfully synced guilds to database', { count: campaigns.length });
     } catch (error) {
-      console.error('Failed to sync guilds from Discord:', error);
+      this.logger.error('Failed to sync guilds from Discord', { error });
     }
   };
 
@@ -179,9 +185,7 @@ export class ExtendedClient extends Client {
           this.commands.set(command.data.name, command);
           this.commandData.push(command.data.toJSON());
         } else {
-          console.log(
-            `[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`
-          );
+          this.logger.warn('Command missing required properties', { filePath });
         }
       }
     }
@@ -194,7 +198,7 @@ export class ExtendedClient extends Client {
     const events =
       await this.getItemsFromFiles<Event<keyof ClientEvents>>(eventFiles);
 
-    console.log(`${events.length} events found`);
+    this.logger.info('Events discovered', { count: events.length });
 
     events.forEach((event) => {
       this.on(event.name, event.execute);
@@ -208,7 +212,9 @@ export class ExtendedClient extends Client {
       );
       return Promise.all(promises);
     } catch (error) {
-      console.error(`Error loading modules from files:`, inspect(error, { depth: null, colors: true }));
+      this.logger.error('Error loading modules from files', {
+        error: inspect(error, { depth: null, colors: true }),
+      });
       process.exit(1);
     }
   };
@@ -218,21 +224,25 @@ export class ExtendedClient extends Client {
    */
   registerCommands = async () => {
     if (this.commands.size === 0) {
-      console.error('No commands to register!');
+      this.logger.error('No commands to register!');
       return;
     }
 
     const rest = new REST().setToken(process.env.DISCORD_TOKEN as string);
     try {
-      console.log('Registering commands globally...');
+      this.logger.info('Registering commands globally...');
       await rest.put(
         Routes.applicationCommands(process.env.DISCORD_CLIENT_ID as string),
         { body: this.commandData }
       );
 
-      console.log(`Successfully registered ${this.commandData.length} application (/) commands globally.`);
+      this.logger.info('Successfully registered commands globally', {
+        count: this.commandData.length,
+      });
     } catch (error) {
-      console.error('Failed registering commands globally:', inspect(error, { depth: null, colors: true }));
+      this.logger.error('Failed registering commands globally', {
+        error: inspect(error, { depth: null, colors: true }),
+      });
     }
   };
 
@@ -241,13 +251,13 @@ export class ExtendedClient extends Client {
    */
   registerCommandsToGuild = async (guildId: string) => {
     if (this.commands.size === 0) {
-      console.error('No commands to register!');
+      this.logger.error('No commands to register!');
       return;
     }
 
     const rest = new REST().setToken(process.env.DISCORD_TOKEN as string);
     try {
-      console.log(`Registering commands to guild ${guildId}...`);
+      this.logger.info('Registering commands to guild', { guildId });
       await rest.put(
         Routes.applicationGuildCommands(
           process.env.DISCORD_CLIENT_ID as string,
@@ -256,9 +266,15 @@ export class ExtendedClient extends Client {
         { body: this.commandData }
       );
 
-      console.log(`Successfully registered ${this.commandData.length} commands to guild ${guildId}.`);
+      this.logger.info('Successfully registered commands to guild', {
+        guildId,
+        count: this.commandData.length,
+      });
     } catch (error) {
-      console.error(`Failed registering commands to guild ${guildId}:`, inspect(error, { depth: null, colors: true }));
+      this.logger.error('Failed registering commands to guild', {
+        guildId,
+        error: inspect(error, { depth: null, colors: true }),
+      });
     }
   };
 }

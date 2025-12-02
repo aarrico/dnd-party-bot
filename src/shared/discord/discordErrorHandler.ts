@@ -1,4 +1,7 @@
 import { retryWithBackoff, RetryOptions } from './retryWithBackoff.js';
+import { createScopedLogger } from '#shared/logging/logger.js';
+
+const logger = createScopedLogger('DiscordErrorHandler');
 import {
   Client,
   Guild,
@@ -26,9 +29,7 @@ const DEFAULT_DISCORD_RETRY_OPTIONS: RetryOptions = {
   backoffMultiplier: 2,
   onRetry: (attempt, error: unknown, delayMs) => {
     const errorMsg = error instanceof Error ? error.message : (typeof error === 'object' && error !== null && 'code' in error ? String((error as { code: string }).code) : 'Unknown');
-    console.warn(
-      `[Discord API Retry] Attempt ${attempt} after ${delayMs}ms - Error: ${errorMsg}`
-    );
+    logger.warn('Discord API retry attempt', { attempt, delayMs, error: errorMsg });
   },
 };
 

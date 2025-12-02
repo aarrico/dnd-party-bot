@@ -8,14 +8,17 @@ import { monthOptionChoicesArray } from '#shared/constants/dateConstants.js';
 import { ExtendedInteraction } from '#shared/types/discord.js';
 import { continueSession } from '#modules/session/controller/session.controller.js';
 import DateChecker from '#shared/datetime/dateChecker.js';
-import { notifyGuild, notifyParty, sendEphemeralReply } from '#shared/discord/messages.js';
+import { notifyParty, sendEphemeralReply } from '#shared/discord/messages.js';
 import { inspect } from 'util';
 import { getUserTimezone, upsertUser } from '#modules/user/repository/user.repository.js';
 import { handleTimezoneAutocomplete } from '#shared/datetime/timezoneUtils.js';
 import { client } from '#app/index.js';
-import { formatSessionContinueDM, formatSessionCreationDM } from '#shared/messages/sessionNotifications.js';
+import { formatSessionContinueDM } from '#shared/messages/sessionNotifications.js';
 import { sanitizeUserInput } from '#shared/validation/sanitizeUserInput.js';
 import { getSessionById } from '#modules/session/repository/session.repository.js';
+import { createScopedLogger } from '#shared/logging/logger.js';
+
+const logger = createScopedLogger('ContinueSessionCommand');
 
 // Helper function to convert number to Roman numerals
 function toRomanNumeral(num: number): string {
@@ -130,14 +133,14 @@ export default {
     ),
   async autocomplete(interaction: AutocompleteInteraction) {
     const focusedOption = interaction.options.getFocused(true);
-    
+
     if (focusedOption.name === String(BotCommandOptionInfo.ContinueSession_ChannelName)) {
       if (!interaction.guild) return;
-      
+
       const channels = await interaction.guild.channels.fetch();
       const topLevelTextChannels = channels
-        .filter(channel => 
-          channel?.type === ChannelType.GuildText && 
+        .filter(channel =>
+          channel?.type === ChannelType.GuildText &&
           channel.parentId === null
         )
         .map(channel => ({
@@ -234,6 +237,16 @@ export default {
         channel.name === normalizedChannelName
       );
 
+      logger.info('Session continued successfully', {
+        previousSessionId: existingSession.id,
+        newSessionId: session.id,
+        newSessionName: newSessionName,
+        campaignId: campaign.id,
+        userId: interaction.user.id,
+        scheduledDate: date.toISOString(),
+        partySize: party.length,
+      });
+
       await interaction.editReply({
         content: createdChannel
           ? BotDialogs.continueSessionSuccess(
@@ -264,7 +277,9 @@ export default {
       } else {
         await interaction.reply(payload);
       }
-      console.error(`Error continuing session:`, inspect(error, { depth: null, colors: true }))
+      logger.error('Error continuing session', {
+        error: inspect(error, { depth: null, colors: true })
+      });
     }
   },
 };

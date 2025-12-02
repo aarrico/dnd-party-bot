@@ -6,6 +6,9 @@ import {
   ListUserWithSessionsResult,
 } from '../domain/user.types.js';
 import { client } from '../../../index.js';
+import { createScopedLogger } from '#shared/logging/logger.js';
+
+const logger = createScopedLogger('UserRepository');
 
 export const upsertUser = async (userId: string, username: string, channelId: string) => {
   return await prisma.user.upsert({
@@ -22,6 +25,7 @@ export const upsertUser = async (userId: string, username: string, channelId: st
 }
 
 export const updateUserTimezone = async (userId: string, timezone: string) => {
+  logger.debug('Updating user timezone', { userId, timezone });
   return await prisma.user.update({
     where: { id: userId },
     data: { timezone },
@@ -53,6 +57,7 @@ export const updatePartyMemberRole = async (
   sessionId: string,
   roleId: RoleType
 ): Promise<void> => {
+  logger.debug('Updating party member role', { userId, sessionId, roleId });
   await prisma.partyMember.update({
     where: { party_member_id: { sessionId, userId } },
     data: { roleId },
@@ -62,9 +67,10 @@ export const updatePartyMemberRole = async (
 export const addUserToParty = async (
   userId: string,
   sessionId: string,
-  roleId: RoleType,
-  username?: string
+  role: RoleType,
+  username: string
 ): Promise<void> => {
+  logger.debug('Adding user to party', { userId, sessionId, role, username });
   // Ensure the user exists in the database before adding to party
   if (username) {
     const user = await client.users.fetch(userId);
@@ -93,12 +99,14 @@ export const addUserToParty = async (
     create: {
       userId,
       sessionId,
-      roleId,
+      roleId: role,
     },
     update: {
-      roleId,
+      roleId: role,
     },
   });
+
+  logger.info('User added to party', { userId, sessionId, role });
 };
 
 export const getSessionsForUser = async (

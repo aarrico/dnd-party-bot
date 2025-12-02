@@ -13,6 +13,9 @@ import {
   safeGuildMembersFetch,
   safeUserSend,
 } from '#shared/discord/discordErrorHandler.js';
+import { createScopedLogger } from '#shared/logging/logger.js';
+
+const logger = createScopedLogger('DiscordMessages');
 
 /**
  * Send a disappearing message to a channel
@@ -66,7 +69,7 @@ export const sendEphemeralReply = async (
       });
     }
   } catch (error) {
-    console.error('Error in sendEphemeralReply:', error);
+    logger.error('Error in sendEphemeralReply', { error });
     // If all else fails, try editReply
     try {
       return await interaction.editReply({
@@ -74,7 +77,7 @@ export const sendEphemeralReply = async (
         files: files ? [...files] : undefined
       });
     } catch (editError) {
-      console.error('Error in editReply fallback:', editError);
+      logger.error('Error in editReply fallback', { error: editError });
       throw editError;
     }
   }
@@ -130,7 +133,7 @@ export const notifyGuild = async (
         content: formattedMessage,
       });
     } catch (error) {
-      console.warn(`Failed to send DM to user ${user.id}:`, error);
+      logger.warn('Failed to send DM to user', { userId: user.id, error });
       return null;
     }
   }));
@@ -148,7 +151,7 @@ export const notifyParty = async (
         content: formattedMessage,
       });
     } catch (error) {
-      console.warn(`Failed to send DM to party member ${userId}:`, error);
+      logger.warn('Failed to send DM to party member', { userId, error });
       return null;
     }
   }));
