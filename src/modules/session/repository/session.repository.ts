@@ -311,3 +311,13 @@ export const isUserMemberOnDate = async (
 
   return Number(result[0].count) > 0;
 };
+
+export const getSessionByPartyMessageId = async (
+  messageId: string
+): Promise<Session | null> => {
+  return await prisma.session.findFirst({
+    where: {
+      partyMessageId: messageId,
+    },
+  });
+};
