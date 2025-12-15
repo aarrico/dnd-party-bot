@@ -45,6 +45,14 @@ export const BotDialogs = {
   continueSessionSuccessFallback: (originalName: string, newName: string, date: Date, channelName: string) =>
     `✅ Session continued from **${originalName}** to **${newName}**!\n📅 Scheduled for: ${format(date, 'PPP')}\n🎲 Join the session: #${channelName}`,
   continueSessionError: '❌ There was an error continuing the session. Please try again.',
+  fullSessionDMSessionTime: (
+    campaign: Guild,
+    session: Pick<Session, 'name' | 'id' | 'partyMessageId' | 'date'>,
+    timezone: string,
+  ) =>
+    `🎉 Gather your gear and supplies! The [${campaign.name}](https://discord.com/channels/${campaign.id}) session is full!\n🎲 [${session.name}](https://discord.com/channels/${campaign.id}/${session.id}/${session.partyMessageId})\n📅 ${formatSessionDateLong(session.date, timezone)}`,
+  fullSessionInvalidChannel: '❌ Invalid channel selected. Please select a text channel.',
+
 
   sessions: {
     listAllResult: '🤖🎉 Report for all scheduled sessions is ready!',

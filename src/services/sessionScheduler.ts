@@ -1,15 +1,15 @@
 import { CronJob } from 'cron';
-import { client } from '../index.js';
 import { getSessionById } from '../modules/session/repository/session.repository.js';
 import { SessionWithParty } from '../modules/session/domain/session.types.js';
-import { notifyGuild } from '../shared/discord/messages.js';
 import {
   getHoursBefore,
   getMinutesBefore,
   formatSessionDateLong,
-  isFutureDate
+  isFutureDate,
 } from '../shared/datetime/dateUtils.js';
 import { createScopedLogger } from '#shared/logging/logger.js';
+import { getUserTimezone } from '../modules/user/repository/user.repository.js';
+import { notifyParty } from '../shared/discord/messages.js';
 
 const logger = createScopedLogger('SessionSchedulerService');
 
@@ -40,6 +40,13 @@ class SessionScheduler {
 
     const task: ScheduledTask = { sessionId };
 
+    logger.info('Scheduling tasks for session', {
+      sessionId,
+      sessionDate: sessionDate.toISOString(),
+      reminderTime: reminderTime.toISOString(),
+      cancelTime: cancelTime.toISOString(),
+    });
+
     if (isFutureDate(reminderTime)) {
       const reminderJob = new CronJob(
         reminderTime,
@@ -49,12 +56,12 @@ class SessionScheduler {
         'UTC'
       );
       task.reminderJob = reminderJob;
-      logger.info('Scheduled reminder', {
+      logger.info('✅ Scheduled reminder job', {
         sessionId,
         reminderTime: reminderTime.toISOString(),
       });
     } else {
-      logger.debug('Reminder time already passed', {
+      logger.info('⏭️ Reminder time already passed, skipping', {
         sessionId,
         reminderTime: reminderTime.toISOString(),
       });
@@ -69,12 +76,12 @@ class SessionScheduler {
         'UTC'
       );
       task.cancellationJob = cancellationJob;
-      logger.info('Scheduled cancellation check', {
+      logger.info('✅ Scheduled cancellation check job', {
         sessionId,
         cancelTime: cancelTime.toISOString(),
       });
     } else {
-      logger.debug('Cancellation time already passed', {
+      logger.info('⏭️ Cancellation time already passed, skipping', {
         sessionId,
         cancelTime: cancelTime.toISOString(),
       });
@@ -82,6 +89,11 @@ class SessionScheduler {
 
     if (task.reminderJob || task.cancellationJob) {
       this.scheduledTasks.set(sessionId, task);
+      logger.info('Session tasks registered', {
+        sessionId,
+        hasReminder: !!task.reminderJob,
+        hasCancellation: !!task.cancellationJob,
+      });
     } else {
       logger.info('No tasks scheduled, all times passed', { sessionId });
     }
@@ -117,10 +129,14 @@ class SessionScheduler {
 
     if (!task.cancellationJob) {
       this.scheduledTasks.delete(sessionId);
-      logger.info('Cleared reminder task; no cancellation job remained', { sessionId });
+      logger.info('Cleared reminder task; no cancellation job remained', {
+        sessionId,
+      });
     } else {
       this.scheduledTasks.set(sessionId, task);
-      logger.info('Cleared reminder task; cancellation job still scheduled', { sessionId });
+      logger.info('Cleared reminder task; cancellation job still scheduled', {
+        sessionId,
+      });
     }
   }
 
@@ -130,15 +146,14 @@ class SessionScheduler {
     try {
       const session = await getSessionById(sessionId, true);
 
-      const isPartyFull = session.partyMembers.length >= 6;
       logger.debug('Session reminder context', {
         sessionId,
         sessionName: session.name,
         partySize: session.partyMembers.length,
-        isPartyFull,
       });
 
-      await this.sendSessionReminders(session, isPartyFull);
+      // Send reminder DMs to party members (status will change to ACTIVE at 5 min mark)
+      await this.sendSessionReminders(session);
       logger.info('Session reminder completed', { sessionId });
     } catch (error) {
       logger.error('Error handling reminder for session', { sessionId, error });
@@ -171,9 +186,13 @@ class SessionScheduler {
         });
 
         try {
-          const { updateSession } = await import('../modules/session/repository/session.repository.js');
+          const { updateSession } = await import(
+            '../modules/session/repository/session.repository.js'
+          );
           await updateSession(session.id, { status: 'ACTIVE' });
-          logger.info('Updated session status to ACTIVE after full party', { sessionId: session.id });
+          logger.info('Updated session status to ACTIVE after full party', {
+            sessionId: session.id,
+          });
         } catch (error) {
           logger.error('Failed to update session status to ACTIVE', {
             sessionId: session.id,
@@ -182,23 +201,18 @@ class SessionScheduler {
         }
 
         try {
-          const { createSessionImage } = await import('../shared/messages/sessionImage.js');
-          const { getPartyInfoForImg } = await import('../modules/session/controller/session.controller.js');
-          const party = await getPartyInfoForImg(session.id);
-          const sessionData = {
-            id: session.id,
-            name: session.name,
-            date: session.date,
-            campaignId: session.campaignId,
-            partyMessageId: session.partyMessageId ?? '',
-            eventId: session.eventId,
-            status: 'ACTIVE' as const,
-            timezone: session.timezone ?? 'America/Los_Angeles',
-          };
-          await createSessionImage(sessionData, party);
-          logger.info('Regenerated session image with ACTIVE status', { sessionId: session.id });
+          const { regenerateSessionMessage } = await import(
+            '../modules/session/controller/session.controller.js'
+          );
+          await regenerateSessionMessage(session.id, session.campaignId);
+          logger.info('Regenerated and updated session message with ACTIVE status', {
+            sessionId: session.id,
+          });
         } catch (error) {
-          logger.error('Failed to regenerate session image during cancellation handling', { error });
+          logger.error(
+            'Failed to regenerate session message during cancellation handling',
+            { sessionId: session.id, error }
+          );
         }
       }
 
@@ -208,80 +222,59 @@ class SessionScheduler {
         wasCanceled: !isPartyFull,
       });
     } catch (error) {
-      logger.error('Error handling cancellation for session', { sessionId, error });
+      logger.error('Error handling cancellation for session', {
+        sessionId,
+        error,
+      });
     }
   }
 
-  private async sendSessionReminders(session: SessionWithParty, sendToPartyOnly: boolean): Promise<void> {
+  private async sendSessionReminders(session: SessionWithParty): Promise<void> {
     logger.info('Sending session reminders', {
       sessionId: session.id,
       sessionName: session.name,
       partySize: session.partyMembers.length,
-      sendToPartyOnly,
     });
 
-    if (sendToPartyOnly) {
-      let successCount = 0;
-      let failureCount = 0;
+    const partyMemberIds = session.partyMembers.map((member) => member.userId);
 
-      for (const member of session.partyMembers) {
-        try {
-          const { getUserTimezone } = await import('../modules/user/repository/user.repository.js');
-          const userTimezone = await getUserTimezone(member.userId);
-          const reminderMessage = this.createReminderMessage(session, userTimezone);
+    await notifyParty(partyMemberIds, async (userId: string) => {
+      const userTimezone = await getUserTimezone(userId);
+      return this.createReminderMessage(session, userTimezone);
+    });
 
-          const user = await client.users.fetch(member.userId);
-          await user.send(reminderMessage);
-          logger.debug('Sent reminder DM', {
-            sessionId: session.id,
-            userId: member.userId,
-          });
-          successCount++;
-        } catch (error) {
-          logger.error('Failed to send reminder DM', {
-            sessionId: session.id,
-            userId: member.userId,
-            error,
-          });
-          failureCount++;
-        }
-      }
-
-      logger.info('Reminder summary', {
-        sessionId: session.id,
-        successCount,
-        failureCount,
-      });
-    } else {
-      const { getUserTimezone } = await import('../modules/user/repository/user.repository.js');
-      await notifyGuild(session.campaignId, async (userId: string) => {
-        const userTimezone = await getUserTimezone(userId);
-        return this.createReminderMessage(session, userTimezone);
-      });
-    }
+    logger.info('Session reminders sent', { sessionId: session.id });
   }
 
-  private async cancelUnfilledSession(session: SessionWithParty): Promise<void> {
+  private async cancelUnfilledSession(
+    session: SessionWithParty
+  ): Promise<void> {
     logger.warn('Cancelling unfilled session', {
       sessionId: session.id,
       sessionName: session.name,
       partySize: session.partyMembers.length,
     });
 
-    // Note: The cancellation message will be formatted per-user in the notifyGuild call
-    // For now we use session timezone as the reason string, but notifyGuild doesn't use it directly for user messages
-    const cancellationReason = `Insufficient players (${session.partyMembers.length}/6)`;
-
     try {
-      const { cancelSession } = await import('../modules/session/controller/session.controller.js');
+      const { cancelSession } = await import(
+        '../modules/session/controller/session.controller.js'
+      );
+      const cancellationReason = `Insufficient players (${session.partyMembers.length}/6)`;
       await cancelSession(session.id, cancellationReason);
-      logger.info('Successfully canceled unfilled session', { sessionId: session.id });
+      logger.info('Successfully canceled unfilled session', {
+        sessionId: session.id,
+      });
     } catch (error) {
-      logger.error('Failed to cancel unfilled session', { sessionId: session.id, error });
+      logger.error('Failed to cancel unfilled session', {
+        sessionId: session.id,
+        error,
+      });
 
       // Try direct database update as fallback
       try {
-        const { updateSession } = await import('../modules/session/repository/session.repository.js');
+        const { updateSession } = await import(
+          '../modules/session/repository/session.repository.js'
+        );
         await updateSession(session.id, { status: 'CANCELED' });
         logger.warn('Fallback: updated session status to CANCELED directly', {
           sessionId: session.id,
@@ -295,34 +288,29 @@ class SessionScheduler {
     }
   }
 
-
-  private createReminderMessage(session: SessionWithParty, timezone: string): string {
+  private createReminderMessage(
+    session: SessionWithParty,
+    timezone: string
+  ): string {
     const sessionTime = formatSessionDateLong(session.date, timezone);
 
-    return `⏰ **Session Reminder**\n\n` +
+    return (
+      `⏰ **Session Reminder**\n\n` +
       `🎲 **[${session.name}](https://discord.com/channels/${session.campaignId}/${session.id}/${session.partyMessageId})** starts in 1 hour!\n` +
       `📅 **Time:** ${sessionTime}\n` +
       `🏰 **Channel:** <#${session.id}>\n` +
       `👥 **Party Size:** ${session.partyMembers.length}/6 members\n\n` +
-      `See you at the table! 🎯`;
-  }
-
-
-  private createCancellationMessage(session: SessionWithParty, timezone: string): string {
-    const sessionTime = formatSessionDateLong(session.date, timezone);
-
-    return `❌ **Session Canceled**\n\n` +
-      `🎲 **[${session.name}](https://discord.com/channels/${session.campaignId}/${session.id}/${session.partyMessageId})** has been canceled due to insufficient players.\n` +
-      `📅 **Was scheduled for:** ${sessionTime}\n` +
-      `👥 **Party Size:** ${session.partyMembers.length}/6 members (minimum 6 required)\n\n` +
-      `We need a full party to run the session. Please try scheduling a new session when more players are available! 🎯`;
+      `See you at the table! 🎯`
+    );
   }
 
   public async initializeExistingSessions(): Promise<void> {
     try {
-      logger.info('Initializing session scheduler...');
+      logger.info('🔄 Initializing session scheduler...');
 
-      const { getSessions } = await import('../modules/session/repository/session.repository.js');
+      const { getSessions } = await import(
+        '../modules/session/repository/session.repository.js'
+      );
 
       const allSessions = await getSessions({
         includeId: true,
@@ -331,19 +319,33 @@ class SessionScheduler {
         includeUserRole: false,
       });
 
-      const futureSessions = allSessions.filter(session => isFutureDate(session.date));
+      const futureSessions = allSessions.filter((session) =>
+        isFutureDate(session.date)
+      );
 
-      logger.info('Future sessions found for scheduling', {
-        count: futureSessions.length,
+      logger.info('📅 Future sessions found for scheduling', {
+        totalSessions: allSessions.length,
+        futureSessions: futureSessions.length,
       });
 
-      for (const session of futureSessions) {
-        this.scheduleSessionTasks(session.id, session.date);
+      if (futureSessions.length === 0) {
+        logger.info('ℹ️  No future sessions to schedule');
+      } else {
+        for (const session of futureSessions) {
+          logger.info('📝 Scheduling session', {
+            sessionId: session.id,
+            sessionDate: session.date.toISOString(),
+          });
+          this.scheduleSessionTasks(session.id, session.date);
+        }
       }
 
-      logger.info('Session scheduler initialization complete');
+      logger.info('✅ Session scheduler initialization complete', {
+        scheduledSessions: futureSessions.length,
+        totalTasks: this.scheduledTasks.size,
+      });
     } catch (error) {
-      logger.error('Error initializing session scheduler', { error });
+      logger.error('❌ Error initializing session scheduler', { error });
     }
   }
 

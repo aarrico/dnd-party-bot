@@ -9,6 +9,7 @@ import { Session } from '#modules/session/domain/session.types.js';
 import { PartyMemberImgInfo } from '#modules/session/domain/session.types.js';
 import { formatSessionDate } from '../datetime/dateUtils.js';
 import { createScopedLogger } from '#shared/logging/logger.js';
+import type { SessionStatus } from '#modules/session/domain/session.types.js';
 
 const logger = createScopedLogger('SessionImage');
 
@@ -16,7 +17,9 @@ const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 const defaultFontsDir = path.resolve(process.cwd(), 'resources/fonts');
 const fallbackFontsDir = path.resolve(moduleDir, '../../resources/fonts');
 
-const resolvedFontsDir = fs.existsSync(path.join(defaultFontsDir, 'Vecna-oppx.ttf'))
+const resolvedFontsDir = fs.existsSync(
+  path.join(defaultFontsDir, 'Vecna-oppx.ttf')
+)
   ? defaultFontsDir
   : fallbackFontsDir;
 
@@ -117,7 +120,10 @@ const measureTextDimensions = async (
     return cached;
   }
 
-  const measurementWidth = Math.max(64, Math.ceil(fontSize * (text.length + 2)));
+  const measurementWidth = Math.max(
+    64,
+    Math.ceil(fontSize * (text.length + 2))
+  );
   const measurementHeight = Math.max(64, Math.ceil(fontSize * 2));
 
   const svg = buildTextSvg(text, {
@@ -179,19 +185,39 @@ const calculateOptimalFontMetrics = async (
   }
 
   if (bestWidth === 0 && bestHeight === 0) {
-    const { width, height } = await measureTextDimensions(text, bestFontSize, bold);
+    const { width, height } = await measureTextDimensions(
+      text,
+      bestFontSize,
+      bold
+    );
     bestWidth = width;
     bestHeight = height;
   }
 
-  return { fontSize: bestFontSize, textWidth: bestWidth, textHeight: bestHeight };
+  return {
+    fontSize: bestFontSize,
+    textWidth: bestWidth,
+    textHeight: bestHeight,
+  };
 };
 
 const coords = {
   member: { width: 300, height: 300, x: [365, 795, 1225, 1655, 2085], y: 1700 },
   dm: { width: 380, height: 380, x: 1170, y: 380 },
-  sessionName: { x: 585, y: 925, maxWidth: 1600, maxHeight: 160, visualCenterX: 1358 },
-  date: { x: 1000, y: 1140, maxWidth: 1300, maxHeight: 160, visualCenterX: 1358 },
+  sessionName: {
+    x: 585,
+    y: 925,
+    maxWidth: 1600,
+    maxHeight: 160,
+    visualCenterX: 1358,
+  },
+  date: {
+    x: 1000,
+    y: 1140,
+    maxWidth: 1300,
+    maxHeight: 160,
+    visualCenterX: 1358,
+  },
   role: { yImg: 1300, yName: 2150, width: 300, height: 300 },
 };
 
@@ -200,7 +226,12 @@ export const createSessionImage = async (
   partyMembers: PartyMemberImgInfo[]
 ): Promise<void> => {
   // Create a snapshot of the data for logging to avoid race conditions
-  const memberSnapshot = partyMembers.map(u => ({ userId: u.userId, username: u.username, role: u.role }));
+  const memberSnapshot = partyMembers.map((u) => ({
+    userId: u.userId,
+    displayName: u.displayName,
+    username: u.username,
+    role: u.role,
+  }));
   logger.debug('Creating session image', {
     sessionId: session.id,
     sessionName: session.name,
@@ -210,7 +241,9 @@ export const createSessionImage = async (
   // Ensure temp directory exists
   const tempDir = BotPaths.TempDir;
   if (!fs.existsSync(tempDir)) {
-    logger.debug('Creating temp directory for session image assets', { tempDir });
+    logger.debug('Creating temp directory for session image assets', {
+      tempDir,
+    });
     fs.mkdirSync(tempDir, { recursive: true });
   }
 
@@ -219,24 +252,28 @@ export const createSessionImage = async (
     throw new Error(`Backdrop image not found at: ${BotPaths.SessionBackdrop}`);
   }
 
-  const dm = partyMembers.find((member) => {
+  const gameMaster = partyMembers.find((member) => {
     const roleData = getRoleByString(member.role);
     return roleData.id === RoleType.GAME_MASTER;
   });
 
-  if (!dm) {
-    logger.error('No dungeon master found while rendering session image', { sessionId: session.id, partyMembers });
+  if (!gameMaster) {
+    logger.error('No dungeon master found while rendering session image', {
+      sessionId: session.id,
+      partyMembers,
+    });
     throw new Error('no dungeon master');
   }
 
-  logger.debug('Found DM for session image', {
+  logger.debug('Found GM for session image', {
     sessionId: session.id,
-    username: dm.username,
-    role: dm.role,
+    displayName: gameMaster.displayName,
+    username: gameMaster.username,
+    role: gameMaster.role,
   });
 
   const dmOverlay = await placeUserAvatar(
-    dm.userAvatarURL,
+    gameMaster.userAvatarURL,
     coords.dm.width,
     coords.dm.height,
     coords.dm.x,
@@ -268,7 +305,10 @@ export const createSessionImage = async (
   const status = session.status || 'SCHEDULED';
   const borderOverlay = await createStatusBorder(status);
 
-  const outputPath = path.join(BotPaths.TempDir, BotAttachmentFileNames.CurrentSession);
+  const outputPath = path.join(
+    BotPaths.TempDir,
+    BotAttachmentFileNames.CurrentSession
+  );
 
   await sharp(BotPaths.SessionBackdrop)
     .composite([borderOverlay, ...sessionOverlays, dmOverlay, ...partyOverlays])
@@ -297,7 +337,10 @@ const placeSessionInfo = async (
     true
   );
 
-  const sessionDate = formatSessionDate(session.date, session.timezone ?? 'America/Los_Angeles');
+  const sessionDate = formatSessionDate(
+    session.date,
+    session.timezone ?? 'America/Los_Angeles'
+  );
 
   const dateOverlay = await createTextOverlay(
     sessionDate,
@@ -308,12 +351,16 @@ const placeSessionInfo = async (
   return [
     {
       input: sessionNameOverlay,
-      left: coords.sessionName.visualCenterX - Math.floor(await getImageWidth(sessionNameOverlay) / 2),
+      left:
+        coords.sessionName.visualCenterX -
+        Math.floor((await getImageWidth(sessionNameOverlay)) / 2),
       top: coords.sessionName.y,
     },
     {
       input: dateOverlay,
-      left: coords.date.visualCenterX - Math.floor(await getImageWidth(dateOverlay) / 2),
+      left:
+        coords.date.visualCenterX -
+        Math.floor((await getImageWidth(dateOverlay)) / 2),
       top: coords.date.y,
     },
   ];
@@ -393,7 +440,10 @@ const createTextOverlay = async (
     )
   );
 
-  logger.debug('Text overlay width calculation', { effectiveWidth, paddedWidth });
+  logger.debug('Text overlay width calculation', {
+    effectiveWidth,
+    paddedWidth,
+  });
 
   const svgWidth = bold ? maxWidth : paddedWidth;
   const svgHeight = maxHeight;
@@ -427,13 +477,16 @@ const createTextOverlay = async (
 /**
  * Create a colored border overlay based on session status
  */
-const createStatusBorder = async (status: 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED'): Promise<OverlayOptions> => {
+const createStatusBorder = async (
+  status: SessionStatus
+): Promise<OverlayOptions> => {
   // Define colors for each status
   const statusColors = {
     SCHEDULED: '#00FF00', // Green
-    ACTIVE: '#FFD700',    // Gold
-    COMPLETED: '#0080FF', // Blue
-    CANCELED: '#FF0000'   // Red
+    FULL: '#FFD700', // Gold
+    ACTIVE: '#0080FF', // Blue
+    COMPLETED: '#FF0000', // Red
+    CANCELED: '#FF0000', // Red
   };
 
   const color = statusColors[status];
@@ -471,6 +524,6 @@ const createStatusBorder = async (status: 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' |
   return {
     input: borderBuffer,
     left: 0,
-    top: 0
+    top: 0,
   };
 };

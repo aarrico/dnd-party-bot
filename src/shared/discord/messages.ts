@@ -156,3 +156,19 @@ export const notifyParty = async (
     }
   }));
 };
+
+export const notifyGameMaster = async (
+ gameMasterId: string,
+  messageFormatter: (userId: string) => Promise<string>
+) => {
+  try {
+    const formattedMessage = await messageFormatter(gameMasterId);
+    const user = await client.users.fetch(gameMasterId);
+    return await safeUserSend(user, {
+      content: formattedMessage,
+    });
+  } catch (error) {
+    logger.warn('Failed to send DM to game master', { userId: gameMasterId, error });
+    return null;
+  }
+};

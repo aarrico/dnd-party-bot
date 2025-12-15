@@ -35,7 +35,7 @@ const partyMemberJoined = async (
   username: string,
   role: string,
   channelId: string
-): Promise<{ message: string; status: RoleSelectionStatus }> => {
+): Promise<{ message: string; status: RoleSelectionStatus; partySize: number }> => {
   const roleType = getRoleByString(role);
   const newPartyMember: PartyMember = {
     userId,
@@ -49,6 +49,8 @@ const partyMemberJoined = async (
     channelId
   );
 
+  let partySize = 0;
+
   // Only grant channel permissions if the user was successfully added to the party
   if (roleSelectionStatus === RoleSelectionStatus.ADDED_TO_PARTY) {
     const channel = await client.channels.fetch(channelId);
@@ -57,12 +59,36 @@ const partyMemberJoined = async (
         ViewChannel: true,
         SendMessages: true
       });
+
+      // Check if the party just became full (exactly 6 members)
+      const sessionWithParty = await getSessionById(channelId, true);
+      partySize = sessionWithParty.partyMembers.length;
+
+      if (partySize === 6) {
+        logger.info('Party is now full, triggering partyFull handler', {
+          sessionId: channelId,
+          partySize,
+        });
+
+        try {
+          const guild = channel.guild;
+          const { partyFull } = await import('#modules/party/controller/party.controller.js');
+          await partyFull(guild, sessionWithParty);
+        } catch (error) {
+          logger.error('Failed to handle party full event', {
+            sessionId: channelId,
+            error,
+          });
+          // Don't throw - this shouldn't prevent the user from joining
+        }
+      }
     }
   }
 
   return {
     message: getAddPartyMemberMsg(roleSelectionStatus, newPartyMember),
-    status: roleSelectionStatus
+    status: roleSelectionStatus,
+    partySize
   };
 };
 

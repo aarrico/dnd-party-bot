@@ -23,3 +23,12 @@ export const formatSessionContinueDM = async (
   const userTimezone = await getUserTimezone(userId);
   return BotDialogs.continueSessionDMSessionTime(campaign, session, userTimezone);
 };
+
+export const formatSessionFullDM = async (
+  campaign: Guild,
+  session: Session,
+  userId: string
+): Promise<string> => {
+  const userTimezone = await getUserTimezone(userId);
+  return BotDialogs.fullSessionDMSessionTime(campaign, session, userTimezone);
+};

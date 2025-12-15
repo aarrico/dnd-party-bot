@@ -9,6 +9,7 @@ datasource db {
 
 enum SessionStatus {
   SCHEDULED
+  FULL
   ACTIVE
   COMPLETED
   CANCELED

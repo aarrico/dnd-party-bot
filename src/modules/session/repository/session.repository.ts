@@ -5,6 +5,7 @@ import {
   ListSessionsResult,
   SessionWithParty,
   CreateSessionData,
+  SessionStatus,
 } from '#modules/session/domain/session.types.js';
 import { RoleType, Session } from '#generated/prisma/client.js';
 import { createScopedLogger } from '#shared/logging/logger.js';
@@ -14,7 +15,7 @@ const logger = createScopedLogger('SessionRepository');
 export const createSession = async (
   sessionData: CreateSessionData,
   userId: string,
-  party?: PartyMember[],
+  party?: PartyMember[]
 ): Promise<Session> => {
   const { campaignId, ...session } = sessionData;
 
@@ -95,7 +96,7 @@ export const getSession = async (
     partyMessageId: session.partyMessageId,
     eventId: session.eventId ?? undefined,
     timezone: session.timezone ?? 'America/Los_Angeles',
-    status: session.status as 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED',
+    status: session.status as SessionStatus,
     partyMembers: partyMembers,
   };
 };
@@ -116,7 +117,6 @@ export const getParty = async (sessionId: string): Promise<PartyMember[]> => {
     channelId: partyMember.user.channelId,
     role: partyMember.role.id,
   }));
-
 
   return partyMembers;
 };
@@ -201,7 +201,7 @@ export async function getSessionById(
     campaignId: session.campaignId,
     partyMessageId: session.partyMessageId,
     eventId: session.eventId ?? undefined,
-    status: session.status as 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED',
+    status: session.status as SessionStatus,
     timezone: session.timezone ?? 'America/Los_Angeles',
     partyMembers: session.partyMembers.map((member) => ({
       userId: member.user.id,
@@ -217,7 +217,7 @@ export const deleteSessionById = async (id: string): Promise<Session> =>
 
 export const updateSession = async (
   sessionId: string,
-  data: Partial<CreateSessionData>,
+  data: Partial<CreateSessionData>
 ): Promise<Session> => {
   const updateData = {
     ...(data.name && { name: data.name }),
@@ -231,7 +231,9 @@ export const updateSession = async (
         },
       },
     }),
-    ...(data.partyMessageId !== undefined && { partyMessageId: data.partyMessageId }),
+    ...(data.partyMessageId !== undefined && {
+      partyMessageId: data.partyMessageId,
+    }),
     ...(data.eventId !== undefined && { eventId: data.eventId }),
     ...(data.status && { status: data.status }),
   };
@@ -253,12 +255,14 @@ export const updateSession = async (
 
 export const isUserInActiveSession = async (
   userId: string,
-  excludeSessionId?: string
+  excludeSessionId?: string,
+  campaignId?: string
 ): Promise<boolean> => {
   const count = await prisma.session.count({
     where: {
       ...(excludeSessionId && { id: { not: excludeSessionId } }),
-      status: { in: ['SCHEDULED', 'ACTIVE'] },
+      ...(campaignId && { campaignId }),
+      status: { in: ['SCHEDULED', 'ACTIVE', 'FULL'] },
       partyMembers: {
         some: { userId },
       },
@@ -281,6 +285,7 @@ export const isUserHostingOnDate = async (
     WHERE s.campaign_id = ${campaignId}
       AND pm.user_id = ${userId}
       AND pm.role_id = 'GAME_MASTER'
+      AND s.status IN ('SCHEDULED', 'ACTIVE', 'FULL')
       AND DATE(s.date AT TIME ZONE ${timezone}) = DATE(${date}::timestamptz AT TIME ZONE ${timezone})
   `;
 
@@ -300,8 +305,19 @@ export const isUserMemberOnDate = async (
     WHERE s.campaign_id = ${campaignId}
       AND pm.user_id = ${userId}
       AND pm.role_id != 'GAME_MASTER'
+      AND s.status IN ('SCHEDULED', 'ACTIVE', 'FULL')
       AND DATE(s.date AT TIME ZONE ${timezone}) = DATE(${date}::timestamptz AT TIME ZONE ${timezone})
   `;
 
   return Number(result[0].count) > 0;
+};
+
+export const getSessionByPartyMessageId = async (
+  messageId: string
+): Promise<Session | null> => {
+  return await prisma.session.findFirst({
+    where: {
+      partyMessageId: messageId,
+    },
+  });
 };

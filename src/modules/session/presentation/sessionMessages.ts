@@ -4,8 +4,8 @@ import {
   EmbedBuilder,
   TextChannel
 } from 'discord.js';
-import { SessionStatus, RoleType } from '#generated/prisma/client.js';
-import { Session } from '#modules/session/domain/session.types.js';
+import { RoleType } from '#generated/prisma/client.js';
+import { Session, SessionStatus } from '#modules/session/domain/session.types.js';
 import { PartyMember } from '#modules/party/domain/party.types.js';
 import { BotAttachmentFileNames, BotDialogs, BotPaths } from '#shared/messages/botDialogStrings.js';
 import { getImgAttachmentBuilder } from '#shared/files/attachmentBuilders.js';
@@ -22,9 +22,9 @@ const logger = createScopedLogger('SessionMessages');
  * Only sessions with SCHEDULED status allow role selection
  */
 export const getRoleButtonsForSession = (
-  sessionStatus?: SessionStatus | 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED'
+  sessionStatus?: SessionStatus
 ): ActionRowBuilder<ButtonBuilder>[] => {
-  return sessionStatus === SessionStatus.SCHEDULED ? roleButtons : [];
+  return sessionStatus === 'SCHEDULED' ? roleButtons : [];
 };
 
 /**
@@ -34,7 +34,7 @@ export const createPartyMemberEmbed = (
   partyMembers: PartyMember[],
   guildId: string,
   sessionName: string,
-  sessionStatus?: 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED'
+  sessionStatus?: SessionStatus
 ): EmbedBuilder => {
   const embed = new EmbedBuilder()
     .setColor(getStatusColor(sessionStatus))
@@ -146,11 +146,12 @@ export const sendNewSessionMessage = async (
 /**
  * Get color based on session status
  */
-const getStatusColor = (status?: 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED'): number => {
+const getStatusColor = (status?: SessionStatus): number => {
   const colorMap: Record<string, number> = {
     'SCHEDULED': 0x00FF00, // Green
-    'ACTIVE': 0xFFD700,    // Gold
-    'COMPLETED': 0x0080FF, // Blue
+    'FULL': 0xFFD700,      // Gold
+    'ACTIVE': 0x0080FF,    // Blue
+    'COMPLETED': 0xFF0000, // Red
     'CANCELED': 0xFF0000,  // Red
   };
   return colorMap[status || 'SCHEDULED'] || 0x5865F2;

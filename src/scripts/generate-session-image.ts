@@ -14,7 +14,7 @@
 import { PrismaClient } from '../generated/prisma/client.js';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { createSessionImage } from '../shared/messages/sessionImage.js';
-import { Session } from '../modules/session/domain/session.types.js';
+import { Session, SessionStatus } from '#modules/session/domain/session.types.js';
 import { PartyMemberImgInfo } from '../modules/session/domain/session.types.js';
 import { setRoleCache } from '../modules/role/domain/roleManager.js';
 import { getRoles } from '../modules/role/repository/role.repository.js';
@@ -65,6 +65,7 @@ const getPartyInfoForImg = async (sessionId: string): Promise<PartyMemberImgInfo
   return session.partyMembers.map((member) => ({
     userId: member.user.id,
     username: member.user.username,
+    displayName: member.user.username, // For testing, use username as displayName
     userAvatarURL: getMockAvatarURL(member.user.id),
     role: member.role.id,
   }));
@@ -110,7 +111,7 @@ async function generateSessionImage(sessionId: string): Promise<void> {
       campaignId: sessionData.campaignId,
       partyMessageId: sessionData.partyMessageId,
       eventId: sessionData.eventId,
-      status: sessionData.status as 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED',
+      status: sessionData.status as SessionStatus,
       timezone: sessionData.timezone ?? 'America/Los_Angeles',
     };
 
@@ -121,7 +122,7 @@ async function generateSessionImage(sessionId: string): Promise<void> {
     logger.info(`👥 Party size: ${partyMembers.length}`);
     logger.info('Party members:');
     partyMembers.forEach(member => {
-      logger.info(`  - ${member.username} (${member.role})`);
+      logger.info(`  - ${member.displayName} (@${member.username}) (${member.role})`);
     });
 
     // Generate the image
