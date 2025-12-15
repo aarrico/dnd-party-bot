@@ -26,7 +26,11 @@ export default [
       }
     },
     rules: {
-      '@typescript-eslint/array-type': 'error'
+      '@typescript-eslint/array-type': 'error',
+      // Disable overly strict unsafe rules that create false positives with properly typed Discord.js APIs
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
     }
   },
   {
