@@ -14,7 +14,7 @@
 import { PrismaClient } from '../generated/prisma/client.js';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { createSessionImage } from '../shared/messages/sessionImage.js';
-import { Session } from '../modules/session/domain/session.types.js';
+import { Session, SessionStatus } from '#modules/session/domain/session.types.js';
 import { PartyMemberImgInfo } from '../modules/session/domain/session.types.js';
 import { setRoleCache } from '../modules/role/domain/roleManager.js';
 import { getRoles } from '../modules/role/repository/role.repository.js';
@@ -111,7 +111,7 @@ async function generateSessionImage(sessionId: string): Promise<void> {
       campaignId: sessionData.campaignId,
       partyMessageId: sessionData.partyMessageId,
       eventId: sessionData.eventId,
-      status: sessionData.status as 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED',
+      status: sessionData.status as SessionStatus,
       timezone: sessionData.timezone ?? 'America/Los_Angeles',
     };
 

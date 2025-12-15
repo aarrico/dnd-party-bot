@@ -32,6 +32,7 @@ import {
   ListSessionsOptions,
   ListSessionsResult,
   Session,
+  SessionStatus,
 } from '#modules/session/domain/session.types.js';
 import {
   BotCommandOptionInfo,
@@ -54,7 +55,6 @@ import {
   renameChannel,
 } from '#modules/session/services/channelService.js';
 import {
-  createScheduledEvent,
   updateScheduledEvent,
   deleteScheduledEvent,
 } from '#modules/session/services/scheduledEventService.js';
@@ -126,7 +126,7 @@ export const initSession = async (
     date: session.date,
     campaignId: session.campaignId,
     partyMessageId: session.partyMessageId ?? '',
-    status: session.status as 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED',
+    status: session.status as SessionStatus,
     timezone: session.timezone ?? 'America/Los_Angeles',
   };
 

@@ -1,5 +1,6 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { BotCommandOptionInfo } from '#shared/messages/botDialogStrings.js';
+import { SessionStatus } from '#modules/session/domain/session.types.js';
 import { ExtendedInteraction } from '#shared/types/discord.js';
 import { updateSession } from '#modules/session/repository/session.repository.js';
 import { sendEphemeralReply } from '#shared/discord/messages.js';
@@ -38,7 +39,7 @@ export default {
       }
 
       const sessionId = interaction.options.getString(BotCommandOptionInfo.Session_Id_Name, true);
-      const newStatus = interaction.options.getString('status', true) as 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED';
+      const newStatus = interaction.options.getString('status', true) as SessionStatus;
 
       await interaction.deferReply();
 

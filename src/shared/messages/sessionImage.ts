@@ -9,6 +9,7 @@ import { Session } from '#modules/session/domain/session.types.js';
 import { PartyMemberImgInfo } from '#modules/session/domain/session.types.js';
 import { formatSessionDate } from '../datetime/dateUtils.js';
 import { createScopedLogger } from '#shared/logging/logger.js';
+import type { SessionStatus } from '#modules/session/domain/session.types.js';
 
 const logger = createScopedLogger('SessionImage');
 
@@ -477,13 +478,14 @@ const createTextOverlay = async (
  * Create a colored border overlay based on session status
  */
 const createStatusBorder = async (
-  status: 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED'
+  status: SessionStatus
 ): Promise<OverlayOptions> => {
   // Define colors for each status
   const statusColors = {
     SCHEDULED: '#00FF00', // Green
-    ACTIVE: '#FFD700', // Gold
-    COMPLETED: '#0080FF', // Blue
+    FULL: '#FFD700', // Gold
+    ACTIVE: '#0080FF', // Blue
+    COMPLETED: '#FF0000', // Red
     CANCELED: '#FF0000', // Red
   };
 

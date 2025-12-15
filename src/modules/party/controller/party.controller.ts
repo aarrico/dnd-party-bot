@@ -13,6 +13,13 @@ export const partyFull = async (
   campaign: Guild,
   session: SessionWithParty
 ): Promise<void> => {
+  // Update session status to FULL
+  await updateSession(session.id, { status: 'FULL' });
+  logger.info('Updated session status to FULL', {
+    sessionId: session.id,
+    partySize: session.partyMembers.length,
+  });
+
   // Notify all party members that the party is full
   await notifyParty(
     session.partyMembers.map((member) => member.userId),

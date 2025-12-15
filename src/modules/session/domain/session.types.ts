@@ -1,5 +1,7 @@
 import { PartyMember } from '#modules/party/domain/party.types.js';
 
+export type SessionStatus = 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED' | 'FULL';
+
 export type Session = {
   id: string;
   name: string;
@@ -8,7 +10,7 @@ export type Session = {
   campaignId: string;
   partyMessageId: string;
   eventId?: string | null;
-  status?: 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED';
+  status?: SessionStatus;
 };
 
 export interface CreateSessionData {
@@ -19,7 +21,7 @@ export interface CreateSessionData {
   campaignId: string;
   partyMessageId: string;
   eventId?: string | null;
-  status?: 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED';
+  status?: SessionStatus;
 }
 
 export interface ListSessionsOptions {

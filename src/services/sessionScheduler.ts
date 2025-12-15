@@ -23,7 +23,7 @@ class SessionScheduler {
   private static instance: SessionScheduler;
   private scheduledTasks: Map<string, ScheduledTask> = new Map();
 
-  private constructor() {}
+  private constructor() { }
 
   public static getInstance(): SessionScheduler {
     if (!SessionScheduler.instance) {
@@ -139,6 +139,52 @@ class SessionScheduler {
         sessionName: session.name,
         partySize: session.partyMembers.length,
       });
+
+      // Update session status to ACTIVE
+      try {
+        const { updateSession } = await import(
+          '../modules/session/repository/session.repository.js'
+        );
+        await updateSession(session.id, { status: 'ACTIVE' });
+        logger.info('Updated session status to ACTIVE for reminder', {
+          sessionId: session.id,
+        });
+      } catch (error) {
+        logger.error('Failed to update session status to ACTIVE', {
+          sessionId: session.id,
+          error,
+        });
+      }
+
+      // Regenerate session image with ACTIVE status
+      try {
+        const { createSessionImage } = await import(
+          '../shared/messages/sessionImage.js'
+        );
+        const { getPartyInfoForImg } = await import(
+          '../modules/session/controller/session.controller.js'
+        );
+        const party = await getPartyInfoForImg(session.id);
+        const sessionData = {
+          id: session.id,
+          name: session.name,
+          date: session.date,
+          campaignId: session.campaignId,
+          partyMessageId: session.partyMessageId ?? '',
+          eventId: session.eventId,
+          status: 'ACTIVE' as const,
+          timezone: session.timezone ?? 'America/Los_Angeles',
+        };
+        await createSessionImage(sessionData, party);
+        logger.info('Regenerated session image with ACTIVE status for reminder', {
+          sessionId: session.id,
+        });
+      } catch (error) {
+        logger.error(
+          'Failed to regenerate session image during reminder',
+          { error }
+        );
+      }
 
       await this.sendSessionReminders(session);
       logger.info('Session reminder completed', { sessionId });

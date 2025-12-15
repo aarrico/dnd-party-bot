@@ -5,6 +5,7 @@ import {
   ListSessionsResult,
   SessionWithParty,
   CreateSessionData,
+  SessionStatus,
 } from '#modules/session/domain/session.types.js';
 import { RoleType, Session } from '#generated/prisma/client.js';
 import { createScopedLogger } from '#shared/logging/logger.js';
@@ -95,7 +96,7 @@ export const getSession = async (
     partyMessageId: session.partyMessageId,
     eventId: session.eventId ?? undefined,
     timezone: session.timezone ?? 'America/Los_Angeles',
-    status: session.status as 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED',
+    status: session.status as SessionStatus,
     partyMembers: partyMembers,
   };
 };
@@ -201,7 +202,7 @@ export async function getSessionById(
     campaignId: session.campaignId,
     partyMessageId: session.partyMessageId,
     eventId: session.eventId ?? undefined,
-    status: session.status as 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED',
+    status: session.status as SessionStatus,
     timezone: session.timezone ?? 'America/Los_Angeles',
     partyMembers: session.partyMembers.map((member) => ({
       userId: member.user.id,
