@@ -14,20 +14,51 @@ import {
   getRoleButtonsForSession,
   createPartyMemberEmbed,
 } from '#modules/session/presentation/sessionMessages.js';
-import { sendEphemeralReply, notifyGuild } from '#shared/discord/messages.js';
+import {
+  sendEphemeralReply,
+  notifyGuild,
+  notifyParty,
+} from '#shared/discord/messages.js';
 import { client } from '#app/index.js';
 import { ExtendedInteraction } from '#shared/types/discord.js';
-import { AvatarOptions, PartyMemberImgInfo } from '#modules/session/domain/session.types.js';
-import { PartyMember, RoleSelectionStatus } from '#modules/party/domain/party.types.js';
-import { ListSessionsOptions, ListSessionsResult, Session } from '#modules/session/domain/session.types.js';
-import { BotCommandOptionInfo, BotDialogs, BotAttachmentFileNames, BotPaths } from '#shared/messages/botDialogStrings.js';
+import {
+  AvatarOptions,
+  PartyMemberImgInfo,
+} from '#modules/session/domain/session.types.js';
+import {
+  PartyMember,
+  RoleSelectionStatus,
+} from '#modules/party/domain/party.types.js';
+import {
+  ListSessionsOptions,
+  ListSessionsResult,
+  Session,
+} from '#modules/session/domain/session.types.js';
+import {
+  BotCommandOptionInfo,
+  BotDialogs,
+  BotAttachmentFileNames,
+  BotPaths,
+} from '#shared/messages/botDialogStrings.js';
 import { getImgAttachmentBuilder } from '#shared/files/attachmentBuilders.js';
 import DateChecker from '#shared/datetime/dateChecker.js';
-import { addUserToParty, updatePartyMemberRole, upsertUser, getUserTimezone } from '#modules/user/repository/user.repository.js';
+import {
+  addUserToParty,
+  updatePartyMemberRole,
+  upsertUser,
+  getUserTimezone,
+} from '#modules/user/repository/user.repository.js';
 import { deletePartyMember } from '#modules/party/repository/partyMember.repository.js';
 import { ChannelType, Guild, TextChannel } from 'discord.js';
-import { createChannel, renameChannel } from '#modules/session/services/channelService.js';
-import { createScheduledEvent, updateScheduledEvent, deleteScheduledEvent } from '#modules/session/services/scheduledEventService.js';
+import {
+  createChannel,
+  renameChannel,
+} from '#modules/session/services/channelService.js';
+import {
+  createScheduledEvent,
+  updateScheduledEvent,
+  deleteScheduledEvent,
+} from '#modules/session/services/scheduledEventService.js';
 import { RoleType } from '#generated/prisma/client.js';
 import { sessionScheduler } from '#services/sessionScheduler.js';
 import { CreateSessionData } from '#modules/session/domain/session.types.js';
@@ -40,7 +71,7 @@ import {
   safeMessageEdit,
   safeUserFetch,
   safeCreateDM,
-  safePermissionOverwritesEdit
+  safePermissionOverwritesEdit,
 } from '#shared/discord/discordErrorHandler.js';
 import { createScopedLogger } from '#shared/logging/logger.js';
 
@@ -82,12 +113,11 @@ export const initSession = async (
 
   await safePermissionOverwritesEdit(sessionChannel, userId, {
     ViewChannel: true,
-    SendMessages: true
+    SendMessages: true,
   });
 
   // Create session with all party members in a single transaction
   const session = await createSessionInDb(newSession, userId, party);
-
 
   const sessionForMessage: Session = {
     id: session.id,
@@ -102,10 +132,20 @@ export const initSession = async (
   // Send the session message (with retry logic)
   let partyMessageId: string = '';
   try {
-    partyMessageId = await sendNewSessionMessage(sessionForMessage, sessionChannel, party);
-    logger.info('Session message created', { sessionId: session.id, partyMessageId });
+    partyMessageId = await sendNewSessionMessage(
+      sessionForMessage,
+      sessionChannel,
+      party
+    );
+    logger.info('Session message created', {
+      sessionId: session.id,
+      partyMessageId,
+    });
   } catch (error) {
-    logger.error('Failed to send new session message', { sessionId: session.id, error });
+    logger.error('Failed to send new session message', {
+      sessionId: session.id,
+      error,
+    });
     // Continue - we still want to create the session even if message sending fails
     // The message can be resent later or users can access via the channel directly
   }
@@ -120,10 +160,16 @@ export const initSession = async (
       sessionChannel.id
     );
     if (eventId) {
-      logger.info('Created scheduled event for session', { sessionId: session.id, eventId });
+      logger.info('Created scheduled event for session', {
+        sessionId: session.id,
+        eventId,
+      });
     }
   } catch (error) {
-    logger.error('Failed to create scheduled event', { sessionId: session.id, error });
+    logger.error('Failed to create scheduled event', {
+      sessionId: session.id,
+      error,
+    });
     // Continue - event creation is optional
   }
 
@@ -134,7 +180,10 @@ export const initSession = async (
       partyMessageId,
       eventId,
     });
-    const updatedSession = await updateSession(session.id, { partyMessageId, eventId });
+    const updatedSession = await updateSession(session.id, {
+      partyMessageId,
+      eventId,
+    });
     logger.info('Session metadata updated', {
       sessionId: session.id,
       partyMessageId: updatedSession.partyMessageId,
@@ -173,7 +222,7 @@ export const createSession = async (
   date: Date,
   username: string,
   userId: string,
-  timezone: string,
+  timezone: string
 ): Promise<Session> => {
   logger.debug('createSession called', {
     campaignId: campaign.id,
@@ -183,7 +232,12 @@ export const createSession = async (
   });
 
   // Validate session parameters
-  const validationError = await isSessionValid(campaign, date, userId, timezone);
+  const validationError = await isSessionValid(
+    campaign,
+    date,
+    userId,
+    timezone
+  );
   if (validationError) {
     logger.warn('Session validation failed', {
       campaignId: campaign.id,
@@ -203,12 +257,14 @@ export const createSession = async (
   await upsertUser(userId, username, dmChannel.id);
 
   // Initialize party with just the game master
-  const party: PartyMember[] = [{
-    userId,
-    username,
-    channelId: dmChannel.id,
-    role: RoleType.GAME_MASTER,
-  }];
+  const party: PartyMember[] = [
+    {
+      userId,
+      username,
+      channelId: dmChannel.id,
+      role: RoleType.GAME_MASTER,
+    },
+  ];
 
   // Initialize the session with all data
   return await initSession(
@@ -233,7 +289,7 @@ export const continueSession = async (
   date: Date,
   username: string,
   userId: string,
-  timezone: string,
+  timezone: string
 ): Promise<{ session: Session; party: PartyMember[] }> => {
   logger.info('Continuing session', {
     previousSessionId: existingSession.id,
@@ -244,7 +300,12 @@ export const continueSession = async (
     carryOverPartySize: existingSession.partyMembers.length,
   });
 
-  const validationError = await isSessionValid(campaign, date, userId, timezone);
+  const validationError = await isSessionValid(
+    campaign,
+    date,
+    userId,
+    timezone
+  );
   if (validationError) {
     logger.warn('Session continuation validation failed', {
       previousSessionId: existingSession.id,
@@ -262,12 +323,14 @@ export const continueSession = async (
   await upsertUser(userId, username, dmChannel.id);
 
   // Copy party from existing session (Game Master will be added by initSession)
-  const party: PartyMember[] = [{
-    userId,
-    username,
-    channelId: dmChannel.id,
-    role: RoleType.GAME_MASTER,
-  }];
+  const party: PartyMember[] = [
+    {
+      userId,
+      username,
+      channelId: dmChannel.id,
+      role: RoleType.GAME_MASTER,
+    },
+  ];
 
   existingSession.partyMembers.forEach((member) => {
     if (member.userId !== userId) {
@@ -317,7 +380,10 @@ export const cancelSession = async (sessionId: string, reason: string) => {
         eventId: session.eventId,
       });
     } catch (error) {
-      logger.error('Failed to delete scheduled event for session', { sessionId, error });
+      logger.error('Failed to delete scheduled event for session', {
+        sessionId,
+        error,
+      });
       // Continue - event deletion is optional
     }
   }
@@ -327,7 +393,10 @@ export const cancelSession = async (sessionId: string, reason: string) => {
     await updateSession(sessionId, { status: 'CANCELED' });
     logger.info('Updated session status to CANCELED', { sessionId });
   } catch (error) {
-    logger.error('Failed to update session status to CANCELED', { sessionId, error });
+    logger.error('Failed to update session status to CANCELED', {
+      sessionId,
+      error,
+    });
     throw error; // Re-throw since this is critical
   }
 
@@ -346,7 +415,12 @@ export const cancelSession = async (sessionId: string, reason: string) => {
       );
 
       const party = await getParty(sessionId);
-      const embed = createPartyMemberEmbed(party, session.campaignId, session.name, 'CANCELED');
+      const embed = createPartyMemberEmbed(
+        party,
+        session.campaignId,
+        session.name,
+        'CANCELED'
+      );
       embed.setDescription(`❌ **CANCELED** - ${session.name}\n${reason}`);
 
       await safeMessageEdit(message, {
@@ -355,7 +429,9 @@ export const cancelSession = async (sessionId: string, reason: string) => {
         components: getRoleButtonsForSession('CANCELED'),
       });
 
-      logger.info('Updated Discord message for canceled session', { sessionId });
+      logger.info('Updated Discord message for canceled session', {
+        sessionId,
+      });
     }
   } catch (error) {
     logger.error('Failed to update Discord message for canceled session', {
@@ -365,24 +441,37 @@ export const cancelSession = async (sessionId: string, reason: string) => {
     // Don't throw - message update failure shouldn't prevent cancellation
   }
 
-  // Try to notify guild members
   try {
-    const { getUserTimezone } = await import('../../user/repository/user.repository.js');
-    const { formatSessionDateLong } = await import('../../../shared/datetime/dateUtils.js');
+    const { getUserTimezone } = await import(
+      '../../user/repository/user.repository.js'
+    );
+    const { formatSessionDateLong } = await import(
+      '../../../shared/datetime/dateUtils.js'
+    );
 
-    await notifyGuild(session.campaignId, async (userId: string) => {
-      const userTimezone = await getUserTimezone(userId);
-      const sessionTime = formatSessionDateLong(session.date, userTimezone);
+    await notifyParty(
+      session.partyMembers.map((member) => member.userId),
+      async (userId: string) => {
+        const userTimezone = await getUserTimezone(userId);
+        const sessionTime = formatSessionDateLong(session.date, userTimezone);
 
-      return `❌ **Session Canceled**\n\n` +
-        `🎲 **[${session.name}](https://discord.com/channels/${session.campaignId}/${session.id}/${session.partyMessageId})** has been canceled.\n` +
-        `📅 **Was scheduled for:** ${sessionTime}\n` +
-        `❗ **Reason:** ${reason}\n\n` +
-        `We apologize for any inconvenience. 🎯`;
+        return (
+          `❌ **Session Canceled**\n\n` +
+          `🎲 **[${session.name}](https://discord.com/channels/${session.campaignId}/${session.id}/${session.partyMessageId})** has been canceled.\n` +
+          `📅 **Was scheduled for:** ${sessionTime}\n` +
+          `❗ **Reason:** ${reason}\n\n` +
+          `We apologize for any inconvenience. 🎯`
+        );
+      }
+    );
+    logger.info('Notified guild members about session cancellation', {
+      sessionId,
     });
-    logger.info('Notified guild members about session cancellation', { sessionId });
   } catch (error) {
-    logger.error('Failed to notify guild about session cancellation', { sessionId, error });
+    logger.error('Failed to notify guild about session cancellation', {
+      sessionId,
+      error,
+    });
     // Don't throw - notification failure shouldn't prevent cancellation
   }
 
@@ -406,7 +495,10 @@ export const modifySession = async (interaction: ExtendedInteraction) => {
       : undefined;
 
     if (rawNewSessionName && !newSessionName) {
-      await sendEphemeralReply(BotDialogs.createSessionInvalidSessionName, interaction);
+      await sendEphemeralReply(
+        BotDialogs.createSessionInvalidSessionName,
+        interaction
+      );
       return;
     }
 
@@ -415,11 +507,15 @@ export const modifySession = async (interaction: ExtendedInteraction) => {
     // Ensure user exists in database before getting their timezone
     const user = await safeUserFetch(client, interaction.user.id);
     const dmChannel = await safeCreateDM(user);
-    const username = sanitizeUserInput(interaction.user.displayName) || interaction.user.username;
+    const username =
+      sanitizeUserInput(interaction.user.displayName) ||
+      interaction.user.username;
     await upsertUser(interaction.user.id, username, dmChannel.id);
 
     // Get timezone from command or user's stored timezone
-    let timezone = interaction.options.getString(BotCommandOptionInfo.CreateSession_TimezoneName);
+    let timezone = interaction.options.getString(
+      BotCommandOptionInfo.CreateSession_TimezoneName
+    );
 
     if (!timezone) {
       timezone = await getUserTimezone(interaction.user.id);
@@ -484,9 +580,14 @@ export const modifySession = async (interaction: ExtendedInteraction) => {
     if (dateChanged || nameChanged) {
       try {
         await regenerateSessionMessage(sessionId, session.campaignId);
-        logger.info('Regenerated session message after modification', { sessionId });
+        logger.info('Regenerated session message after modification', {
+          sessionId,
+        });
       } catch (error) {
-        logger.error('Failed to regenerate session message', { sessionId, error });
+        logger.error('Failed to regenerate session message', {
+          sessionId,
+          error,
+        });
         // Continue - message update failure shouldn't prevent modification
       }
     }
@@ -527,7 +628,10 @@ export const processRoleSelection = async (
   });
 
   if (status && status !== 'SCHEDULED') {
-    logger.info('Rejected role selection: session locked', { sessionId, status });
+    logger.info('Rejected role selection: session locked', {
+      sessionId,
+      status,
+    });
     return RoleSelectionStatus.LOCKED;
   }
 
@@ -537,7 +641,10 @@ export const processRoleSelection = async (
   }
 
   if (newPartyMember.role === RoleType.GAME_MASTER) {
-    logger.info('Rejected role selection: GM role not allowed', { sessionId, userId: newPartyMember.userId });
+    logger.info('Rejected role selection: GM role not allowed', {
+      sessionId,
+      userId: newPartyMember.userId,
+    });
     return RoleSelectionStatus.INVALID;
   }
 
@@ -613,7 +720,12 @@ export const processRoleSelection = async (
     userId: newPartyMember.userId,
     role: newPartyMember.role,
   });
-  await addUserToParty(newPartyMember.userId, sessionId, newPartyMember.role, newPartyMember.username);
+  await addUserToParty(
+    newPartyMember.userId,
+    sessionId,
+    newPartyMember.role,
+    newPartyMember.username
+  );
   return RoleSelectionStatus.ADDED_TO_PARTY;
 };
 
@@ -701,7 +813,12 @@ export const formatSessionsAsStr = (
   return [[header], ...data].map((row) => row.join(delimiter)).join('\n');
 };
 
-const isSessionValid = async (campaign: Guild, date: Date, userId: string, timezone: string): Promise<string> => {
+const isSessionValid = async (
+  campaign: Guild,
+  date: Date,
+  userId: string,
+  timezone: string
+): Promise<string> => {
   if (!campaign) {
     return BotDialogs.createSessionInvalidGuild;
   }
@@ -718,13 +835,23 @@ const isSessionValid = async (campaign: Guild, date: Date, userId: string, timez
   }
 
   // Check if the user is already hosting a session on the same day
-  const isHostingOnSameDay = await isUserHostingOnDate(userId, date, campaign.id, timezone);
+  const isHostingOnSameDay = await isUserHostingOnDate(
+    userId,
+    date,
+    campaign.id,
+    timezone
+  );
   if (isHostingOnSameDay) {
     return BotDialogs.createSessionHostingMultipleSessions;
   }
 
   // Check if the user is a member of another session on the same day
-  const isMemberOnSameDay = await isUserMemberOnDate(userId, date, campaign.id, timezone);
+  const isMemberOnSameDay = await isUserMemberOnDate(
+    userId,
+    date,
+    campaign.id,
+    timezone
+  );
   if (isMemberOnSameDay) {
     return BotDialogs.createSessionAlreadyMemberSameDay;
   }
@@ -732,7 +859,10 @@ const isSessionValid = async (campaign: Guild, date: Date, userId: string, timez
   return '';
 };
 
-export const regenerateSessionMessage = async (sessionId: string, guildId: string): Promise<void> => {
+export const regenerateSessionMessage = async (
+  sessionId: string,
+  guildId: string
+): Promise<void> => {
   logger.debug('Regenerating session message', { sessionId, guildId });
 
   const session = await getSessionById(sessionId);
@@ -751,10 +881,23 @@ export const regenerateSessionMessage = async (sessionId: string, guildId: strin
   );
 
   const party = await getParty(sessionId);
-  const embed = createPartyMemberEmbed(party, guildId, session.name, session.status);
-  embed.setDescription(BotDialogs.sessions.scheduled(session.date, session.timezone ?? 'America/Los_Angeles'));
+  const embed = createPartyMemberEmbed(
+    party,
+    guildId,
+    session.name,
+    session.status
+  );
+  embed.setDescription(
+    BotDialogs.sessions.scheduled(
+      session.date,
+      session.timezone ?? 'America/Los_Angeles'
+    )
+  );
 
-  const message = await safeMessageFetch(sessionChannel, session.partyMessageId);
+  const message = await safeMessageFetch(
+    sessionChannel,
+    session.partyMessageId
+  );
   await safeMessageEdit(message, {
     embeds: [embed],
     files: [attachment],

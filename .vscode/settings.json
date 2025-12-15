@@ -7,5 +7,6 @@
   "editor.fontSize": 14,
   "[prisma]": {
     "editor.defaultFormatter": "Prisma.prisma"
-  }
+  },
+  "prettier.configPath": "config/.prettierrc"
 }
