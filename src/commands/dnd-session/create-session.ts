@@ -8,7 +8,7 @@ import { monthOptionChoicesArray } from '#shared/constants/dateConstants.js';
 import { ExtendedInteraction } from '#shared/types/discord.js';
 import { createSession } from '#modules/session/controller/session.controller.js';
 import DateChecker from '#shared/datetime/dateChecker.js';
-import { notifyGuild, sendEphemeralReply } from '#shared/discord/messages.js';
+import { notifyGameMaster, sendEphemeralReply } from '#shared/discord/messages.js';
 import { inspect } from 'util';
 import { getUserTimezone, upsertUser } from '#modules/user/repository/user.repository.js';
 import { handleTimezoneAutocomplete } from '#shared/datetime/timezoneUtils.js';
@@ -88,15 +88,16 @@ export default {
         sanitizeUserInput(interaction.user.displayName) || interaction.user.username;
 
       // Ensure user exists in database before getting their timezone
-      const user = await client.users.fetch(interaction.user.id);
+      const gameMasterId = interaction.user.id;
+      const user = await client.users.fetch(gameMasterId);
       const dmChannel = await user.createDM();
-      await upsertUser(interaction.user.id, creatorDisplayName, dmChannel.id);
+      await upsertUser(gameMasterId, creatorDisplayName, dmChannel.id);
 
       let timezone = interaction.options.getString(BotCommandOptionInfo.CreateSession_TimezoneName);
 
       // If no timezone specified, get the user's default timezone (now that we know they exist)
       if (!timezone) {
-        timezone = await getUserTimezone(interaction.user.id);
+        timezone = await getUserTimezone(gameMasterId);
       }
 
       const date = DateChecker(interaction, timezone);
@@ -113,7 +114,7 @@ export default {
         sessionName,
         date,
         creatorDisplayName,
-        interaction.user.id,
+        gameMasterId,
         timezone,
       );
 
@@ -127,7 +128,7 @@ export default {
         sessionId: session.id,
         sessionName: sessionName,
         campaignId: campaign.id,
-        userId: interaction.user.id,
+        userId: gameMasterId,
         scheduledDate: date.toISOString(),
         timezone,
       });
@@ -138,8 +139,8 @@ export default {
           : BotDialogs.createSessionSuccessFallback(sessionName, date, normalizedChannelName)
       });
 
-      await notifyGuild(
-        campaign.id,
+      await notifyGameMaster(
+        gameMasterId,
         (userId: string) => formatSessionCreationDM(campaign, session, userId)
       );
     } catch (error) {
