@@ -109,6 +109,26 @@ export async function safeGuildMembersFetch(
 }
 
 /**
+ * Safely fetch a single guild member with automatic retry
+ */
+export async function safeGuildMemberFetch(
+  guild: Guild,
+  userId: string,
+  options?: RetryOptions
+): Promise<GuildMember> {
+  return retryWithBackoff(
+    async () => {
+      const member = await guild.members.fetch(userId);
+      if (!member) {
+        throw new Error(`Guild member ${userId} not found in guild ${guild.id}`);
+      }
+      return member;
+    },
+    { ...DEFAULT_DISCORD_RETRY_OPTIONS, ...options }
+  );
+}
+
+/**
  * Safely send a message to a channel with automatic retry
  */
 export async function safeChannelSend(

@@ -16,7 +16,6 @@ import {
 } from '#modules/session/presentation/sessionMessages.js';
 import {
   sendEphemeralReply,
-  notifyGuild,
   notifyParty,
 } from '#shared/discord/messages.js';
 import { client } from '#app/index.js';
@@ -72,6 +71,8 @@ import {
   safeUserFetch,
   safeCreateDM,
   safePermissionOverwritesEdit,
+  safeGuildMemberFetch,
+  safeGuildFetch,
 } from '#shared/discord/discordErrorHandler.js';
 import { createScopedLogger } from '#shared/logging/logger.js';
 
@@ -732,20 +733,55 @@ export const processRoleSelection = async (
 export const getPartyInfoForImg = async (
   sessionId: string
 ): Promise<PartyMemberImgInfo[]> => {
+  const session = await getSession(sessionId);
   const party = await getParty(sessionId);
   const avatarOptions: AvatarOptions = {
     extension: 'png',
     forceStatic: true,
   };
 
+  // Fetch the guild to get member-specific information
+  let guild: Guild | null = null;
+  try {
+    guild = await safeGuildFetch(client, session.campaignId);
+  } catch (error) {
+    logger.warn('Could not fetch guild for session image generation', {
+      sessionId,
+      campaignId: session.campaignId,
+      error,
+    });
+  }
+
   const partyWithAvatars = await Promise.all(
     party.map(async (member) => {
       try {
         const user = await safeUserFetch(client, member.userId);
+
+        // Try to get guild-specific information (avatar and nickname)
+        let displayName = member.username;
+        let avatarURL = user.displayAvatarURL(avatarOptions);
+
+        if (guild) {
+          try {
+            const guildMember = await safeGuildMemberFetch(guild, member.userId);
+            // Use guild member's display name (nickname if set, otherwise username)
+            displayName = guildMember.displayName;
+            // Use guild member's avatar if available, otherwise fall back to user avatar
+            avatarURL = guildMember.displayAvatarURL(avatarOptions);
+          } catch (guildMemberError) {
+            logger.debug('Could not fetch guild member, using user-level data', {
+              userId: member.userId,
+              guildId: guild.id,
+              error: guildMemberError,
+            });
+          }
+        }
+
         return {
           userId: member.userId,
           username: member.username,
-          userAvatarURL: user.displayAvatarURL(avatarOptions),
+          displayName,
+          userAvatarURL: avatarURL,
           role: member.role,
         };
       } catch (error) {
@@ -756,6 +792,7 @@ export const getPartyInfoForImg = async (
         return {
           userId: member.userId,
           username: member.username,
+          displayName: member.username,
           userAvatarURL: `https://cdn.discordapp.com/embed/avatars/${member.userId.slice(-1)}.png`,
           role: member.role,
         };

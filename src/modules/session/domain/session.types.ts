@@ -61,6 +61,7 @@ export interface PartyMemberImgInfo {
   userId: string;
   userAvatarURL: string;
   username: string;
+  displayName: string; // Server-specific display name (nickname) or username fallback
   role: string;
 }
 

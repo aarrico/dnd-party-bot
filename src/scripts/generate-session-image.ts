@@ -65,6 +65,7 @@ const getPartyInfoForImg = async (sessionId: string): Promise<PartyMemberImgInfo
   return session.partyMembers.map((member) => ({
     userId: member.user.id,
     username: member.user.username,
+    displayName: member.user.username, // For testing, use username as displayName
     userAvatarURL: getMockAvatarURL(member.user.id),
     role: member.role.id,
   }));
@@ -121,7 +122,7 @@ async function generateSessionImage(sessionId: string): Promise<void> {
     logger.info(`👥 Party size: ${partyMembers.length}`);
     logger.info('Party members:');
     partyMembers.forEach(member => {
-      logger.info(`  - ${member.username} (${member.role})`);
+      logger.info(`  - ${member.displayName} (@${member.username}) (${member.role})`);
     });
 
     // Generate the image
