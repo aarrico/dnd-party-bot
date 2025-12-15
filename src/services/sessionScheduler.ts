@@ -40,6 +40,13 @@ class SessionScheduler {
 
     const task: ScheduledTask = { sessionId };
 
+    logger.info('Scheduling tasks for session', {
+      sessionId,
+      sessionDate: sessionDate.toISOString(),
+      reminderTime: reminderTime.toISOString(),
+      cancelTime: cancelTime.toISOString(),
+    });
+
     if (isFutureDate(reminderTime)) {
       const reminderJob = new CronJob(
         reminderTime,
@@ -49,12 +56,12 @@ class SessionScheduler {
         'UTC'
       );
       task.reminderJob = reminderJob;
-      logger.info('Scheduled reminder', {
+      logger.info('✅ Scheduled reminder job', {
         sessionId,
         reminderTime: reminderTime.toISOString(),
       });
     } else {
-      logger.debug('Reminder time already passed', {
+      logger.info('⏭️ Reminder time already passed, skipping', {
         sessionId,
         reminderTime: reminderTime.toISOString(),
       });
@@ -69,12 +76,12 @@ class SessionScheduler {
         'UTC'
       );
       task.cancellationJob = cancellationJob;
-      logger.info('Scheduled cancellation check', {
+      logger.info('✅ Scheduled cancellation check job', {
         sessionId,
         cancelTime: cancelTime.toISOString(),
       });
     } else {
-      logger.debug('Cancellation time already passed', {
+      logger.info('⏭️ Cancellation time already passed, skipping', {
         sessionId,
         cancelTime: cancelTime.toISOString(),
       });
@@ -82,6 +89,11 @@ class SessionScheduler {
 
     if (task.reminderJob || task.cancellationJob) {
       this.scheduledTasks.set(sessionId, task);
+      logger.info('Session tasks registered', {
+        sessionId,
+        hasReminder: !!task.reminderJob,
+        hasCancellation: !!task.cancellationJob,
+      });
     } else {
       logger.info('No tasks scheduled, all times passed', { sessionId });
     }
@@ -140,52 +152,7 @@ class SessionScheduler {
         partySize: session.partyMembers.length,
       });
 
-      // Update session status to ACTIVE
-      try {
-        const { updateSession } = await import(
-          '../modules/session/repository/session.repository.js'
-        );
-        await updateSession(session.id, { status: 'ACTIVE' });
-        logger.info('Updated session status to ACTIVE for reminder', {
-          sessionId: session.id,
-        });
-      } catch (error) {
-        logger.error('Failed to update session status to ACTIVE', {
-          sessionId: session.id,
-          error,
-        });
-      }
-
-      // Regenerate session image with ACTIVE status
-      try {
-        const { createSessionImage } = await import(
-          '../shared/messages/sessionImage.js'
-        );
-        const { getPartyInfoForImg } = await import(
-          '../modules/session/controller/session.controller.js'
-        );
-        const party = await getPartyInfoForImg(session.id);
-        const sessionData = {
-          id: session.id,
-          name: session.name,
-          date: session.date,
-          campaignId: session.campaignId,
-          partyMessageId: session.partyMessageId ?? '',
-          eventId: session.eventId,
-          status: 'ACTIVE' as const,
-          timezone: session.timezone ?? 'America/Los_Angeles',
-        };
-        await createSessionImage(sessionData, party);
-        logger.info('Regenerated session image with ACTIVE status for reminder', {
-          sessionId: session.id,
-        });
-      } catch (error) {
-        logger.error(
-          'Failed to regenerate session image during reminder',
-          { error }
-        );
-      }
-
+      // Send reminder DMs to party members (status will change to ACTIVE at 5 min mark)
       await this.sendSessionReminders(session);
       logger.info('Session reminder completed', { sessionId });
     } catch (error) {
@@ -234,31 +201,17 @@ class SessionScheduler {
         }
 
         try {
-          const { createSessionImage } = await import(
-            '../shared/messages/sessionImage.js'
-          );
-          const { getPartyInfoForImg } = await import(
+          const { regenerateSessionMessage } = await import(
             '../modules/session/controller/session.controller.js'
           );
-          const party = await getPartyInfoForImg(session.id);
-          const sessionData = {
-            id: session.id,
-            name: session.name,
-            date: session.date,
-            campaignId: session.campaignId,
-            partyMessageId: session.partyMessageId ?? '',
-            eventId: session.eventId,
-            status: 'ACTIVE' as const,
-            timezone: session.timezone ?? 'America/Los_Angeles',
-          };
-          await createSessionImage(sessionData, party);
-          logger.info('Regenerated session image with ACTIVE status', {
+          await regenerateSessionMessage(session.id, session.campaignId);
+          logger.info('Regenerated and updated session message with ACTIVE status', {
             sessionId: session.id,
           });
         } catch (error) {
           logger.error(
-            'Failed to regenerate session image during cancellation handling',
-            { error }
+            'Failed to regenerate session message during cancellation handling',
+            { sessionId: session.id, error }
           );
         }
       }
@@ -353,7 +306,7 @@ class SessionScheduler {
 
   public async initializeExistingSessions(): Promise<void> {
     try {
-      logger.info('Initializing session scheduler...');
+      logger.info('🔄 Initializing session scheduler...');
 
       const { getSessions } = await import(
         '../modules/session/repository/session.repository.js'
@@ -370,17 +323,29 @@ class SessionScheduler {
         isFutureDate(session.date)
       );
 
-      logger.info('Future sessions found for scheduling', {
-        count: futureSessions.length,
+      logger.info('📅 Future sessions found for scheduling', {
+        totalSessions: allSessions.length,
+        futureSessions: futureSessions.length,
       });
 
-      for (const session of futureSessions) {
-        this.scheduleSessionTasks(session.id, session.date);
+      if (futureSessions.length === 0) {
+        logger.info('ℹ️  No future sessions to schedule');
+      } else {
+        for (const session of futureSessions) {
+          logger.info('📝 Scheduling session', {
+            sessionId: session.id,
+            sessionDate: session.date.toISOString(),
+          });
+          this.scheduleSessionTasks(session.id, session.date);
+        }
       }
 
-      logger.info('Session scheduler initialization complete');
+      logger.info('✅ Session scheduler initialization complete', {
+        scheduledSessions: futureSessions.length,
+        totalTasks: this.scheduledTasks.size,
+      });
     } catch (error) {
-      logger.error('Error initializing session scheduler', { error });
+      logger.error('❌ Error initializing session scheduler', { error });
     }
   }
 

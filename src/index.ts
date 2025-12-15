@@ -72,12 +72,13 @@ await (async () => {
 
       void (async () => {
         try {
+          schedulerLogger.info('Starting session scheduler initialization...');
           await sessionScheduler.initializeExistingSessions();
-          schedulerLogger.info('Session scheduler initialized', {
+          schedulerLogger.info('✅ Session scheduler initialized successfully', {
             scheduledTasks: sessionScheduler.getScheduledTaskCount(),
           });
         } catch (error) {
-          schedulerLogger.error('Failed to initialize session scheduler', { error });
+          schedulerLogger.error('❌ Failed to initialize session scheduler', { error });
         }
       })();
     });

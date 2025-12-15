@@ -657,7 +657,8 @@ export const processRoleSelection = async (
   // User is NOT in the party - check if they can join
   const isInAnotherSession = await isUserInActiveSession(
     newPartyMember.userId,
-    sessionId
+    sessionId,
+    campaignId
   );
 
   if (isInAnotherSession) {
@@ -914,8 +915,9 @@ export const regenerateSessionMessage = async (
     components: getRoleButtonsForSession(session.status),
   });
 
-  logger.debug('Session message regenerated', {
+  logger.info('Session message regenerated and updated', {
     sessionId,
     messageId: session.partyMessageId,
+    status: session.status,
   });
 };

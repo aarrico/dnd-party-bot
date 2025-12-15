@@ -15,7 +15,7 @@ const logger = createScopedLogger('SessionRepository');
 export const createSession = async (
   sessionData: CreateSessionData,
   userId: string,
-  party?: PartyMember[],
+  party?: PartyMember[]
 ): Promise<Session> => {
   const { campaignId, ...session } = sessionData;
 
@@ -118,7 +118,6 @@ export const getParty = async (sessionId: string): Promise<PartyMember[]> => {
     role: partyMember.role.id,
   }));
 
-
   return partyMembers;
 };
 
@@ -218,7 +217,7 @@ export const deleteSessionById = async (id: string): Promise<Session> =>
 
 export const updateSession = async (
   sessionId: string,
-  data: Partial<CreateSessionData>,
+  data: Partial<CreateSessionData>
 ): Promise<Session> => {
   const updateData = {
     ...(data.name && { name: data.name }),
@@ -232,7 +231,9 @@ export const updateSession = async (
         },
       },
     }),
-    ...(data.partyMessageId !== undefined && { partyMessageId: data.partyMessageId }),
+    ...(data.partyMessageId !== undefined && {
+      partyMessageId: data.partyMessageId,
+    }),
     ...(data.eventId !== undefined && { eventId: data.eventId }),
     ...(data.status && { status: data.status }),
   };
@@ -254,12 +255,14 @@ export const updateSession = async (
 
 export const isUserInActiveSession = async (
   userId: string,
-  excludeSessionId?: string
+  excludeSessionId?: string,
+  campaignId?: string
 ): Promise<boolean> => {
   const count = await prisma.session.count({
     where: {
       ...(excludeSessionId && { id: { not: excludeSessionId } }),
-      status: { in: ['SCHEDULED', 'ACTIVE'] },
+      ...(campaignId && { campaignId }),
+      status: { in: ['SCHEDULED', 'ACTIVE', 'FULL'] },
       partyMembers: {
         some: { userId },
       },
@@ -282,6 +285,7 @@ export const isUserHostingOnDate = async (
     WHERE s.campaign_id = ${campaignId}
       AND pm.user_id = ${userId}
       AND pm.role_id = 'GAME_MASTER'
+      AND s.status IN ('SCHEDULED', 'ACTIVE', 'FULL')
       AND DATE(s.date AT TIME ZONE ${timezone}) = DATE(${date}::timestamptz AT TIME ZONE ${timezone})
   `;
 
@@ -301,6 +305,7 @@ export const isUserMemberOnDate = async (
     WHERE s.campaign_id = ${campaignId}
       AND pm.user_id = ${userId}
       AND pm.role_id != 'GAME_MASTER'
+      AND s.status IN ('SCHEDULED', 'ACTIVE', 'FULL')
       AND DATE(s.date AT TIME ZONE ${timezone}) = DATE(${date}::timestamptz AT TIME ZONE ${timezone})
   `;
 
