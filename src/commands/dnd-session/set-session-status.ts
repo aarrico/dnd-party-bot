@@ -26,6 +26,7 @@ export default {
         .setRequired(true)
         .addChoices(
           { name: 'Scheduled', value: 'SCHEDULED' },
+          { name: 'Full', value: 'FULL' },
           { name: 'Active', value: 'ACTIVE' },
           { name: 'Completed', value: 'COMPLETED' },
           { name: 'Canceled', value: 'CANCELED' }
@@ -71,10 +72,11 @@ export default {
       await createSessionImage(sessionData, party);
 
       const statusEmojis = {
-        SCHEDULED: '🟢',
-        ACTIVE: '🟡',
-        COMPLETED: '🔵',
-        CANCELED: '🔴'
+        SCHEDULED: '🟢', // Green
+        FULL: '🟡',      // Gold/Yellow
+        ACTIVE: '🔵',    // Blue
+        COMPLETED: '🔴', // Red
+        CANCELED: '🔴'   // Red
       };
 
       await sendEphemeralReply(

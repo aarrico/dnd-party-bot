@@ -8,7 +8,7 @@
     "dev:fresh": "docker compose -f docker/docker-compose.dev.yml down --volumes --remove-orphans",
     "local": "npm run build && node dist/src/index.js",
     "start": "docker compose -f docker/docker-compose.prod.yml up --build --detach",
-    "start:prod": "prisma migrate deploy --config dist/prisma/prisma.config.js && node dist/src/index.js",
+    "start:prod": "prisma migrate deploy --config dist/prisma.config.js && node dist/src/index.js",
     "start:fresh": "docker compose -f docker/docker-compose.prod.yml down --volumes --remove-orphans && docker volume rm postgres-data 2>/dev/null || true && npm run start",
     "stop": "docker compose -f docker/docker-compose.prod.yml down",
     "stop:clean": "docker compose -f docker/docker-compose.prod.yml down --volumes --remove-orphans",

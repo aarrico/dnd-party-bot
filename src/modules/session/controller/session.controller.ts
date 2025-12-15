@@ -440,11 +440,11 @@ export const cancelSession = async (sessionId: string, reason: string) => {
         );
       }
     );
-    logger.info('Notified guild members about session cancellation', {
+    logger.info('Notified party members about session cancellation', {
       sessionId,
     });
   } catch (error) {
-    logger.error('Failed to notify guild about session cancellation', {
+    logger.error('Failed to notify party members about session cancellation', {
       sessionId,
       error,
     });
