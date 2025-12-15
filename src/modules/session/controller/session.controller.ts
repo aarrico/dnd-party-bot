@@ -151,46 +151,21 @@ export const initSession = async (
     // The message can be resent later or users can access via the channel directly
   }
 
-  // Create Discord scheduled event (non-blocking - failures won't prevent session creation)
-  let eventId: string | null = null;
+  // Update session with partyMessageId
   try {
-    eventId = await createScheduledEvent(
-      campaign.id,
-      sessionChannel.name,
-      date,
-      sessionChannel.id
-    );
-    if (eventId) {
-      logger.info('Created scheduled event for session', {
-        sessionId: session.id,
-        eventId,
-      });
-    }
-  } catch (error) {
-    logger.error('Failed to create scheduled event', {
-      sessionId: session.id,
-      error,
-    });
-    // Continue - event creation is optional
-  }
-
-  // Update session with partyMessageId and eventId
-  try {
-    logger.debug('Updating session with party message/event metadata', {
+    logger.debug('Updating session with party message metadata', {
       sessionId: session.id,
       partyMessageId,
-      eventId,
     });
     const updatedSession = await updateSession(session.id, {
       partyMessageId,
-      eventId,
     });
     logger.info('Session metadata updated', {
       sessionId: session.id,
       partyMessageId: updatedSession.partyMessageId,
     });
   } catch (error) {
-    logger.error('Failed to update session with party message/event metadata', {
+    logger.error('Failed to update session with party message metadata', {
       sessionId: session.id,
       error,
     });
@@ -764,9 +739,7 @@ export const getPartyInfoForImg = async (
         if (guild) {
           try {
             const guildMember = await safeGuildMemberFetch(guild, member.userId);
-            // Use guild member's display name (nickname if set, otherwise username)
             displayName = guildMember.displayName;
-            // Use guild member's avatar if available, otherwise fall back to user avatar
             avatarURL = guildMember.displayAvatarURL(avatarOptions);
           } catch (guildMemberError) {
             logger.debug('Could not fetch guild member, using user-level data', {

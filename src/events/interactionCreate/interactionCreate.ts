@@ -58,6 +58,27 @@ const partyMemberJoined = async (
         SendMessages: true
       });
     }
+
+    // Check if the party just became full (exactly 6 members)
+    const sessionWithParty = await getSessionById(channelId, true);
+    if (sessionWithParty.partyMembers.length === 6) {
+      logger.info('Party is now full, triggering partyFull handler', {
+        sessionId: channelId,
+        partySize: sessionWithParty.partyMembers.length,
+      });
+
+      try {
+        const guild = channel.guild;
+        const { partyFull } = await import('#modules/party/controller/party.controller.js');
+        await partyFull(guild, sessionWithParty);
+      } catch (error) {
+        logger.error('Failed to handle party full event', {
+          sessionId: channelId,
+          error,
+        });
+        // Don't throw - this shouldn't prevent the user from joining
+      }
+    }
   }
 
   return {
