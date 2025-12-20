@@ -11,10 +11,10 @@ export const BotDialogs = {
   createSessionInvalidSessionName: 'Your session name is invalid.',
   createSessionDMSessionTime: (
     campaign: Guild,
-    session: Pick<Session, 'name' | 'id' | 'partyMessageId' | 'date'>,
+    session: Pick<Session, 'name' | 'id' | 'campaignId' | 'date'>,
     timezone: string,
   ) =>
-    `🥳 New session for [${campaign.name}](https://discord.com/channels/${campaign.id}) available to join!\n🎲 [${session.name}](https://discord.com/channels/${campaign.id}/${session.id}/${session.partyMessageId})\n📅 ${formatSessionDateLong(session.date, timezone)}`,
+    `🥳 New session for [${campaign.name}](https://discord.com/channels/${campaign.id}) available to join!\n🎲 [${session.name}](https://discord.com/channels/${campaign.id}/${session.campaignId}/${session.id})\n📅 ${formatSessionDateLong(session.date, timezone)}`,
   createSessionOneMoment:
     '🤖 One moment while I create your session. You will receive a message via Direct Message when complete!',
   createSessionInvalidDateEntered:
@@ -33,10 +33,10 @@ export const BotDialogs = {
 
   continueSessionDMSessionTime: (
     campaign: Guild,
-    session: Pick<Session, 'name' | 'id' | 'partyMessageId' | 'date'>,
+    session: Pick<Session, 'name' | 'id' | 'campaignId' | 'date'>,
     timezone: string,
   ) =>
-    `🥳 Get ready to continue your session for [${campaign.name}](https://discord.com/channels/${campaign.id})!\n🎲 [${session.name}](https://discord.com/channels/${campaign.id}/${session.id}/${session.partyMessageId})\n📅 ${formatSessionDateLong(session.date, timezone)}`,
+    `🥳 Get ready to continue your session for [${campaign.name}](https://discord.com/channels/${campaign.id})!\n🎲 [${session.name}](https://discord.com/channels/${campaign.id}/${session.campaignId}/${session.id})\n📅 ${formatSessionDateLong(session.date, timezone)}`,
   continueSessionInvalidChannel: '❌ Invalid channel selected. Please select a text channel.',
   continueSessionChannelNotSession: '❌ The selected channel is not a session channel. Session channels must not be in a category.',
   continueSessionNotFound: '❌ The selected channel is not a valid session.',
@@ -47,10 +47,10 @@ export const BotDialogs = {
   continueSessionError: '❌ There was an error continuing the session. Please try again.',
   fullSessionDMSessionTime: (
     campaign: Guild,
-    session: Pick<Session, 'name' | 'id' | 'partyMessageId' | 'date'>,
+    session: Pick<Session, 'name' | 'id' | 'campaignId' | 'date'>,
     timezone: string,
   ) =>
-    `🎉 Gather your gear and supplies! The [${campaign.name}](https://discord.com/channels/${campaign.id}) session is full!\n🎲 [${session.name}](https://discord.com/channels/${campaign.id}/${session.id}/${session.partyMessageId})\n📅 ${formatSessionDateLong(session.date, timezone)}`,
+    `🎉 Gather your gear and supplies! The [${campaign.name}](https://discord.com/channels/${campaign.id}) session is full!\n🎲 [${session.name}](https://discord.com/channels/${campaign.id}/${session.campaignId}/${session.id})\n📅 ${formatSessionDateLong(session.date, timezone)}`,
   fullSessionInvalidChannel: '❌ Invalid channel selected. Please select a text channel.',
 
 

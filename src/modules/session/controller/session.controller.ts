@@ -75,6 +75,7 @@ import {
   safeGuildFetch,
 } from '#shared/discord/discordErrorHandler.js';
 import { createScopedLogger } from '#shared/logging/logger.js';
+import { upsertCampaign } from '#app/modules/guild/repository/guild.repository.js';
 
 const logger = createScopedLogger('SessionController');
 
@@ -82,9 +83,14 @@ const logger = createScopedLogger('SessionController');
  * Core function to initialize a session with all required data.
  * This function performs the actual session creation without database lookups.
  * Use createSession or continueSession wrapper functions instead of calling this directly.
+ * 
+ * NEW ARCHITECTURE: 
+ * - Campaign = Discord Channel (where sessions are posted)
+ * - Session = Discord Message (the party message)
+ * - Flow: Upsert campaign -> Send message -> Create session in DB with message ID
  */
 export const initSession = async (
-  campaign: Guild,
+  guild: Guild,
   sessionChannel: TextChannel,
   sessionName: string,
   date: Date,
@@ -93,89 +99,86 @@ export const initSession = async (
   party: PartyMember[]
 ): Promise<Session> => {
   logger.info('Initializing new session', {
-    campaignId: campaign.id,
-    campaignName: campaign.name,
-    sessionName,
+    guildId: guild.id,
+    guildName: guild.name,
     channelId: sessionChannel.id,
+    channelName: sessionChannel.name,
+    sessionName,
     scheduledDate: date.toISOString(),
     timezone,
     creatorUserId: userId,
     initialPartySize: party.length,
   });
 
-  const newSession: CreateSessionData = {
+  // Step 1: Ensure campaign (channel) exists in database
+  const campaign = await upsertCampaign({
     id: sessionChannel.id,
+    guildId: guild.id,
+    name: sessionChannel.name
+  });
+  logger.info('Campaign upserted', {
+    campaignId: campaign.id,
+    campaignName: campaign.name,
+    guildId: campaign.guildId,
+  });
+
+  // Step 2: Create temporary session object for message generation (id will be set after message creation)
+  const tempSession: Session = {
+    id: '', // Will be set after message creation
     name: sessionName,
     date,
     campaignId: campaign.id,
-    partyMessageId: '',
+    status: 'SCHEDULED' as SessionStatus,
     timezone,
   };
 
-  await safePermissionOverwritesEdit(sessionChannel, userId, {
-    ViewChannel: true,
-    SendMessages: true,
-  });
-
-  // Create session with all party members in a single transaction
-  const session = await createSessionInDb(newSession, userId, party);
-
-  const sessionForMessage: Session = {
-    id: session.id,
-    name: session.name,
-    date: session.date,
-    campaignId: session.campaignId,
-    partyMessageId: session.partyMessageId ?? '',
-    status: session.status as SessionStatus,
-    timezone: session.timezone ?? 'America/Los_Angeles',
-  };
-
-  // Send the session message (with retry logic)
-  let partyMessageId: string = '';
+  // Step 3: Send the session message first to get the message ID
+  let messageId: string = '';
   try {
-    partyMessageId = await sendNewSessionMessage(
-      sessionForMessage,
+    messageId = await sendNewSessionMessage(
+      tempSession,
       sessionChannel,
       party
     );
     logger.info('Session message created', {
-      sessionId: session.id,
-      partyMessageId,
+      messageId,
+      channelId: sessionChannel.id,
     });
   } catch (error) {
     logger.error('Failed to send new session message', {
-      sessionId: session.id,
+      sessionName,
+      channelId: sessionChannel.id,
       error,
     });
-    // Continue - we still want to create the session even if message sending fails
-    // The message can be resent later or users can access via the channel directly
+    throw new Error('Failed to create session message. Please try again.');
   }
 
-  // Update session with partyMessageId
-  try {
-    logger.debug('Updating session with party message metadata', {
-      sessionId: session.id,
-      partyMessageId,
-    });
-    const updatedSession = await updateSession(session.id, {
-      partyMessageId,
-    });
-    logger.info('Session metadata updated', {
-      sessionId: session.id,
-      partyMessageId: updatedSession.partyMessageId,
-    });
-  } catch (error) {
-    logger.error('Failed to update session with party message metadata', {
-      sessionId: session.id,
-      error,
-    });
-    // This is a critical error but we've already created the session
-    // Log it prominently for investigation
-    logger.error('Session created without party message ID set', {
-      sessionId: session.id,
-      partyMessageId,
-    });
-  }
+  // Step 4: Create session in database with message ID as the session ID
+  const newSession: CreateSessionData = {
+    id: messageId,
+    name: sessionName,
+    date,
+    campaignId: campaign.id,
+    timezone,
+  };
+
+  const session = await createSessionInDb(newSession, userId, party);
+  logger.info('Session created in database', {
+    sessionId: session.id,
+    sessionName: session.name,
+    campaignId: session.campaignId,
+    partySize: party.length,
+  });
+
+  const sessionForReturn: Session = {
+    id: session.id,
+    name: session.name,
+    date: session.date,
+    campaignId: session.campaignId,
+    status: session.status as SessionStatus,
+    timezone: session.timezone ?? 'America/Los_Angeles',
+    eventId: session.eventId,
+  };
 
   sessionScheduler.scheduleSessionTasks(session.id, session.date);
   logger.info('Session initialization complete', {
@@ -185,7 +188,7 @@ export const initSession = async (
     partySize: party.length,
   });
 
-  return sessionForMessage;
+  return sessionForReturn;
 };
 
 /**
@@ -193,7 +196,8 @@ export const initSession = async (
  * Performs validation, database calls, and user setup before initializing the session.
  */
 export const createSession = async (
-  campaign: Guild,
+  guild: Guild,
+  sessionChannel: TextChannel,
   sessionName: string,
   date: Date,
   username: string,
@@ -201,31 +205,30 @@ export const createSession = async (
   timezone: string
 ): Promise<Session> => {
   logger.debug('createSession called', {
-    campaignId: campaign.id,
+    guildId: guild.id,
+    channelId: sessionChannel.id,
     sessionName,
     userId,
     username,
   });
 
-  // Validate session parameters
+  // Validate session parameters (note: campaignId validation now uses channelId)
   const validationError = await isSessionValid(
-    campaign,
+    sessionChannel.id,
     date,
     userId,
     timezone
   );
   if (validationError) {
     logger.warn('Session validation failed', {
-      campaignId: campaign.id,
+      guildId: guild.id,
+      channelId: sessionChannel.id,
       sessionName,
       userId,
       validationError,
     });
     throw new Error(validationError);
   }
-
-  // Create Discord channel for the session
-  const sessionChannel = await createChannel(campaign, sessionName);
 
   // Fetch user and create DM channel
   const user = await safeUserFetch(client, userId);
@@ -244,7 +247,7 @@ export const createSession = async (
 
   // Initialize the session with all data
   return await initSession(
-    campaign,
+    guild,
     sessionChannel,
     sessionName,
     date,
@@ -256,10 +259,11 @@ export const createSession = async (
 
 /**
  * Continues an existing session by creating a new session with copied party members.
- * Performs validation, copies party data, and creates the new session.
+ * Performs validation, copies party data, and creates the new session as a new message in the same channel.
  */
 export const continueSession = async (
-  campaign: Guild,
+  guild: Guild,
+  sessionChannel: TextChannel,
   existingSession: Session & { partyMembers: PartyMember[] },
   newSessionName: string,
   date: Date,
@@ -271,13 +275,14 @@ export const continueSession = async (
     previousSessionId: existingSession.id,
     previousSessionName: existingSession.name,
     newSessionName,
-    campaignId: campaign.id,
+    channelId: sessionChannel.id,
+    guildId: guild.id,
     userId,
     carryOverPartySize: existingSession.partyMembers.length,
   });
 
   const validationError = await isSessionValid(
-    campaign,
+    sessionChannel.id,
     date,
     userId,
     timezone
@@ -290,8 +295,6 @@ export const continueSession = async (
     });
     throw new Error(validationError);
   }
-
-  const sessionChannel = await createChannel(campaign, newSessionName);
 
   // Fetch GM user and ensure DM channel exists
   const user = await safeUserFetch(client, userId);
@@ -320,7 +323,7 @@ export const continueSession = async (
   });
 
   const session = await initSession(
-    campaign,
+    guild,
     sessionChannel,
     newSessionName,
     date,
@@ -825,12 +828,12 @@ export const formatSessionsAsStr = (
 };
 
 const isSessionValid = async (
-  campaign: Guild,
+  campaignId: string, // channelId where sessions are posted
   date: Date,
   userId: string,
   timezone: string
 ): Promise<string> => {
-  if (!campaign) {
+  if (!campaignId) {
     return BotDialogs.createSessionInvalidGuild;
   }
 
@@ -845,22 +848,22 @@ const isSessionValid = async (
     return BotDialogs.createSessionInvalidUserId;
   }
 
-  // Check if the user is already hosting a session on the same day
+  // Check if the user is already hosting a session on the same day in this campaign (channel)
   const isHostingOnSameDay = await isUserHostingOnDate(
     userId,
     date,
-    campaign.id,
+    campaignId,
     timezone
   );
   if (isHostingOnSameDay) {
     return BotDialogs.createSessionHostingMultipleSessions;
   }
 
-  // Check if the user is a member of another session on the same day
+  // Check if the user is a member of another session on the same day in this campaign (channel)
   const isMemberOnSameDay = await isUserMemberOnDate(
     userId,
     date,
-    campaign.id,
+    campaignId,
     timezone
   );
   if (isMemberOnSameDay) {

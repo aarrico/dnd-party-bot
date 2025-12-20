@@ -4,75 +4,87 @@ import { client } from '#app/index.js';
 import { syncGuildMember } from '#modules/user/controller/user.controller.js';
 import { createScopedLogger } from '#shared/logging/logger.js';
 
-const logger = createScopedLogger('GuildRepository');
+const logger = createScopedLogger('CampaignRepository');
 
-export const upsertGuild = async (guildData: { id: string; name: string }): Promise<Campaign> => {
+export const upsertCampaign = async (campaignData: {
+  id: string;
+  guildId: string;
+  name: string;
+}): Promise<Campaign> => {
   return await prisma.campaign.upsert({
-    where: { id: guildData.id },
+    where: { id: campaignData.id },
     create: {
-      id: guildData.id,
-      name: guildData.name,
+      id: campaignData.id,
+      guildId: campaignData.guildId,
+      name: campaignData.name,
     },
     update: {
-      name: guildData.name,
+      name: campaignData.name,
+      guildId: campaignData.guildId,
       updatedAt: new Date(),
     },
   });
 };
 
-export const getGuildById = async (guildId: string): Promise<Campaign | null> => {
+export const getCampaignById = async (
+  guildId: string
+): Promise<Campaign | null> => {
   return await prisma.campaign.findUnique({
     where: { id: guildId },
   });
 };
 
-export const getAllGuilds = async (): Promise<Campaign[]> => {
+export const getAllCampaigns = async (): Promise<Campaign[]> => {
   return await prisma.campaign.findMany({
     orderBy: { name: 'asc' },
   });
 };
 
-export const syncGuildsFromDiscord = async (discordGuilds: { id: string; name: string }[]): Promise<Campaign[]> => {
-  const syncedGuilds: Campaign[] = [];
-  logger.info('Starting guild sync from Discord', { guildCount: discordGuilds.length });
+export const syncCampaignsFromDiscord = async (
+  discordCampaigns: { id: string; guildId: string, name: string }[]
+): Promise<Campaign[]> => {
+  const syncedCampaigns: Campaign[] = [];
+  logger.info('Starting guild sync from Discord', {
+    campaignCount: discordCampaigns.length,
+  });
 
-  for (const discordGuild of discordGuilds) {
+  for (const discordCampaign of discordCampaigns) {
     try {
       // Sync the guild itself
-      const guild = await upsertGuild(discordGuild);
-      syncedGuilds.push(guild);
-      logger.info('Synced guild', { guildId: guild.id, guildName: guild.name });
+      const campaign = await upsertCampaign(discordCampaign);
+      syncedCampaigns.push(campaign);
+      logger.info('Synced campaign', { campaignId: campaign.id, campaignName: campaign.name });
 
       // Fetch Discord guild to get members
-      const discordGuildFull = await client.guilds.fetch(discordGuild.id);
+      const discordGuildFull = await client.guilds.fetch(discordCampaign.id);
       const members = await discordGuildFull.members.fetch();
 
       // Sync users and create campaign member entries
       for (const [, member] of members) {
         try {
-          await syncGuildMember(member, guild.id);
+          await syncGuildMember(member, campaign.id);
         } catch {
           // Error already logged in syncGuildMember
         }
       }
 
       logger.info('Synced guild members', {
-        guildId: guild.id,
+        guildId: campaign.id,
         memberCount: members.size,
       });
     } catch (error) {
       logger.error('Failed to sync guild', {
-        guildId: discordGuild.id,
-        guildName: discordGuild.name,
+        guildId: discordCampaign.id,
+        guildName: discordCampaign.name,
         error,
       });
     }
   }
 
   logger.info('Guild sync complete', {
-    totalGuilds: discordGuilds.length,
-    syncedGuilds: syncedGuilds.length,
+    totalGuilds: discordCampaigns.length,
+    syncedGuilds: syncedCampaigns.length,
   });
 
-  return syncedGuilds;
+  return syncedCampaigns;
 };

@@ -16,7 +16,7 @@ import { getAllFiles, getAllFolders } from '#shared/files/getAllFiles.js';
 import * as fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { inspect } from 'node:util';
-import { syncGuildsFromDiscord } from '#modules/guild/repository/guild.repository.js';
+import { syncCampaignsFromDiscord } from '#modules/guild/repository/guild.repository.js';
 import { createScopedLogger } from '#shared/logging/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -158,7 +158,7 @@ export class ExtendedClient extends Client {
         name: guild.name
       }));
 
-      await syncGuildsFromDiscord(campaigns);
+      await syncCampaignsFromDiscord(campaigns);
       this.logger.info('Successfully synced guilds to database', { count: campaigns.length });
     } catch (error) {
       this.logger.error('Failed to sync guilds from Discord', { error });

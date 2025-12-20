@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, AutocompleteInteraction } from 'discord.js';
+import { SlashCommandBuilder, AutocompleteInteraction, ChannelType } from 'discord.js';
 import {
   BotCommandInfo,
   BotCommandOptionInfo,
@@ -8,14 +8,21 @@ import { monthOptionChoicesArray } from '#shared/constants/dateConstants.js';
 import { ExtendedInteraction } from '#shared/types/discord.js';
 import { createSession } from '#modules/session/controller/session.controller.js';
 import DateChecker from '#shared/datetime/dateChecker.js';
-import { notifyGameMaster, sendEphemeralReply } from '#shared/discord/messages.js';
+import {
+  notifyGameMaster,
+  sendEphemeralReply,
+} from '#shared/discord/messages.js';
 import { inspect } from 'util';
-import { getUserTimezone, upsertUser } from '#modules/user/repository/user.repository.js';
+import {
+  getUserTimezone,
+  upsertUser,
+} from '#modules/user/repository/user.repository.js';
 import { handleTimezoneAutocomplete } from '#shared/datetime/timezoneUtils.js';
 import { formatSessionCreationDM } from '#shared/messages/sessionNotifications.js';
 import { sanitizeUserInput } from '#shared/validation/sanitizeUserInput.js';
 import { client } from '#app/index.js';
 import { createScopedLogger } from '#shared/logging/logger.js';
+import { log } from 'console';
 
 const logger = createScopedLogger('CreateSessionCommand');
 
@@ -26,9 +33,7 @@ export default {
     .addStringOption((name) =>
       name
         .setName(BotCommandOptionInfo.Session_Name)
-        .setDescription(
-          BotCommandOptionInfo.Session_Name_Description
-        )
+        .setDescription(BotCommandOptionInfo.Session_Name_Description)
         .setRequired(true)
     )
     .addIntegerOption((month) =>
@@ -69,31 +74,45 @@ export default {
   },
   async execute(interaction: ExtendedInteraction) {
     try {
+      logger.info('Create session command invoked', {
+        interaction: inspect(interaction, { depth: null, colors: true }),
+      });
+
       const campaign = interaction.guild;
       if (!campaign) {
         throw new Error('Command must be run in a server!');
       }
 
-      const rawSessionName = interaction.options.getString(BotCommandOptionInfo.Session_Name, true);
+      const channel = interaction.channel;
+      if (!channel || channel.type !== ChannelType.GuildText) {
+        throw new Error('Command must be run in a text channel!');
+      }
+
+      const rawSessionName = interaction.options.getString(
+        BotCommandOptionInfo.Session_Name,
+        true
+      );
       const sessionName = sanitizeUserInput(rawSessionName);
 
       if (!sessionName) {
-        await sendEphemeralReply(BotDialogs.createSessionInvalidSessionName, interaction);
+        await sendEphemeralReply(
+          BotDialogs.createSessionInvalidSessionName,
+          interaction
+        );
         return;
       }
 
       await interaction.deferReply();
 
       const creatorDisplayName =
-        sanitizeUserInput(interaction.user.displayName) || interaction.user.username;
+        sanitizeUserInput(interaction.user.displayName) ||
+        interaction.user.username;
 
-      // Ensure user exists in database before getting their timezone
       const gameMasterId = interaction.user.id;
-      const user = await client.users.fetch(gameMasterId);
-      const dmChannel = await user.createDM();
-      await upsertUser(gameMasterId, creatorDisplayName, dmChannel.id);
 
-      let timezone = interaction.options.getString(BotCommandOptionInfo.CreateSession_TimezoneName);
+      let timezone = interaction.options.getString(
+        BotCommandOptionInfo.CreateSession_TimezoneName
+      );
 
       // If no timezone specified, get the user's default timezone (now that we know they exist)
       if (!timezone) {
@@ -111,18 +130,17 @@ export default {
 
       const session = await createSession(
         campaign,
+        channel,
         sessionName,
         date,
         creatorDisplayName,
         gameMasterId,
-        timezone,
+        timezone
       );
 
-      const normalizedChannelName = sessionName.replace(/\s+/g, '-').toLowerCase();
-
-      const createdChannel = campaign.channels.cache.find(channel =>
-        channel.name === normalizedChannelName
-      );
+      const normalizedChannelName = sessionName
+        .replace(/\s+/g, '-')
+        .toLowerCase();
 
       logger.info('Session created successfully', {
         sessionId: session.id,
@@ -134,18 +152,21 @@ export default {
       });
 
       await interaction.editReply({
-        content: createdChannel
-          ? BotDialogs.createSessionSuccess(sessionName, date, createdChannel.id)
-          : BotDialogs.createSessionSuccessFallback(sessionName, date, normalizedChannelName)
+        content: channel
+          ? BotDialogs.createSessionSuccess(sessionName, date, channel.id)
+          : BotDialogs.createSessionSuccessFallback(
+              sessionName,
+              date,
+              normalizedChannelName
+            ),
       });
 
-      await notifyGameMaster(
-        gameMasterId,
-        (userId: string) => formatSessionCreationDM(campaign, session, userId)
+      await notifyGameMaster(gameMasterId, (userId: string) =>
+        formatSessionCreationDM(campaign, session, userId)
       );
     } catch (error) {
       const payload = {
-        content: (error as Error).message || BotDialogs.createSessionError
+        content: (error as Error).message || BotDialogs.createSessionError,
       };
 
       if (interaction.deferred) {
@@ -154,7 +175,7 @@ export default {
         await interaction.reply(payload);
       }
       logger.error('Error creating session', {
-        error: inspect(error, { depth: null, colors: true })
+        error: inspect(error, { depth: null, colors: true }),
       });
     }
   },

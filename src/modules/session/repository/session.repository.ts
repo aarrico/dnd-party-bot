@@ -93,7 +93,6 @@ export const getSession = async (
     name: session.name,
     date: session.date,
     campaignId: session.campaignId,
-    partyMessageId: session.partyMessageId,
     eventId: session.eventId ?? undefined,
     timezone: session.timezone ?? 'America/Los_Angeles',
     status: session.status as SessionStatus,
@@ -199,7 +198,6 @@ export async function getSessionById(
     name: session.name,
     date: session.date,
     campaignId: session.campaignId,
-    partyMessageId: session.partyMessageId,
     eventId: session.eventId ?? undefined,
     status: session.status as SessionStatus,
     timezone: session.timezone ?? 'America/Los_Angeles',
@@ -231,9 +229,6 @@ export const updateSession = async (
         },
       },
     }),
-    ...(data.partyMessageId !== undefined && {
-      partyMessageId: data.partyMessageId,
-    }),
     ...(data.eventId !== undefined && { eventId: data.eventId }),
     ...(data.status && { status: data.status }),
   };
@@ -245,10 +240,7 @@ export const updateSession = async (
     data: updateData,
   });
 
-  logger.debug('Updated session result', {
-    sessionId,
-    partyMessageId: updatedSession.partyMessageId,
-  });
+  logger.info('Session updated', { sessionId });
 
   return updatedSession;
 };
@@ -312,12 +304,15 @@ export const isUserMemberOnDate = async (
   return Number(result[0].count) > 0;
 };
 
-export const getSessionByPartyMessageId = async (
-  messageId: string
-): Promise<Session | null> => {
-  return await prisma.session.findFirst({
-    where: {
-      partyMessageId: messageId,
-    },
+/**
+ * Get campaign details including guildId for a given campaignId (channel ID).
+ * Useful for generating Discord URLs and accessing guild-level features like scheduled events.
+ */
+export const getCampaignWithGuildId = async (
+  campaignId: string
+): Promise<{ id: string; name: string; guildId: string } | null> => {
+  return await prisma.campaign.findUnique({
+    where: { id: campaignId },
+    select: { id: true, name: true, guildId: true },
   });
 };
