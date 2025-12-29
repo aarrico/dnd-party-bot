@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "build": "npx prisma generate && npm run tsc && tsc-alias -p config/tsconfig.json && copyfiles -u 1 src/resources/**/* dist/src && mkdir -p dist/prisma && cp prisma/schema.prisma dist/prisma/ && cp prisma/prisma.config.ts dist/prisma/ && tsc dist/prisma/prisma.config.ts --module nodenext --moduleResolution nodenext --target esnext --esModuleInterop && rm dist/prisma/prisma.config.ts && cp -r prisma/migrations dist/prisma/",
+    "build": "npx prisma generate && npm run tsc && tsc-alias -p config/tsconfig.json && copyfiles -u 1 src/resources/**/* dist/src && mkdir -p dist/prisma && cp prisma/schema.prisma dist/prisma/ && cp prisma.config.ts dist/ && tsc dist/prisma.config.ts --module nodenext --moduleResolution nodenext --target esnext --esModuleInterop && rm dist/prisma/prisma.config.ts && cp -r prisma/migrations dist/prisma/",
     "tsc": "tsc --project config/tsconfig.json",
     "dev": "cross-env NODE_OPTIONS=--conditions=development tsx watch src/index.ts",
     "dev:docker": "docker compose -f docker/docker-compose.dev.yml up --build --detach",

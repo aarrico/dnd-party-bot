@@ -51,10 +51,6 @@ import {
 import { deletePartyMember } from '#modules/party/repository/partyMember.repository.js';
 import { ChannelType, Guild, TextChannel } from 'discord.js';
 import {
-  createChannel,
-  renameChannel,
-} from '#modules/session/services/channelService.js';
-import {
   updateScheduledEvent,
   deleteScheduledEvent,
 } from '#modules/session/services/scheduledEventService.js';
@@ -70,25 +66,14 @@ import {
   safeMessageEdit,
   safeUserFetch,
   safeCreateDM,
-  safePermissionOverwritesEdit,
   safeGuildMemberFetch,
   safeGuildFetch,
 } from '#shared/discord/discordErrorHandler.js';
 import { createScopedLogger } from '#shared/logging/logger.js';
-import { upsertCampaign } from '#app/modules/guild/repository/guild.repository.js';
+import { upsertCampaign } from '#app/modules/campaign/repository/campaign.repository.js';
 
 const logger = createScopedLogger('SessionController');
 
-/**
- * Core function to initialize a session with all required data.
- * This function performs the actual session creation without database lookups.
- * Use createSession or continueSession wrapper functions instead of calling this directly.
- * 
- * NEW ARCHITECTURE: 
- * - Campaign = Discord Channel (where sessions are posted)
- * - Session = Discord Message (the party message)
- * - Flow: Upsert campaign -> Send message -> Create session in DB with message ID
- */
 export const initSession = async (
   guild: Guild,
   sessionChannel: TextChannel,
@@ -384,9 +369,9 @@ export const cancelSession = async (sessionId: string, reason: string) => {
     await regenerateSessionMessage(sessionId, session.campaignId);
 
     // Update the embed description to include the cancellation reason
-    const channel = await safeChannelFetch(client, sessionId);
+    const channel = await safeChannelFetch(client, session.campaignId);
     if (channel && channel.type === ChannelType.GuildText) {
-      const message = await safeMessageFetch(channel, session.partyMessageId);
+      const message = await safeMessageFetch(channel, session.id);
 
       const attachment = getImgAttachmentBuilder(
         `${BotPaths.TempDir}/${BotAttachmentFileNames.CurrentSession}`,
@@ -427,6 +412,13 @@ export const cancelSession = async (sessionId: string, reason: string) => {
     const { formatSessionDateLong } = await import(
       '../../../shared/datetime/dateUtils.js'
     );
+    const { getCampaignWithGuildId } = await import(
+      '../repository/session.repository.js'
+    );
+
+    // Get guildId for Discord URL
+    const campaign = await getCampaignWithGuildId(session.campaignId);
+    const guildId = campaign?.guildId ?? '';
 
     await notifyParty(
       session.partyMembers.map((member) => member.userId),
@@ -436,7 +428,7 @@ export const cancelSession = async (sessionId: string, reason: string) => {
 
         return (
           `❌ **Session Canceled**\n\n` +
-          `🎲 **[${session.name}](https://discord.com/channels/${session.campaignId}/${session.id}/${session.partyMessageId})** has been canceled.\n` +
+          `🎲 **[${session.name}](https://discord.com/channels/${guildId}/${session.campaignId}/${session.id})** has been canceled.\n` +
           `📅 **Was scheduled for:** ${sessionTime}\n` +
           `❗ **Reason:** ${reason}\n\n` +
           `We apologize for any inconvenience. 🎯`
@@ -512,7 +504,6 @@ export const modifySession = async (interaction: ExtendedInteraction) => {
     }
 
     if (newSessionName && newSessionName !== session.name) {
-      await renameChannel(session.id, newSessionName);
       session.name = newSessionName;
       nameChanged = true;
     }
@@ -527,7 +518,6 @@ export const modifySession = async (interaction: ExtendedInteraction) => {
       });
     }
 
-    // Update Discord scheduled event if it exists and something changed
     if (session.eventId && (dateChanged || nameChanged)) {
       try {
         const updates: { name?: string; scheduledStartTime?: Date } = {};
@@ -555,7 +545,6 @@ export const modifySession = async (interaction: ExtendedInteraction) => {
       }
     }
 
-    // Regenerate session message if name or date changed
     if (dateChanged || nameChanged) {
       try {
         await regenerateSessionMessage(sessionId, session.campaignId);
@@ -709,34 +698,26 @@ export const processRoleSelection = async (
   return RoleSelectionStatus.ADDED_TO_PARTY;
 };
 
-export const getPartyInfoForImg = async (
-  sessionId: string
+export const convertPartyToImgInfo = async (
+  party: PartyMember[],
+  guildId: string
 ): Promise<PartyMemberImgInfo[]> => {
-  const session = await getSession(sessionId);
-  const party = await getParty(sessionId);
   const avatarOptions: AvatarOptions = {
     extension: 'png',
     forceStatic: true,
   };
 
-  // Fetch the guild to get member-specific information
   let guild: Guild | null = null;
   try {
-    guild = await safeGuildFetch(client, session.campaignId);
+    guild = await safeGuildFetch(client, guildId);
   } catch (error) {
-    logger.warn('Could not fetch guild for session image generation', {
-      sessionId,
-      campaignId: session.campaignId,
-      error,
-    });
+    logger.warn('Could not fetch guild for party image conversion', { guildId, error });
   }
 
-  const partyWithAvatars = await Promise.all(
+  return Promise.all(
     party.map(async (member) => {
       try {
         const user = await safeUserFetch(client, member.userId);
-
-        // Try to get guild-specific information (avatar and nickname)
         let displayName = member.username;
         let avatarURL = user.displayAvatarURL(avatarOptions);
 
@@ -776,8 +757,14 @@ export const getPartyInfoForImg = async (
       }
     })
   );
+};
 
-  return partyWithAvatars;
+export const getPartyInfoForImg = async (
+  sessionId: string
+): Promise<PartyMemberImgInfo[]> => {
+  const session = await getSession(sessionId);
+  const party = await getParty(sessionId);
+  return convertPartyToImgInfo(party, session.campaignId);
 };
 
 export const listSessions = async (
@@ -880,7 +867,7 @@ export const regenerateSessionMessage = async (
   logger.debug('Regenerating session message', { sessionId, guildId });
 
   const session = await getSessionById(sessionId);
-  const sessionChannel = await safeChannelFetch(client, sessionId);
+  const sessionChannel = await safeChannelFetch(client, session.campaignId);
 
   if (!sessionChannel || sessionChannel.type !== ChannelType.GuildText) {
     throw new Error('Session channel not found or is not a text channel');
@@ -910,7 +897,7 @@ export const regenerateSessionMessage = async (
 
   const message = await safeMessageFetch(
     sessionChannel,
-    session.partyMessageId
+    session.id
   );
   await safeMessageEdit(message, {
     embeds: [embed],
@@ -920,7 +907,7 @@ export const regenerateSessionMessage = async (
 
   logger.info('Session message regenerated and updated', {
     sessionId,
-    messageId: session.partyMessageId,
+    messageId: session.id,
     status: session.status,
   });
 };

@@ -8,6 +8,7 @@ import {
   REST,
   Routes,
   Events,
+  SlashCommandBuilder,
 } from 'discord.js';
 import { Event } from './Event.js';
 import { DiscordCommand } from '#shared/types/discord.js';
@@ -16,7 +17,6 @@ import { getAllFiles, getAllFolders } from '#shared/files/getAllFiles.js';
 import * as fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { inspect } from 'node:util';
-import { syncCampaignsFromDiscord } from '#modules/guild/repository/guild.repository.js';
 import { createScopedLogger } from '#shared/logging/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -43,7 +43,7 @@ const SRC_DIR = isCompiledCode
 
 export class ExtendedClient extends Client {
   commands: Collection<string, DiscordCommand> = new Collection();
-  commandData: any = [];
+  commandData: ReturnType<SlashCommandBuilder['toJSON']>[] = [];
   private readonly logger = createScopedLogger('DiscordClient');
 
   constructor() {
@@ -150,23 +150,14 @@ export class ExtendedClient extends Client {
 
     await this.getEvents(getAllFolders(path.join(SRC_DIR, 'events')));
 
-    try {
-      this.logger.info('Syncing guilds from Discord...');
-      const discordGuilds = await this.guilds.fetch();
-      const campaigns = discordGuilds.map(guild => ({
-        id: guild.id,
-        name: guild.name
-      }));
-
-      await syncCampaignsFromDiscord(campaigns);
-      this.logger.info('Successfully synced guilds to database', { count: campaigns.length });
-    } catch (error) {
-      this.logger.error('Failed to sync guilds from Discord', { error });
-    }
+    this.logger.info('Bot startup complete', {
+      guildCount: this.guilds.cache.size,
+      userCount: this.users.cache.size,
+    });
   };
 
-  importFile = async <T = any>(filePath: string): Promise<T> => {
-    const module = await import(filePath);
+  importFile = async <T = unknown>(filePath: string): Promise<T> => {
+    const module = await import(filePath) as { default?: T };
     return module?.default as T;
   };
 
@@ -180,7 +171,7 @@ export class ExtendedClient extends Client {
         .filter((file) => file.endsWith('.js') || file.endsWith('.ts'));
       for (const file of commandFiles) {
         const filePath = path.join(commandsPath, file);
-        const command = await this.importFile(filePath);
+        const command = await this.importFile<DiscordCommand>(filePath);
         if ('data' in command && 'execute' in command) {
           this.commands.set(command.data.name, command);
           this.commandData.push(command.data.toJSON());
@@ -201,7 +192,9 @@ export class ExtendedClient extends Client {
     this.logger.info('Events discovered', { count: events.length });
 
     events.forEach((event) => {
-      this.on(event.name, event.execute);
+      this.on(event.name, (...args) => {
+        void event.execute(...args);
+      });
     });
   };
 

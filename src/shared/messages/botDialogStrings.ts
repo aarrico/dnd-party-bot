@@ -66,7 +66,7 @@ export const BotDialogs = {
     scheduled: (
       date: Date,
       timezone: string
-    ) => `🗓️ ${formatSessionDateLong(date, timezone)}!`,
+    ) => `🗓️ ${formatSessionDateLong(date, timezone)}`,
   },
 
   users: {
@@ -211,10 +211,10 @@ export enum BotCommandOptionInfo {
   Campaign_Description = 'Include campaign name in the output.',
   CreateSession_TimezoneName = "timezone",
   CreateSession_TimezoneDescription = "Timezone for the session (defaults to your saved timezone)",
-  ContinueSession_ChannelName = "session-channel",
-  ContinueSession_ChannelDescription = "Select the session channel to continue",
-  CancelSession_ChannelName = "cancel-session-channel",
-  CancelSession_ChannelDescription = "Select the session channel to cancel",
-  ModifySession_ChannelName = "modify-session-channel",
-  ModifySession_ChannelDescription = "Select the session channel to modify",
+  ContinueSession_ChannelName = "continue-session-select",
+  ContinueSession_ChannelDescription = "Select a completed session to continue (defaults to most recent in this channel)",
+  CancelSession_ChannelName = "cancel-session-select",
+  CancelSession_ChannelDescription = "Select the session to cancel",
+  ModifySession_ChannelName = "modify-session-select",
+  ModifySession_ChannelDescription = "Select the session to modify",
 }

@@ -1,26 +1,18 @@
 import { Event } from '#shared/discord/Event.js';
 import { Events, NonThreadGuildBasedChannel, ChannelType, DMChannel } from 'discord.js';
 import { createScopedLogger } from '#shared/logging/logger.js';
-import { prisma } from '#generated/prisma/client.js';
 import { cancelSession } from '#modules/session/controller/session.controller.js';
+import { getActiveSessionsByCampaignId } from '#modules/session/repository/session.repository.js';
 
 const logger = createScopedLogger('ChannelDeleteEvent');
 
 export default new Event(Events.ChannelDelete, async (channel: DMChannel | NonThreadGuildBasedChannel) => {
-  // Only handle guild text channels that could be campaigns (channels with sessions)
   if (channel.type !== ChannelType.GuildText) {
     return;
   }
 
   try {
-    // Check if this channel is a campaign (has sessions)
-    // In new architecture: Campaign.id = channel ID
-    const sessions = await prisma.session.findMany({
-      where: {
-        campaignId: channel.id,
-        status: { notIn: ['COMPLETED', 'CANCELED'] }
-      }
-    });
+    const sessions = await getActiveSessionsByCampaignId(channel.id);
 
     if (sessions.length > 0) {
       logger.info(`Channel ${channel.name} (${channel.id}) was deleted. Auto-canceling ${sessions.length} session(s).`);

@@ -303,6 +303,11 @@ export const createSessionImage = async (
 
   // Add status border overlay
   const status = session.status || 'SCHEDULED';
+  logger.info('Creating session image with status border', {
+    sessionId: session.id,
+    sessionStatus: session.status,
+    resolvedStatus: status,
+  });
   const borderOverlay = await createStatusBorder(status);
 
   const outputPath = path.join(

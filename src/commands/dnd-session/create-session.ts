@@ -4,7 +4,7 @@ import {
   BotCommandOptionInfo,
   BotDialogs,
 } from '#shared/messages/botDialogStrings.js';
-import { monthOptionChoicesArray } from '#shared/constants/dateConstants.js';
+import { monthOptionChoicesArray, dayChoices, yearOptionChoicesArray } from '#shared/constants/dateConstants.js';
 import { ExtendedInteraction } from '#shared/types/discord.js';
 import { createSession } from '#modules/session/controller/session.controller.js';
 import DateChecker from '#shared/datetime/dateChecker.js';
@@ -13,16 +13,11 @@ import {
   sendEphemeralReply,
 } from '#shared/discord/messages.js';
 import { inspect } from 'util';
-import {
-  getUserTimezone,
-  upsertUser,
-} from '#modules/user/repository/user.repository.js';
+import { getUserTimezone } from '#modules/user/repository/user.repository.js';
 import { handleTimezoneAutocomplete } from '#shared/datetime/timezoneUtils.js';
 import { formatSessionCreationDM } from '#shared/messages/sessionNotifications.js';
 import { sanitizeUserInput } from '#shared/validation/sanitizeUserInput.js';
-import { client } from '#app/index.js';
 import { createScopedLogger } from '#shared/logging/logger.js';
-import { log } from 'console';
 
 const logger = createScopedLogger('CreateSessionCommand');
 
@@ -47,12 +42,14 @@ export default {
       day
         .setName(BotCommandOptionInfo.Session_Day_Name)
         .setDescription(BotCommandOptionInfo.Session_Day_Description)
+        .setAutocomplete(true)
         .setRequired(true)
     )
     .addIntegerOption((year) =>
       year
         .setName(BotCommandOptionInfo.Session_Year_Name)
         .setDescription(BotCommandOptionInfo.Session_Year_Description)
+        .setChoices(yearOptionChoicesArray)
         .setRequired(true)
     )
     .addStringOption((time) =>
@@ -69,8 +66,17 @@ export default {
         .setAutocomplete(true)
     ),
   async autocomplete(interaction: AutocompleteInteraction) {
-    const userTimezone = await getUserTimezone(interaction.user.id);
-    await handleTimezoneAutocomplete(interaction, userTimezone);
+    const focusedOption = interaction.options.getFocused(true);
+
+    if (focusedOption.name === String(BotCommandOptionInfo.Session_Day_Name)) {
+      const filtered = dayChoices.filter(day =>
+        day.name.startsWith(focusedOption.value.toString())
+      ).slice(0, 25);
+      await interaction.respond(filtered);
+    } else if (focusedOption.name === String(BotCommandOptionInfo.CreateSession_TimezoneName)) {
+      const userTimezone = await getUserTimezone(interaction.user.id);
+      await handleTimezoneAutocomplete(interaction, userTimezone);
+    }
   },
   async execute(interaction: ExtendedInteraction) {
     try {
@@ -138,10 +144,6 @@ export default {
         timezone
       );
 
-      const normalizedChannelName = sessionName
-        .replace(/\s+/g, '-')
-        .toLowerCase();
-
       logger.info('Session created successfully', {
         sessionId: session.id,
         sessionName: sessionName,
@@ -151,15 +153,7 @@ export default {
         timezone,
       });
 
-      await interaction.editReply({
-        content: channel
-          ? BotDialogs.createSessionSuccess(sessionName, date, channel.id)
-          : BotDialogs.createSessionSuccessFallback(
-              sessionName,
-              date,
-              normalizedChannelName
-            ),
-      });
+      await interaction.deleteReply();
 
       await notifyGameMaster(gameMasterId, (userId: string) =>
         formatSessionCreationDM(campaign, session, userId)

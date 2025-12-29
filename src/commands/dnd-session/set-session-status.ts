@@ -2,9 +2,9 @@ import { SlashCommandBuilder } from 'discord.js';
 import { BotCommandOptionInfo } from '#shared/messages/botDialogStrings.js';
 import { SessionStatus } from '#modules/session/domain/session.types.js';
 import { ExtendedInteraction } from '#shared/types/discord.js';
-import { updateSession } from '#modules/session/repository/session.repository.js';
+import { updateSession, getSessionById } from '#modules/session/repository/session.repository.js';
+import { regenerateSessionMessage } from '#modules/session/controller/session.controller.js';
 import { sendEphemeralReply } from '#shared/discord/messages.js';
-import { createSessionImage } from '#shared/messages/sessionImage.js';
 import { createScopedLogger } from '#shared/logging/logger.js';
 
 const logger = createScopedLogger('SetSessionStatusCommand');
@@ -47,40 +47,22 @@ export default {
       // Update the session status
       await updateSession(sessionId, { status: newStatus });
 
-      // Get session and party data for image generation
-      const { getSessionById } = await import('#modules/session/repository/session.repository.js');
-      const { getPartyInfoForImg } = await import('#modules/session/controller/session.controller.js');
+      // Fetch session to get campaignId for regeneration
       const session = await getSessionById(sessionId);
-      const party = await getPartyInfoForImg(sessionId);
 
-      if (!session) {
-        throw new Error('Session not found');
-      }
-
-      const sessionData = {
-        id: session.id,
-        name: session.name,
-        date: session.date,
-        campaignId: session.campaignId,
-        partyMessageId: session.partyMessageId ?? '',
-        eventId: session.eventId,
-        status: newStatus,
-        timezone: session.timezone ?? 'America/Los_Angeles',
-      };
-
-      // Regenerate the session image with the new status border
-      await createSessionImage(sessionData, party);
+      // Regenerate the session message (image + embed) with the new status
+      await regenerateSessionMessage(sessionId, session.campaignId);
 
       const statusEmojis = {
-        SCHEDULED: '🟢', // Green
-        FULL: '🟡',      // Gold/Yellow
-        ACTIVE: '🔵',    // Blue
-        COMPLETED: '🔴', // Red
-        CANCELED: '🔴'   // Red
+        SCHEDULED: '🟢',
+        FULL: '🟡',
+        ACTIVE: '🔵',
+        COMPLETED: '🔴',
+        CANCELED: '🔴'
       };
 
       await sendEphemeralReply(
-        `${statusEmojis[newStatus]} Session status updated to **${newStatus}** and image regenerated with new border color!`,
+        `${statusEmojis[newStatus]} Session status updated to **${newStatus}**!`,
         interaction
       );
     } catch (error) {

@@ -48,7 +48,7 @@ export default {
         attachment,
       ]);
     } catch (error) {
-      void sendEphemeralReply(`There was an error: ${error}`, interaction);
+      void sendEphemeralReply(`There was an error: ${error instanceof Error ? error.message : String(error)}`, interaction);
     }
   },
 };

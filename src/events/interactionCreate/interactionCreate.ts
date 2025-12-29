@@ -34,6 +34,7 @@ const partyMemberJoined = async (
   userId: string,
   username: string,
   role: string,
+  sessionId: string,
   channelId: string
 ): Promise<{ message: string; status: RoleSelectionStatus; partySize: number }> => {
   const roleType = getRoleByString(role);
@@ -46,7 +47,7 @@ const partyMemberJoined = async (
 
   const roleSelectionStatus = await processRoleSelection(
     newPartyMember,
-    channelId
+    sessionId
   );
 
   let partySize = 0;
@@ -61,12 +62,12 @@ const partyMemberJoined = async (
       });
 
       // Check if the party just became full (exactly 6 members)
-      const sessionWithParty = await getSessionById(channelId, true);
+      const sessionWithParty = await getSessionById(sessionId, true);
       partySize = sessionWithParty.partyMembers.length;
 
       if (partySize === 6) {
         logger.info('Party is now full, triggering partyFull handler', {
-          sessionId: channelId,
+          sessionId,
           partySize,
         });
 
@@ -76,7 +77,7 @@ const partyMemberJoined = async (
           await partyFull(guild, sessionWithParty);
         } catch (error) {
           logger.error('Failed to handle party full event', {
-            sessionId: channelId,
+            sessionId,
             error,
           });
           // Don't throw - this shouldn't prevent the user from joining
@@ -178,9 +179,11 @@ const processButton = async (
     buttonId: interaction.customId,
     userId: interaction.user.id,
     channelId: interaction.channelId,
+    messageId: interaction.message.id,
   });
 
-  const session = await getSessionById(interaction.channelId);
+  // In new architecture, session.id = message ID
+  const session = await getSessionById(interaction.message.id);
   if (!session) {
     throw new Error('something went wrong getting the session from the db');
   }
@@ -191,7 +194,7 @@ const processButton = async (
 
   // Verify the session message exists before processing role selection
   try {
-    await interaction.channel.messages.fetch(session.partyMessageId);
+    await interaction.channel.messages.fetch(session.id);
     logger.debug('Fetched session message successfully', {
       sessionId: session.id,
       channelId: interaction.channelId,
@@ -199,7 +202,7 @@ const processButton = async (
   } catch (error) {
     logger.error('Failed to fetch session message', {
       sessionId: session.id,
-      messageId: session.partyMessageId,
+      messageId: session.id,
       error,
     });
     throw new Error('Could not find the session message to update');
@@ -209,6 +212,7 @@ const processButton = async (
     interaction.user.id,
     interaction.user.displayName,
     interaction.customId,
+    session.id,
     interaction.channelId
   );
 

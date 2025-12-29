@@ -4,7 +4,7 @@ import {
   BotCommandOptionInfo,
   BotDialogs,
 } from '#shared/messages/botDialogStrings.js';
-import { monthOptionChoicesArray } from '#shared/constants/dateConstants.js';
+import { monthOptionChoicesArray, dayChoices, yearOptionChoicesArray } from '#shared/constants/dateConstants.js';
 import { ExtendedInteraction } from '#shared/types/discord.js';
 import { continueSession } from '#modules/session/controller/session.controller.js';
 import DateChecker from '#shared/datetime/dateChecker.js';
@@ -15,7 +15,7 @@ import { handleTimezoneAutocomplete } from '#shared/datetime/timezoneUtils.js';
 import { client } from '#app/index.js';
 import { formatSessionContinueDM } from '#shared/messages/sessionNotifications.js';
 import { sanitizeUserInput } from '#shared/validation/sanitizeUserInput.js';
-import { getSessionById } from '#modules/session/repository/session.repository.js';
+import { getSessionById, getLastCompletedSessionInChannel } from '#modules/session/repository/session.repository.js';
 import { createScopedLogger } from '#shared/logging/logger.js';
 
 const logger = createScopedLogger('ContinueSessionCommand');
@@ -92,13 +92,6 @@ export default {
   data: new SlashCommandBuilder()
     .setName(BotCommandInfo.ContinueSessionName)
     .setDescription(BotCommandInfo.ContinueSessionDescription)
-    .addStringOption((channel) =>
-      channel
-        .setName(BotCommandOptionInfo.ContinueSession_ChannelName)
-        .setDescription(BotCommandOptionInfo.ContinueSession_ChannelDescription)
-        .setAutocomplete(true)
-        .setRequired(true)
-    )
     .addIntegerOption((month) =>
       month
         .setName(BotCommandOptionInfo.Session_Month_Name)
@@ -110,12 +103,14 @@ export default {
       day
         .setName(BotCommandOptionInfo.Session_Day_Name)
         .setDescription(BotCommandOptionInfo.Session_Day_Description)
+        .setAutocomplete(true)
         .setRequired(true)
     )
     .addIntegerOption((year) =>
       year
         .setName(BotCommandOptionInfo.Session_Year_Name)
         .setDescription(BotCommandOptionInfo.Session_Year_Description)
+        .setChoices(yearOptionChoicesArray)
         .setRequired(true)
     )
     .addStringOption((time) =>
@@ -134,22 +129,11 @@ export default {
   async autocomplete(interaction: AutocompleteInteraction) {
     const focusedOption = interaction.options.getFocused(true);
 
-    if (focusedOption.name === String(BotCommandOptionInfo.ContinueSession_ChannelName)) {
-      if (!interaction.guild) return;
-
-      const channels = await interaction.guild.channels.fetch();
-      const topLevelTextChannels = channels
-        .filter(channel =>
-          channel?.type === ChannelType.GuildText &&
-          channel.parentId === null
-        )
-        .map(channel => ({
-          name: channel!.name,
-          value: channel!.id
-        }))
-        .slice(0, 25); // Discord limits to 25 choices
-
-      await interaction.respond(topLevelTextChannels);
+    if (focusedOption.name === String(BotCommandOptionInfo.Session_Day_Name)) {
+      const filtered = dayChoices.filter(day =>
+        day.name.startsWith(focusedOption.value.toString())
+      ).slice(0, 25);
+      await interaction.respond(filtered);
     } else if (focusedOption.name === String(BotCommandOptionInfo.CreateSession_TimezoneName)) {
       const userTimezone = await getUserTimezone(interaction.user.id);
       await handleTimezoneAutocomplete(interaction, userTimezone);
@@ -162,31 +146,32 @@ export default {
         throw new Error('Command must be run in a server!');
       }
 
-      const channelId = interaction.options.getString(
-        BotCommandOptionInfo.ContinueSession_ChannelName,
-        true
-      );
+      const channel = interaction.channel;
+      if (!channel || channel.type !== ChannelType.GuildText) {
+        throw new Error('Command must be run in a text channel!');
+      }
 
-      const fullChannel = await campaign.channels.fetch(channelId);
-      if (!fullChannel || fullChannel.type !== ChannelType.GuildText) {
+      // Auto-select the most recent completed/canceled session in this channel
+      const lastSession = await getLastCompletedSessionInChannel(channel.id);
+
+      if (!lastSession) {
         await sendEphemeralReply(
-          BotDialogs.continueSessionInvalidChannel,
+          'No completed or canceled sessions found in this channel to continue.',
           interaction
         );
         return;
       }
 
-      if (fullChannel.parentId !== null) {
-        await sendEphemeralReply(
-          BotDialogs.continueSessionChannelNotSession,
-          interaction
-        );
-        return;
-      }
+      const sessionId = lastSession.id;
+      logger.info('Auto-selected last session in channel', {
+        sessionId,
+        sessionName: lastSession.name,
+        channelId: channel.id
+      });
 
       let existingSession;
       try {
-        existingSession = await getSessionById(fullChannel.id, true);
+        existingSession = await getSessionById(sessionId, true);
       } catch {
         await sendEphemeralReply(
           BotDialogs.continueSessionNotFound,
@@ -223,6 +208,7 @@ export default {
 
       const { session, party } = await continueSession(
         campaign,
+        channel,
         existingSession,
         newSessionName,
         date,
@@ -231,37 +217,17 @@ export default {
         timezone,
       );
 
-      const normalizedChannelName = newSessionName.replace(/\s+/g, '-').toLowerCase();
-
-      const createdChannel = campaign.channels.cache.find(channel =>
-        channel.name === normalizedChannelName
-      );
-
       logger.info('Session continued successfully', {
         previousSessionId: existingSession.id,
         newSessionId: session.id,
         newSessionName: newSessionName,
-        campaignId: campaign.id,
+        campaignId: session.campaignId,
         userId: interaction.user.id,
         scheduledDate: date.toISOString(),
         partySize: party.length,
       });
 
-      await interaction.editReply({
-        content: createdChannel
-          ? BotDialogs.continueSessionSuccess(
-            existingSession.name,
-            newSessionName,
-            date,
-            createdChannel.id
-          )
-          : BotDialogs.continueSessionSuccessFallback(
-            existingSession.name,
-            newSessionName,
-            date,
-            normalizedChannelName
-          )
-      });
+      await interaction.deleteReply();
 
       await notifyParty(
         party.map(member => member.userId),

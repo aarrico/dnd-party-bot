@@ -2,7 +2,6 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  Channel,
   ChannelType,
   Client,
   IntentsBitField,
@@ -35,30 +34,32 @@ const roles = [
   },
 ];
 
-client.on('ready', async () => {
-  try {
-    const channel: Channel = (await client?.channels?.cache?.get(
-      '1213617829996134521'
-    )) as Channel;
-    if (!channel || channel.type !== ChannelType.GuildText) return;
-
-    const row = new ActionRowBuilder<ButtonBuilder>();
-    roles.forEach((role) => {
-      row.components.push(
-        new ButtonBuilder()
-          .setCustomId(role.id)
-          .setLabel(role.label)
-          .setStyle(ButtonStyle.Primary)
+client.on('ready', () => {
+  void (async () => {
+    try {
+      const channel = client?.channels?.cache?.get(
+        '1213617829996134521'
       );
-    });
-    await channel.send({
-      content: 'Claim or remove a role',
-      components: [row],
-    });
-    process.exit();
-  } catch (error) {
-    logger.error('Failed to send role selection message', { error });
-  }
+      if (!channel || channel.type !== ChannelType.GuildText) return;
+
+      const row = new ActionRowBuilder<ButtonBuilder>();
+      roles.forEach((role) => {
+        row.components.push(
+          new ButtonBuilder()
+            .setCustomId(role.id)
+            .setLabel(role.label)
+            .setStyle(ButtonStyle.Primary)
+        );
+      });
+      await channel.send({
+        content: 'Claim or remove a role',
+        components: [row],
+      });
+      process.exit();
+    } catch (error) {
+      logger.error('Failed to send role selection message', { error });
+    }
+  })();
 });
 
-client.login(process.env.DISCORD_TOKEN);
+void client.login(process.env.DISCORD_TOKEN);

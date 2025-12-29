@@ -25,7 +25,6 @@ enum RoleType {
   CONTROL
 }
 
-// Discord Server/Guild
 model Campaign {
   id        String   @id // discord channel id
   name      String   @unique
@@ -39,7 +38,6 @@ model Campaign {
   @@map("campaign")
 }
 
-// discord channel with channel type GUILD_TEXT
 model Session {
   id             String        @id // discord message id
   campaignId     String        @map("campaign_id")

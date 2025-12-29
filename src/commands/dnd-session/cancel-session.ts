@@ -1,10 +1,11 @@
-import { SlashCommandBuilder, ChannelType, AutocompleteInteraction } from 'discord.js';
+import { SlashCommandBuilder, AutocompleteInteraction } from 'discord.js';
 import { BotCommandOptionInfo, BotDialogs } from '#shared/messages/botDialogStrings.js';
 import { ExtendedInteraction } from '#shared/types/discord.js';
 import { cancelSession } from '#modules/session/controller/session.controller.js';
 import { sanitizeUserInput } from '#shared/validation/sanitizeUserInput.js';
 import { sendEphemeralReply } from '#shared/discord/messages.js';
-import { getSessionById } from '#modules/session/repository/session.repository.js';
+import { getSessionById, getActiveSessionsForGuild } from '#modules/session/repository/session.repository.js';
+import { formatSessionDateLong } from '#shared/datetime/dateUtils.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -28,19 +29,14 @@ export default {
 
     const focusedOption = interaction.options.getFocused(true);
     if (focusedOption.name === String(BotCommandOptionInfo.CancelSession_ChannelName)) {
-      const channels = await interaction.guild.channels.fetch();
-      const topLevelTextChannels = channels
-        .filter(channel => 
-          channel?.type === ChannelType.GuildText && 
-          channel.parentId === null
-        )
-        .map(channel => ({
-          name: channel!.name,
-          value: channel!.id
-        }))
-        .slice(0, 25); // Discord limits to 25 choices
+      const sessions = await getActiveSessionsForGuild(interaction.guild.id);
 
-      await interaction.respond(topLevelTextChannels);
+      const choices = sessions.map(session => ({
+        name: `${session.name} (${session.campaignName}) - ${formatSessionDateLong(session.date, session.timezone)}`,
+        value: session.id
+      }));
+
+      await interaction.respond(choices);
     }
   },
   async execute(interaction: ExtendedInteraction) {
@@ -49,30 +45,13 @@ export default {
       throw new Error('Command must be run in a server!');
     }
 
-    const channelId = interaction.options.getString(
+    const sessionId = interaction.options.getString(
       BotCommandOptionInfo.CancelSession_ChannelName,
       true
     );
 
-    const fullChannel = await campaign.channels.fetch(channelId);
-    if (!fullChannel || fullChannel.type !== ChannelType.GuildText) {
-      await sendEphemeralReply(
-        BotDialogs.continueSessionInvalidChannel,
-        interaction
-      );
-      return;
-    }
-
-    if (fullChannel.parentId !== null) {
-      await sendEphemeralReply(
-        BotDialogs.continueSessionChannelNotSession,
-        interaction
-      );
-      return;
-    }
-
     try {
-      await getSessionById(fullChannel.id, true);
+      await getSessionById(sessionId, true);
     } catch {
       await sendEphemeralReply(
         BotDialogs.continueSessionNotFound,
@@ -86,7 +65,7 @@ export default {
 
     await interaction.deferReply({ ephemeral: true });
 
-    await cancelSession(fullChannel.id, reason);
+    await cancelSession(sessionId, reason);
 
     await interaction.editReply('Session data has been deleted.');
   },
