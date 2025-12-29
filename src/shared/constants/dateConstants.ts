@@ -52,3 +52,21 @@ export const monthOptionChoicesArray = [
     value: 11,
   },
 ];
+
+/**
+ * Day choices for autocomplete (1-31)
+ */
+export const dayChoices = Array.from({ length: 31 }, (_, i) => ({
+  name: String(i + 1),
+  value: i + 1,
+}));
+
+/**
+ * Year selection choices for Discord slash command options
+ * Provides current year and next 2 years
+ */
+const currentYear = new Date().getFullYear();
+export const yearOptionChoicesArray = Array.from({ length: 2 }, (_, i) => ({
+  name: String(currentYear + i),
+  value: currentYear + i,
+}));

@@ -11,9 +11,9 @@ export interface RetryOptions {
   /** Multiplier for exponential backoff (default: 2) */
   backoffMultiplier?: number;
   /** Function to determine if an error should trigger a retry */
-  shouldRetry?: (error: any) => boolean;
+  shouldRetry?: (error: unknown) => boolean;
   /** Optional callback for logging retry attempts */
-  onRetry?: (attempt: number, error: any, delayMs: number) => void;
+  onRetry?: (attempt: number, error: unknown, delayMs: number) => void;
 }
 
 /**
@@ -30,10 +30,11 @@ const DEFAULT_OPTIONS: Required<RetryOptions> = {
   backoffMultiplier: 2,
   shouldRetry: isRetryableError,
   onRetry: (attempt, error, delayMs) => {
+    const err = error as { message?: string; code?: string };
     logger.warn('Retrying operation', {
       attempt,
       delayMs,
-      error: error?.message || error?.code || 'Unknown error',
+      error: err?.message || err?.code || 'Unknown error',
     });
   },
 };
@@ -41,30 +42,31 @@ const DEFAULT_OPTIONS: Required<RetryOptions> = {
 /**
  * Determines if an error is retryable (network/connection errors)
  */
-function isRetryableError(error: any): boolean {
+function isRetryableError(error: unknown): boolean {
+  const err = error as { code?: string | number; status?: number; message?: string };
   // Check for socket/connection errors
-  if (error.code === 'UND_ERR_SOCKET' || error.code === 'ECONNRESET') {
+  if (err.code === 'UND_ERR_SOCKET' || err.code === 'ECONNRESET') {
     return true;
   }
 
   // Check for Discord API rate limits (should be handled by discord.js, but just in case)
-  if (error.code === 50027 || error.status === 429) {
+  if (err.code === 50027 || err.status === 429) {
     return true;
   }
 
   // Check for temporary server errors
-  if (error.status >= 500 && error.status < 600) {
+  if (err.status && err.status >= 500 && err.status < 600) {
     return true;
   }
 
   // Check for gateway/connection issues
-  if (error.message && (
-    error.message.includes('other side closed') ||
-    error.message.includes('socket hang up') ||
-    error.message.includes('ECONNRESET') ||
-    error.message.includes('ETIMEDOUT') ||
-    error.message.includes('ENOTFOUND') ||
-    error.message.includes('getaddrinfo')
+  if (err.message && (
+    err.message.includes('other side closed') ||
+    err.message.includes('socket hang up') ||
+    err.message.includes('ECONNRESET') ||
+    err.message.includes('ETIMEDOUT') ||
+    err.message.includes('ENOTFOUND') ||
+    err.message.includes('getaddrinfo')
   )) {
     return true;
   }
@@ -118,12 +120,12 @@ export async function retryWithBackoff<T>(
   options: RetryOptions = {}
 ): Promise<T> {
   const opts = { ...DEFAULT_OPTIONS, ...options };
-  let lastError: any;
+  let lastError: unknown;
 
   for (let attempt = 1; attempt <= opts.maxRetries + 1; attempt++) {
     try {
       return await fn();
-    } catch (error: any) {
+    } catch (error: unknown) {
       lastError = error;
 
       // If this is the last attempt or error is not retryable, throw
@@ -168,7 +170,7 @@ export async function retryWithBackoff<T>(
  * const user = await fetchUserWithRetry('123456789');
  * ```
  */
-export function withRetry<TArgs extends any[], TReturn>(
+export function withRetry<TArgs extends unknown[], TReturn>(
   fn: (...args: TArgs) => Promise<TReturn>,
   options: RetryOptions = {}
 ): (...args: TArgs) => Promise<TReturn> {

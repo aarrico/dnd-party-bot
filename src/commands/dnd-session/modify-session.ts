@@ -1,12 +1,13 @@
-import { SlashCommandBuilder, AutocompleteInteraction, ChannelType } from 'discord.js';
-import { monthOptionChoicesArray } from '#shared/constants/dateConstants.js';
+import { SlashCommandBuilder, AutocompleteInteraction } from 'discord.js';
+import { monthOptionChoicesArray, dayChoices, yearOptionChoicesArray } from '#shared/constants/dateConstants.js';
 import { BotCommandOptionInfo, BotDialogs } from '#shared/messages/botDialogStrings.js';
 import { ExtendedInteraction } from '#shared/types/discord.js';
 import { modifySession } from '#modules/session/controller/session.controller.js';
 import { handleTimezoneAutocomplete } from '#shared/datetime/timezoneUtils.js';
 import { getUserTimezone } from '#modules/user/repository/user.repository.js';
 import { sendEphemeralReply } from '#shared/discord/messages.js';
-import { getSessionById } from '#modules/session/repository/session.repository.js';
+import { getSessionById, getActiveSessionsForGuild } from '#modules/session/repository/session.repository.js';
+import { formatSessionDateLong } from '#shared/datetime/dateUtils.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -40,12 +41,14 @@ export default {
       day
         .setName(BotCommandOptionInfo.Session_Day_Name)
         .setDescription(BotCommandOptionInfo.Session_Day_Description)
+        .setAutocomplete(true)
         .setRequired(true)
     )
     .addIntegerOption((year) =>
       year
         .setName(BotCommandOptionInfo.Session_Year_Name)
         .setDescription(BotCommandOptionInfo.Session_Year_Description)
+        .setChoices(yearOptionChoicesArray)
         .setRequired(true)
     )
     .addStringOption((time) =>
@@ -63,23 +66,23 @@ export default {
     ),
   async autocomplete(interaction: AutocompleteInteraction) {
     const focusedOption = interaction.options.getFocused(true);
-    
+
     if (focusedOption.name === String(BotCommandOptionInfo.ModifySession_ChannelName)) {
       if (!interaction.guild) return;
-      
-      const channels = await interaction.guild.channels.fetch();
-      const topLevelTextChannels = channels
-        .filter(channel => 
-          channel?.type === ChannelType.GuildText && 
-          channel.parentId === null
-        )
-        .map(channel => ({
-          name: channel!.name,
-          value: channel!.id
-        }))
-        .slice(0, 25); // Discord limits to 25 choices
 
-      await interaction.respond(topLevelTextChannels);
+      const sessions = await getActiveSessionsForGuild(interaction.guild.id);
+
+      const choices = sessions.map(session => ({
+        name: `${session.name} (${session.campaignName}) - ${formatSessionDateLong(session.date, session.timezone)}`,
+        value: session.id
+      }));
+
+      await interaction.respond(choices);
+    } else if (focusedOption.name === String(BotCommandOptionInfo.Session_Day_Name)) {
+      const filtered = dayChoices.filter(day =>
+        day.name.startsWith(focusedOption.value.toString())
+      ).slice(0, 25);
+      await interaction.respond(filtered);
     } else if (focusedOption.name === String(BotCommandOptionInfo.CreateSession_TimezoneName)) {
       const userTimezone = await getUserTimezone(interaction.user.id);
       await handleTimezoneAutocomplete(interaction, userTimezone);
@@ -91,30 +94,13 @@ export default {
       throw new Error('Command must be run in a server!');
     }
 
-    const channelId = interaction.options.getString(
+    const sessionId = interaction.options.getString(
       BotCommandOptionInfo.ModifySession_ChannelName,
       true
     );
 
-    const fullChannel = await campaign.channels.fetch(channelId);
-    if (!fullChannel || fullChannel.type !== ChannelType.GuildText) {
-      await sendEphemeralReply(
-        BotDialogs.continueSessionInvalidChannel,
-        interaction
-      );
-      return;
-    }
-
-    if (fullChannel.parentId !== null) {
-      await sendEphemeralReply(
-        BotDialogs.continueSessionChannelNotSession,
-        interaction
-      );
-      return;
-    }
-
     try {
-      await getSessionById(fullChannel.id, true);
+      await getSessionById(sessionId, true);
     } catch {
       await sendEphemeralReply(
         BotDialogs.continueSessionNotFound,

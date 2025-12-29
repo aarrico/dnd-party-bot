@@ -3,23 +3,21 @@ import { PartyMember } from '#modules/party/domain/party.types.js';
 export type SessionStatus = 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED' | 'FULL';
 
 export type Session = {
-  id: string;
+  id: string; // Discord message ID
   name: string;
   date: Date;
   timezone: string;
-  campaignId: string;
-  partyMessageId: string;
+  campaignId: string; // Discord channel ID where session message is posted
   eventId?: string | null;
   status?: SessionStatus;
 };
 
 export interface CreateSessionData {
-  id: string;
+  id: string; // Discord message ID (empty string initially, set after message creation)
   name: string;
   date: Date;
   timezone: string;
-  campaignId: string;
-  partyMessageId: string;
+  campaignId: string; // Discord channel ID
   eventId?: string | null;
   status?: SessionStatus;
 }

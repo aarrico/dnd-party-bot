@@ -288,17 +288,24 @@ class SessionScheduler {
     }
   }
 
-  private createReminderMessage(
+  private async createReminderMessage(
     session: SessionWithParty,
     timezone: string
-  ): string {
+  ): Promise<string> {
     const sessionTime = formatSessionDateLong(session.date, timezone);
+
+    // Get guildId from campaign for Discord URL
+    const { getCampaignWithGuildId } = await import(
+      '../modules/session/repository/session.repository.js'
+    );
+    const campaign = await getCampaignWithGuildId(session.campaignId);
+    const guildId = campaign?.guildId ?? '';
 
     return (
       `⏰ **Session Reminder**\n\n` +
-      `🎲 **[${session.name}](https://discord.com/channels/${session.campaignId}/${session.id}/${session.partyMessageId})** starts in 1 hour!\n` +
+      `🎲 **[${session.name}](https://discord.com/channels/${guildId}/${session.campaignId}/${session.id})** starts in 1 hour!\n` +
       `📅 **Time:** ${sessionTime}\n` +
-      `🏰 **Channel:** <#${session.id}>\n` +
+      `🏰 **Channel:** <#${session.campaignId}>\n` +
       `👥 **Party Size:** ${session.partyMembers.length}/6 members\n\n` +
       `See you at the table! 🎯`
     );

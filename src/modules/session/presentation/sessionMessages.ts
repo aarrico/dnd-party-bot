@@ -56,10 +56,7 @@ export const createPartyMemberEmbed = (
   }
 
   for (const [roleType, members] of Object.entries(membersByRole) as [RoleType, PartyMember[]][]) {
-    // Create mention links for all members in this role
     const memberLinks = members.map(member => `<@${member.userId}>`);
-
-    // Convert enum to display name
     const displayName = roleType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
     embed.addFields({
@@ -84,9 +81,16 @@ export const sendNewSessionMessage = async (
 
   try {
     logger.debug('Creating session image for session message', { sessionId: session.id });
+
     // Dynamic import to avoid circular dependencies
     const sessionController = await import('#modules/session/controller/session.controller.js');
-    const party = await sessionController.getPartyInfoForImg(session.id);
+
+    // If session.id is empty (new session), convert partyMembers directly
+    // Otherwise fetch from database for existing sessions
+    const party = session.id
+      ? await sessionController.getPartyInfoForImg(session.id)
+      : await sessionController.convertPartyToImgInfo(partyMembers, channel.guildId);
+
     await createSessionImage(session, party);
 
     const imagePath = `${BotPaths.TempDir}/${BotAttachmentFileNames.CurrentSession}`;

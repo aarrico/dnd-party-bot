@@ -109,7 +109,6 @@ async function generateSessionImage(sessionId: string): Promise<void> {
       name: 'Night of the Bell\'s Toll',
       date: sessionData.date,
       campaignId: sessionData.campaignId,
-      partyMessageId: sessionData.partyMessageId,
       eventId: sessionData.eventId,
       status: sessionData.status as SessionStatus,
       timezone: sessionData.timezone ?? 'America/Los_Angeles',

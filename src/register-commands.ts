@@ -52,7 +52,7 @@ const commands = [
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN as string);
 
-(async () => {
+void (async () => {
   try {
     if (process.env.GUILD_ID) {
       // Register to specific guild (instant, for development)
@@ -60,7 +60,7 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN as s
       await rest.put(
         Routes.applicationGuildCommands(
           process.env.DISCORD_CLIENT_ID as string,
-          process.env.GUILD_ID as string
+          process.env.GUILD_ID
         ),
         { body: commands }
       );
