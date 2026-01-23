@@ -217,4 +217,6 @@ export enum BotCommandOptionInfo {
   CancelSession_ChannelDescription = "Select the session to cancel",
   ModifySession_ChannelName = "modify-session-select",
   ModifySession_ChannelDescription = "Select the session to modify",
+  EndSession_Name = "end-session",
+  EndSession_Description = "Mark the active session in this channel as completed",
 }

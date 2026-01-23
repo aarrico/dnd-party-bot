@@ -1,5 +1,5 @@
 import { GuildMember } from 'discord.js';
-import { getAllUsers, upsertUser, getUserById, addUserToCampaign, isUserInCampaign } from '../repository/user.repository.js';
+import { getAllUsers, upsertUser } from '../repository/user.repository.js';
 import { ListUsersOptions, ListUsersResult } from '../domain/user.types.js';
 import { sendTimezoneOnboardingDM } from '../../../shared/datetime/timezoneUtils.js';
 import { createScopedLogger } from '#shared/logging/logger.js';
@@ -69,8 +69,6 @@ export const newGuildMember = async (member: GuildMember) => {
     logger.info('Added user to database', { userId: member.user.id });
 
     await sendTimezoneOnboardingDM(member.user);
-
-    await addUserToCampaign(member.user.id, member.guild.id);
   } catch (error) {
     logger.error('Failed to add new guild member', {
       displayName: member.user.displayName,
@@ -78,42 +76,5 @@ export const newGuildMember = async (member: GuildMember) => {
       error,
     });
     // Don't throw - we don't want to break the bot if DMs are disabled
-  }
-};
-
-export const syncGuildMember = async (member: GuildMember, campaignId: string): Promise<void> => {
-  if (member.user.bot) {
-    return;
-  }
-
-  try {
-    const existingUser = await getUserById(member.user.id);
-    if (!existingUser) {
-      logger.info('New user detected during sync', {
-        userId: member.user.id,
-        username: member.user.username,
-        campaignId,
-      });
-      await newGuildMember(member);
-      return;
-    }
-
-    const isInCampaign = await isUserInCampaign(member.user.id, campaignId);
-    if (!isInCampaign) {
-      await addUserToCampaign(member.user.id, campaignId);
-      logger.info('Added user to campaign', {
-        userId: member.user.id,
-        username: member.user.username,
-        campaignId,
-      });
-    }
-  } catch (error) {
-    logger.error('Failed to sync user', {
-      userId: member.user.id,
-      username: member.user.username,
-      campaignId,
-      error,
-    });
-    throw error;
   }
 };

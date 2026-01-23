@@ -1,4 +1,4 @@
-import { format, sub, isAfter } from 'date-fns';
+import { format, sub, add, isAfter } from 'date-fns';
 import { TZDate } from '@date-fns/tz';
 
 /**
@@ -63,6 +63,13 @@ export function getHoursBefore(date: Date, hours: number): Date {
  */
 export function getMinutesBefore(date: Date, minutes: number): Date {
   return sub(date, { minutes });
+}
+
+/**
+ * Get a date that is X hours after the given date
+ */
+export function getHoursAfter(date: Date, hours: number): Date {
+  return add(date, { hours });
 }
 
 /**

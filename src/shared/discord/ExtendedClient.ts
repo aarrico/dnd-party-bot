@@ -192,8 +192,10 @@ export class ExtendedClient extends Client {
     this.logger.info('Events discovered', { count: events.length });
 
     events.forEach((event) => {
+      // Wrap event handlers with error handling to prevent crashes
+      const safeExecutor = event.createSafeExecutor(this.logger);
       this.on(event.name, (...args) => {
-        void event.execute(...args);
+        void safeExecutor(...args);
       });
     });
   };

@@ -19,6 +19,8 @@ import { PartyMemberImgInfo } from '../modules/session/domain/session.types.js';
 import { setRoleCache } from '../modules/role/domain/roleManager.js';
 import { getRoles } from '../modules/role/repository/role.repository.js';
 import { createLogger, format, transports } from 'winston';
+import fs from 'fs';
+import path from 'path';
 
 // Script-specific logger with console-only transport (no file logging for CLI output)
 const logger = createLogger({
@@ -126,10 +128,18 @@ async function generateSessionImage(sessionId: string): Promise<void> {
 
     // Generate the image
     logger.info('\n🖼️  Generating session image...');
-    await createSessionImage(session, partyMembers);
+    const imageBuffer = await createSessionImage(session, partyMembers);
+
+    // Save to file for inspection
+    const outputDir = path.join(process.cwd(), 'resources', 'temp');
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
+    const outputPath = path.join(outputDir, 'current-session.png');
+    fs.writeFileSync(outputPath, imageBuffer);
 
     logger.info('\n✅ Session image generated successfully!');
-    logger.info('📂 Output location: resources/temp/current-session.png\n');
+    logger.info(`📂 Output location: ${outputPath}\n`);
   } catch (error) {
     if (error instanceof Error) {
       if (error.message.includes('No') && error.message.includes('found')) {

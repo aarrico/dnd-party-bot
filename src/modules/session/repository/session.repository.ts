@@ -417,3 +417,38 @@ export const getActiveSessionsByCampaignId = async (
     }
   });
 };
+
+/**
+ * Get the active session in a channel with party members included.
+ * Returns null if no active session exists.
+ * Since there should only be one active session per channel, returns the first found.
+ */
+export const getActiveSessionInChannel = async (
+  campaignId: string
+): Promise<Session | null> => {
+  const session = await prisma.session.findFirst({
+    where: {
+      campaignId,
+      status: { notIn: ['COMPLETED', 'CANCELED'] }
+    },
+  });
+
+  if (!session) {
+    return null;
+  }
+
+  return session;
+};
+
+export const isUserGameMaster = async (
+  userId: string,
+  sessionId: string
+): Promise<boolean> => {
+  return !!(await prisma.partyMember.findFirst({
+    where: {
+      sessionId,
+      userId,
+      roleId: RoleType.GAME_MASTER,
+    },
+  }));
+};  

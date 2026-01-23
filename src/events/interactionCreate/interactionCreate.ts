@@ -295,13 +295,41 @@ const processStringSelectMenu = async (interaction: StringSelectMenuInteraction<
 };
 
 export default new Event(Events.InteractionCreate, async (interaction) => {
-  if (interaction.isCommand() && interaction.isChatInputCommand()) {
-    await processCommand(interaction);
-  } else if (interaction.isAutocomplete()) {
-    await processAutocomplete(interaction);
-  } else if (interaction.isButton()) {
-    await processButton(interaction);
-  } else if (interaction.isStringSelectMenu()) {
-    await processStringSelectMenu(interaction);
+  try {
+    if (interaction.isCommand() && interaction.isChatInputCommand()) {
+      await processCommand(interaction);
+    } else if (interaction.isAutocomplete()) {
+      await processAutocomplete(interaction);
+    } else if (interaction.isButton()) {
+      await processButton(interaction);
+    } else if (interaction.isStringSelectMenu()) {
+      await processStringSelectMenu(interaction);
+    }
+  } catch (error) {
+    logger.error('Error handling interaction', {
+      interactionType: interaction.type,
+      userId: interaction.user?.id,
+      guildId: interaction.guildId,
+      error: error instanceof Error ? {
+        message: error.message,
+        stack: error.stack,
+      } : error,
+    });
+
+    // Try to respond to the user if possible
+    try {
+      const errorMessage = '❌ An unexpected error occurred. Please try again later.';
+
+      if (interaction.isRepliable()) {
+        if (interaction.replied || interaction.deferred) {
+          await interaction.followUp({ content: errorMessage, ephemeral: true });
+        } else {
+          await interaction.reply({ content: errorMessage, ephemeral: true });
+        }
+      }
+    } catch (replyError) {
+      // Failed to send error message to user - already logged the original error
+      logger.debug('Failed to send error response to user', { replyError });
+    }
   }
 });

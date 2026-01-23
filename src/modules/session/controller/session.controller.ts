@@ -38,12 +38,11 @@ import {
   BotCommandOptionInfo,
   BotDialogs,
   BotAttachmentFileNames,
-  BotPaths,
 } from '#shared/messages/botDialogStrings.js';
-import { getImgAttachmentBuilder } from '#shared/files/attachmentBuilders.js';
+import { getImgAttachmentBuilderFromBuffer } from '#shared/files/attachmentBuilders.js';
 import DateChecker from '#shared/datetime/dateChecker.js';
 import {
-  addUserToParty,
+  addUserToPartyIfNotFull,
   updatePartyMemberRole,
   upsertUser,
   getUserTimezone,
@@ -243,10 +242,63 @@ export const createSession = async (
 };
 
 /**
+ * Continues the most recent completed/canceled session in a channel.
+ * Finds the last session, generates the next session name, and creates a new session with the same party.
+ */
+export const continueSessionInChannel = async (
+  guild: Guild,
+  sessionChannel: TextChannel,
+  date: Date,
+  username: string,
+  userId: string,
+  timezone: string
+): Promise<{ session: Session; party: PartyMember[] }> => {
+  const { getLastCompletedSessionInChannel } = await import(
+    '../repository/session.repository.js'
+  );
+  const { getNextSessionName } = await import('../domain/sessionNameUtils.js');
+
+  // Find the last completed/canceled session in this channel
+  const lastSession = await getLastCompletedSessionInChannel(sessionChannel.id);
+
+  if (!lastSession) {
+    throw new Error(
+      'No completed or canceled sessions found in this channel to continue.'
+    );
+  }
+
+  logger.info('Found last session to continue', {
+    sessionId: lastSession.id,
+    sessionName: lastSession.name,
+    channelId: sessionChannel.id,
+  });
+
+  // Fetch the full session with party members
+  const existingSession = await getSessionById(lastSession.id, true);
+
+  // Use existing session's timezone if not provided
+  const effectiveTimezone = timezone || existingSession.timezone || 'America/Los_Angeles';
+
+  // Generate the next session name
+  const newSessionName = getNextSessionName(existingSession.name);
+
+  return continueSession(
+    guild,
+    sessionChannel,
+    existingSession,
+    newSessionName,
+    date,
+    username,
+    userId,
+    effectiveTimezone
+  );
+};
+
+/**
  * Continues an existing session by creating a new session with copied party members.
  * Performs validation, copies party data, and creates the new session as a new message in the same channel.
  */
-export const continueSession = async (
+const continueSession = async (
   guild: Guild,
   sessionChannel: TextChannel,
   existingSession: Session & { partyMembers: PartyMember[] },
@@ -317,6 +369,49 @@ export const continueSession = async (
     party
   );
 
+  // If party is already full, create Discord scheduled event and update status
+  if (party.length >= 6) {
+    logger.info('Continued session has full party, creating scheduled event', {
+      sessionId: session.id,
+      partySize: party.length,
+    });
+
+    try {
+      await updateSession(session.id, { status: 'FULL' });
+      logger.info('Updated continued session status to FULL', {
+        sessionId: session.id,
+      });
+
+      const {
+        createScheduledEvent,
+      } = await import('../services/scheduledEventService.js');
+
+      const eventId = await createScheduledEvent(
+        guild.id,
+        sessionChannel.name,
+        date,
+        session.id
+      );
+
+      if (eventId) {
+        await updateSession(session.id, { eventId });
+        logger.info('Created scheduled event for continued session', {
+          sessionId: session.id,
+          eventId,
+        });
+      }
+
+      // Regenerate session message with FULL status
+      await regenerateSessionMessage(session.id, session.campaignId);
+    } catch (error) {
+      logger.error('Failed to create scheduled event for continued session', {
+        sessionId: session.id,
+        error,
+      });
+      // Continue - event creation is optional
+    }
+  }
+
   return { session, party };
 };
 
@@ -366,15 +461,20 @@ export const cancelSession = async (sessionId: string, reason: string) => {
 
   // Try to regenerate the session message with canceled status
   try {
-    await regenerateSessionMessage(sessionId, session.campaignId);
+    // Generate the updated image
+    const partyForImg = await getPartyInfoForImg(sessionId);
+    const imageBuffer = await createSessionImage(
+      { ...session, status: 'CANCELED' },
+      partyForImg
+    );
 
     // Update the embed description to include the cancellation reason
     const channel = await safeChannelFetch(client, session.campaignId);
     if (channel && channel.type === ChannelType.GuildText) {
       const message = await safeMessageFetch(channel, session.id);
 
-      const attachment = getImgAttachmentBuilder(
-        `${BotPaths.TempDir}/${BotAttachmentFileNames.CurrentSession}`,
+      const attachment = getImgAttachmentBuilderFromBuffer(
+        imageBuffer,
         BotAttachmentFileNames.CurrentSession
       );
 
@@ -450,6 +550,69 @@ export const cancelSession = async (sessionId: string, reason: string) => {
     sessionId,
     sessionName: session.name,
     reason,
+  });
+};
+
+export const endSession = async (sessionId: string) => {
+  logger.info('Ending session', { sessionId });
+
+  const session = await getSession(sessionId);
+  logger.debug('Session to end', {
+    sessionId,
+    sessionName: session.name,
+    status: session.status,
+  });
+
+  // Cancel any scheduled tasks
+  sessionScheduler.cancelSessionTasks(sessionId);
+  logger.info('Canceled scheduled tasks for session', { sessionId });
+
+  // Delete Discord scheduled event if it exists (non-blocking)
+  if (session.eventId) {
+    try {
+      await deleteScheduledEvent(session.campaignId, session.eventId);
+      logger.info('Deleted scheduled event for ended session', {
+        sessionId,
+        eventId: session.eventId,
+      });
+    } catch (error) {
+      logger.error('Failed to delete scheduled event for session', {
+        sessionId,
+        error,
+      });
+      // Continue - event deletion is optional
+    }
+  }
+
+  // Update database status
+  try {
+    await updateSession(sessionId, { status: 'COMPLETED' });
+    logger.info('Updated session status to COMPLETED', { sessionId });
+  } catch (error) {
+    logger.error('Failed to update session status to COMPLETED', {
+      sessionId,
+      error,
+    });
+    throw error; // Re-throw since this is critical
+  }
+
+  // Regenerate the session message with completed status
+  try {
+    await regenerateSessionMessage(sessionId, session.campaignId);
+    logger.info('Regenerated session message with COMPLETED status', {
+      sessionId,
+    });
+  } catch (error) {
+    logger.error('Failed to regenerate session message', {
+      sessionId,
+      error,
+    });
+    // Don't throw - message update failure shouldn't prevent completion
+  }
+
+  logger.info('Session ended successfully', {
+    sessionId,
+    sessionName: session.name,
   });
 };
 
@@ -676,25 +839,29 @@ export const processRoleSelection = async (
     return RoleSelectionStatus.HOSTING_SAME_DAY;
   }
 
-  if (party.length >= 6) {
-    logger.info('Rejected role selection: party full', {
-      sessionId,
-      partySize: party.length,
-    });
-    return RoleSelectionStatus.PARTY_FULL;
-  }
-
+  // Use atomic add to prevent race condition where two users
+  // could both pass a "party full" check simultaneously
   logger.info('Adding user to party', {
     sessionId,
     userId: newPartyMember.userId,
     role: newPartyMember.role,
   });
-  await addUserToParty(
+
+  const wasAdded = await addUserToPartyIfNotFull(
     newPartyMember.userId,
     sessionId,
     newPartyMember.role,
     newPartyMember.username
   );
+
+  if (!wasAdded) {
+    logger.info('Rejected role selection: party full (atomic check)', {
+      sessionId,
+      userId: newPartyMember.userId,
+    });
+    return RoleSelectionStatus.PARTY_FULL;
+  }
+
   return RoleSelectionStatus.ADDED_TO_PARTY;
 };
 
@@ -874,10 +1041,10 @@ export const regenerateSessionMessage = async (
   }
 
   const partyForImg = await getPartyInfoForImg(sessionId);
-  await createSessionImage(session, partyForImg);
+  const imageBuffer = await createSessionImage(session, partyForImg);
 
-  const attachment = getImgAttachmentBuilder(
-    `${BotPaths.TempDir}/${BotAttachmentFileNames.CurrentSession}`,
+  const attachment = getImgAttachmentBuilderFromBuffer(
+    imageBuffer,
     BotAttachmentFileNames.CurrentSession
   );
 

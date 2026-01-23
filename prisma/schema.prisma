@@ -28,27 +28,26 @@ enum RoleType {
 model Campaign {
   id        String   @id // discord channel id
   name      String   @unique
-  guildId  String    @unique // discord guild(server) id
+  guildId   String   @map("guild_id") // discord guild(server) id
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  sessions      Session[]
-  factionMember Faction[]
+  sessions Session[]
 
   @@map("campaign")
 }
 
 model Session {
-  id             String        @id // discord message id
-  campaignId     String        @map("campaign_id")
-  campaign       Campaign      @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  name           String
-  date           DateTime
-  timezone       String        @default("America/Los_Angeles")
-  status         SessionStatus @default(SCHEDULED)
-  eventId        String?       @map("event_id") // discord scheduled event id
-  createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @updatedAt @map("updated_at")
+  id         String        @id // discord message id
+  campaignId String        @map("campaign_id")
+  campaign   Campaign      @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  name       String
+  date       DateTime
+  timezone   String        @default("America/Los_Angeles")
+  status     SessionStatus @default(SCHEDULED)
+  eventId    String?       @map("event_id") // discord scheduled event id
+  createdAt  DateTime      @default(now()) @map("created_at")
+  updatedAt  DateTime      @updatedAt @map("updated_at")
 
   partyMembers PartyMember[]
 
@@ -62,21 +61,8 @@ model User {
   timezone  String @default("America/Los_Angeles")
 
   sessions PartyMember[]
-  factions Faction[]
 
   @@map("user")
-}
-
-model Faction {
-  campaignId String   @map("campaign_id")
-  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  userId     String   @map("user_id")
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now()) @map("created_at")
-
-  @@id([campaignId, userId], name: "campaign_member_id")
-  @@map("campaign_member")
 }
 
 model PartyMember {

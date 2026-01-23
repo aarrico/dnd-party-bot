@@ -109,6 +109,87 @@ export const addUserToParty = async (
   logger.info('User added to party', { userId, sessionId, role });
 };
 
+/**
+ * Atomically add a user to a party if there's room (max 6 members).
+ * Uses a transaction to prevent race conditions where two users
+ * could both pass the "party full" check simultaneously.
+ *
+ * @returns true if user was added, false if party is full
+ */
+export const addUserToPartyIfNotFull = async (
+  userId: string,
+  sessionId: string,
+  role: RoleType,
+  username: string,
+  maxPartySize: number = 6
+): Promise<boolean> => {
+  logger.debug('Attempting to add user to party (atomic)', {
+    userId,
+    sessionId,
+    role,
+    username,
+    maxPartySize,
+  });
+
+  // Ensure the user exists in the database before adding to party
+  if (username) {
+    const user = await client.users.fetch(userId);
+    const dmChannel = await user.createDM();
+
+    await prisma.user.upsert({
+      where: { id: userId },
+      create: {
+        id: userId,
+        username: username,
+        channelId: dmChannel.id,
+      },
+      update: {
+        username: username,
+      },
+    });
+  }
+
+  // Use a transaction to atomically check count and insert
+  const result = await prisma.$transaction(async (tx) => {
+    // Count current party members
+    const currentCount = await tx.partyMember.count({
+      where: { sessionId },
+    });
+
+    if (currentCount >= maxPartySize) {
+      logger.info('Party full during atomic add attempt', {
+        sessionId,
+        currentCount,
+        maxPartySize,
+      });
+      return false;
+    }
+
+    // Add the user
+    await tx.partyMember.upsert({
+      where: {
+        party_member_id: {
+          userId,
+          sessionId,
+        },
+      },
+      create: {
+        userId,
+        sessionId,
+        roleId: role,
+      },
+      update: {
+        roleId: role,
+      },
+    });
+
+    logger.info('User added to party (atomic)', { userId, sessionId, role });
+    return true;
+  });
+
+  return result;
+};
+
 export const getSessionsForUser = async (
   userId: string,
   includeCampaign = false
@@ -162,32 +243,4 @@ export const getUserById = async (userId: string): Promise<User | null> => {
   return await prisma.user.findUnique({
     where: { id: userId },
   });
-};
-
-export const addUserToCampaign = async (userId: string, campaignId: string): Promise<void> => {
-  await prisma.faction.upsert({
-    where: {
-      campaign_member_id: {
-        campaignId,
-        userId,
-      },
-    },
-    create: {
-      campaignId,
-      userId,
-    },
-    update: {}, // No updates needed if already exists
-  });
-};
-
-export const isUserInCampaign = async (userId: string, campaignId: string): Promise<boolean> => {
-  const campaignMember = await prisma.faction.findUnique({
-    where: {
-      campaign_member_id: {
-        campaignId,
-        userId,
-      },
-    },
-  });
-  return campaignMember !== null;
 };

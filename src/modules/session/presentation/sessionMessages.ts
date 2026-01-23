@@ -7,12 +7,11 @@ import {
 import { RoleType } from '#generated/prisma/client.js';
 import { Session, SessionStatus } from '#modules/session/domain/session.types.js';
 import { PartyMember } from '#modules/party/domain/party.types.js';
-import { BotAttachmentFileNames, BotDialogs, BotPaths } from '#shared/messages/botDialogStrings.js';
-import { getImgAttachmentBuilder } from '#shared/files/attachmentBuilders.js';
+import { BotAttachmentFileNames, BotDialogs } from '#shared/messages/botDialogStrings.js';
+import { getImgAttachmentBuilderFromBuffer } from '#shared/files/attachmentBuilders.js';
 import { createSessionImage } from '#shared/messages/sessionImage.js';
 import { safeChannelSend } from '#shared/discord/discordErrorHandler.js';
 import { roleButtons } from '#app/index.js';
-import fs from 'fs';
 import { createScopedLogger } from '#shared/logging/logger.js';
 
 const logger = createScopedLogger('SessionMessages');
@@ -91,21 +90,12 @@ export const sendNewSessionMessage = async (
       ? await sessionController.getPartyInfoForImg(session.id)
       : await sessionController.convertPartyToImgInfo(partyMembers, channel.guildId);
 
-    await createSessionImage(session, party);
+    const imageBuffer = await createSessionImage(session, party);
 
-    const imagePath = `${BotPaths.TempDir}/${BotAttachmentFileNames.CurrentSession}`;
-    logger.debug('Attempting to attach session image', { imagePath });
+    logger.debug('Session image created in memory', { sizeBytes: imageBuffer.length });
 
-    // Check if the file exists before trying to attach it
-    if (!fs.existsSync(imagePath)) {
-      throw new Error(`Image file not found at: ${imagePath}`);
-    }
-
-    const stats = fs.statSync(imagePath);
-    logger.debug('Session image file found', { imagePath, size: stats.size });
-
-    const attachment = getImgAttachmentBuilder(
-      imagePath,
+    const attachment = getImgAttachmentBuilderFromBuffer(
+      imageBuffer,
       BotAttachmentFileNames.CurrentSession
     );
 
