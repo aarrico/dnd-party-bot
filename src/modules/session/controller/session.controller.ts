@@ -402,7 +402,7 @@ const continueSession = async (
       }
 
       // Regenerate session message with FULL status
-      await regenerateSessionMessage(session.id, session.campaignId);
+      await regenerateSessionMessage(session.id);
     } catch (error) {
       logger.error('Failed to create scheduled event for continued session', {
         sessionId: session.id,
@@ -481,7 +481,6 @@ export const cancelSession = async (sessionId: string, reason: string) => {
       const party = await getParty(sessionId);
       const embed = createPartyMemberEmbed(
         party,
-        session.campaignId,
         session.name,
         'CANCELED'
       );
@@ -598,7 +597,7 @@ export const endSession = async (sessionId: string) => {
 
   // Regenerate the session message with completed status
   try {
-    await regenerateSessionMessage(sessionId, session.campaignId);
+    await regenerateSessionMessage(sessionId);
     logger.info('Regenerated session message with COMPLETED status', {
       sessionId,
     });
@@ -710,7 +709,7 @@ export const modifySession = async (interaction: ExtendedInteraction) => {
 
     if (dateChanged || nameChanged) {
       try {
-        await regenerateSessionMessage(sessionId, session.campaignId);
+        await regenerateSessionMessage(sessionId);
         logger.info('Regenerated session message after modification', {
           sessionId,
         });
@@ -1028,10 +1027,9 @@ const isSessionValid = async (
 };
 
 export const regenerateSessionMessage = async (
-  sessionId: string,
-  guildId: string
+  sessionId: string
 ): Promise<void> => {
-  logger.debug('Regenerating session message', { sessionId, guildId });
+  logger.debug('Regenerating session message', { sessionId });
 
   const session = await getSessionById(sessionId);
   const sessionChannel = await safeChannelFetch(client, session.campaignId);
@@ -1051,7 +1049,6 @@ export const regenerateSessionMessage = async (
   const party = await getParty(sessionId);
   const embed = createPartyMemberEmbed(
     party,
-    guildId,
     session.name,
     session.status
   );

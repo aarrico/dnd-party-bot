@@ -29,7 +29,7 @@ export const partyFull = async (
   // Create Discord scheduled event now that the party is set
   let eventId: string | null = null;
   try {
-    const channel = await campaign.channels.fetch(session.id);
+    const channel = await campaign.channels.fetch(session.campaignId);
     const channelName = channel?.name || session.name;
 
     eventId = await createScheduledEvent(

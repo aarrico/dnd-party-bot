@@ -89,15 +89,19 @@ function parseTime(timeStr: string): { hour: number; mins: number } | undefined 
 }
 
 function isValidMonth(month: number) {
-  return month < 13;
+  return month >= 0 && month <= 11;
 }
 
 function isValidDay(month: number, day: number) {
   return day > 0 && day <= monthMaxDayCounts[month];
 }
 
+function isLeapYear(year: number) {
+  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+}
+
 function isLeapYearDay(month: number, year: number, day: number) {
-  return month === 1 && year % 4 === 0 && !(day > 29);
+  return month === 1 && isLeapYear(year) && day > 0 && day <= 29;
 }
 
 function isDateAfterCurrentDate(date: Date) {

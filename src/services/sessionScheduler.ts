@@ -155,15 +155,17 @@ class SessionScheduler {
 
     task.reminderJob = undefined;
 
-    if (!task.cancellationJob) {
+    if (!task.cancellationJob && !task.completionJob) {
       this.scheduledTasks.delete(sessionId);
-      logger.info('Cleared reminder task; no cancellation job remained', {
+      logger.info('Cleared reminder task; no other jobs remained', {
         sessionId,
       });
     } else {
       this.scheduledTasks.set(sessionId, task);
-      logger.info('Cleared reminder task; cancellation job still scheduled', {
+      logger.info('Cleared reminder task; other jobs still scheduled', {
         sessionId,
+        hasCancellation: !!task.cancellationJob,
+        hasCompletion: !!task.completionJob,
       });
     }
   }
@@ -232,7 +234,7 @@ class SessionScheduler {
           const { regenerateSessionMessage } = await import(
             '../modules/session/controller/session.controller.js'
           );
-          await regenerateSessionMessage(session.id, session.campaignId);
+          await regenerateSessionMessage(session.id);
           logger.info('Regenerated and updated session message with ACTIVE status', {
             sessionId: session.id,
           });

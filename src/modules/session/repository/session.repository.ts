@@ -424,11 +424,11 @@ export const getActiveSessionsByCampaignId = async (
  * Since there should only be one active session per channel, returns the first found.
  */
 export const getActiveSessionInChannel = async (
-  campaignId: string
+  channelId: string
 ): Promise<Session | null> => {
   const session = await prisma.session.findFirst({
     where: {
-      campaignId,
+      campaignId: channelId,
       status: { notIn: ['COMPLETED', 'CANCELED'] }
     },
   });

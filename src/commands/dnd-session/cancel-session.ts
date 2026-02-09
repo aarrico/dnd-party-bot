@@ -3,9 +3,12 @@ import { BotCommandOptionInfo, BotDialogs } from '#shared/messages/botDialogStri
 import { ExtendedInteraction } from '#shared/types/discord.js';
 import { cancelSession } from '#modules/session/controller/session.controller.js';
 import { sanitizeUserInput } from '#shared/validation/sanitizeUserInput.js';
-import { sendEphemeralReply } from '#shared/discord/messages.js';
 import { getSessionById, getActiveSessionsForGuild } from '#modules/session/repository/session.repository.js';
+import { canManageSession } from '#shared/discord/permissions.js';
 import { formatSessionDateLong } from '#shared/datetime/dateUtils.js';
+import { createScopedLogger } from '#shared/logging/logger.js';
+
+const logger = createScopedLogger('CancelSessionCommand');
 
 export default {
   data: new SlashCommandBuilder()
@@ -45,17 +48,29 @@ export default {
       throw new Error('Command must be run in a server!');
     }
 
+    await interaction.deferReply({ ephemeral: true });
+
     const sessionId = interaction.options.getString(
       BotCommandOptionInfo.CancelSession_ChannelName,
       true
     );
 
+    let session;
     try {
-      await getSessionById(sessionId, true);
+      session = await getSessionById(sessionId, true);
     } catch {
-      await sendEphemeralReply(
-        BotDialogs.continueSessionNotFound,
-        interaction
+      await interaction.editReply(BotDialogs.continueSessionNotFound);
+      return;
+    }
+
+    const { allowed, isAdmin, isGameMaster } = await canManageSession(
+      interaction.member,
+      sessionId
+    );
+
+    if (!allowed) {
+      await interaction.editReply(
+        '❌ You must be the Game Master of this session or a server Administrator to cancel it.'
       );
       return;
     }
@@ -63,10 +78,20 @@ export default {
     const rawReason = interaction.options.getString(BotCommandOptionInfo.CancelSession_ReasonName, true);
     const reason = sanitizeUserInput(rawReason, { maxLength: 512 }) || 'No reason provided.';
 
-    await interaction.deferReply({ ephemeral: true });
-
-    await cancelSession(sessionId, reason);
-
-    await interaction.editReply('Session data has been deleted.');
+    try {
+      await cancelSession(sessionId, reason);
+      logger.info('Session canceled by user', {
+        sessionId,
+        sessionName: session.name,
+        userId: interaction.user.id,
+        isAdmin,
+        isGameMaster,
+        reason,
+      });
+      await interaction.editReply(`✅ Session **${session.name}** has been canceled.`);
+    } catch (error) {
+      logger.error('Error canceling session', { sessionId, error });
+      await interaction.editReply('❌ An error occurred while canceling the session.');
+    }
   },
 };

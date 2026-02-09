@@ -2,8 +2,8 @@ import { SlashCommandBuilder } from 'discord.js';
 import { BotCommandOptionInfo } from '#shared/messages/botDialogStrings.js';
 import { ExtendedInteraction } from '#shared/types/discord.js';
 import { endSession } from '#modules/session/controller/session.controller.js';
-import { sendEphemeralReply } from '#shared/discord/messages.js';
-import { getActiveSessionInChannel, isUserGameMaster } from '#modules/session/repository/session.repository.js';
+import { getActiveSessionInChannel } from '#modules/session/repository/session.repository.js';
+import { canManageSession } from '#shared/discord/permissions.js';
 import { createScopedLogger } from '#shared/logging/logger.js';
 
 const logger = createScopedLogger('EndSessionCommand');
@@ -18,40 +18,27 @@ export default {
       throw new Error('Command must be run in a server!');
     }
 
+    await interaction.deferReply({ ephemeral: true });
+
     const channelId = interaction.channelId;
 
     const session = await getActiveSessionInChannel(channelId);
     if (!session) {
-      await sendEphemeralReply(
-        '❌ No active session found in this channel.',
-        interaction
-      );
+      await interaction.editReply('❌ No active session found in this channel.');
       return;
     }
 
-    // Permission check: user must be Admin OR the Game Master of the session
-    const member = interaction.member;
-    const isAdmin = member.permissions.has('Administrator');
-    const isGameMaster = await isUserGameMaster(
-      interaction.user.id,
+    const { allowed, isAdmin, isGameMaster } = await canManageSession(
+      interaction.member,
       session.id
     );
 
-    if (!isAdmin && !isGameMaster) {
-      logger.info('User denied permission to end session', {
-        userId: interaction.user.id,
-        sessionId: session.id,
-        isAdmin,
-        isGameMaster,
-      });
-      await sendEphemeralReply(
-        '❌ You must be the Game Master of this session or a server Administrator to end it.',
-        interaction
+    if (!allowed) {
+      await interaction.editReply(
+        '❌ You must be the Game Master of this session or a server Administrator to end it.'
       );
       return;
     }
-
-    await interaction.deferReply({ ephemeral: true });
 
     try {
       await endSession(session.id);

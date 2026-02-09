@@ -51,7 +51,7 @@ export default {
       const session = await getSessionById(sessionId);
 
       // Regenerate the session message (image + embed) with the new status
-      await regenerateSessionMessage(sessionId, session.campaignId);
+      await regenerateSessionMessage(sessionId);
 
       const statusEmojis = {
         SCHEDULED: '🟢',

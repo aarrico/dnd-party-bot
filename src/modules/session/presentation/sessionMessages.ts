@@ -31,7 +31,6 @@ export const getRoleButtonsForSession = (
  */
 export const createPartyMemberEmbed = (
   partyMembers: PartyMember[],
-  guildId: string,
   sessionName: string,
   sessionStatus?: SessionStatus
 ): EmbedBuilder => {
@@ -99,7 +98,7 @@ export const sendNewSessionMessage = async (
       BotAttachmentFileNames.CurrentSession
     );
 
-    const embed = createPartyMemberEmbed(partyMembers, channel.guildId, session.name, session.status);
+    const embed = createPartyMemberEmbed(partyMembers, session.name, session.status);
 
     embed.setDescription(BotDialogs.sessions.scheduled(session.date, session.timezone ?? 'America/Los_Angeles'));
 
@@ -120,7 +119,7 @@ export const sendNewSessionMessage = async (
 
     try {
       logger.info('Sending fallback session message without image', { channelId: channel.id });
-      const embed = createPartyMemberEmbed(partyMembers, channel.guildId, session.name, session.status);
+      const embed = createPartyMemberEmbed(partyMembers, session.name, session.status);
       embed.setDescription(BotDialogs.sessions.scheduled(session.date, session.timezone ?? 'America/Los_Angeles'));
 
       const sentMessage = await safeChannelSend(channel, {

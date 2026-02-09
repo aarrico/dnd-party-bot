@@ -235,7 +235,7 @@ const processButton = async (
   if (partyChangedStatuses.includes(result.status)) {
     try {
       const { regenerateSessionMessage } = await import('#modules/session/controller/session.controller.js');
-      await regenerateSessionMessage(session.id, interaction.guildId ?? '');
+      await regenerateSessionMessage(session.id);
     } catch (error) {
       logger.error('Failed to update session message after party change', {
         sessionId: session.id,
