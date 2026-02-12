@@ -1,5 +1,7 @@
 import {
   createSession as createSessionInDb,
+  getCampaignWithGuildId,
+  getLastCompletedSessionInChannel,
   getParty,
   getSession,
   getSessionById,
@@ -21,10 +23,6 @@ import {
 import { client } from '#app/index.js';
 import { ExtendedInteraction } from '#shared/types/discord.js';
 import {
-  AvatarOptions,
-  PartyMemberImgInfo,
-} from '#modules/session/domain/session.types.js';
-import {
   PartyMember,
   RoleSelectionStatus,
 } from '#modules/party/domain/party.types.js';
@@ -33,6 +31,7 @@ import {
   ListSessionsResult,
   Session,
   SessionStatus,
+  CreateSessionData,
 } from '#modules/session/domain/session.types.js';
 import {
   BotCommandOptionInfo,
@@ -50,14 +49,14 @@ import {
 import { deletePartyMember } from '#modules/party/repository/partyMember.repository.js';
 import { ChannelType, Guild, TextChannel } from 'discord.js';
 import {
+  createScheduledEvent,
   updateScheduledEvent,
   deleteScheduledEvent,
 } from '#modules/session/services/scheduledEventService.js';
 import { RoleType } from '#generated/prisma/client.js';
 import { sessionScheduler } from '#services/sessionScheduler.js';
-import { CreateSessionData } from '#modules/session/domain/session.types.js';
 import { createSessionImage } from '#shared/messages/sessionImage.js';
-import { areDatesEqual, isFutureDate } from '#shared/datetime/dateUtils.js';
+import { areDatesEqual, formatSessionDateLong, isFutureDate } from '#shared/datetime/dateUtils.js';
 import { sanitizeUserInput } from '#shared/validation/sanitizeUserInput.js';
 import {
   safeChannelFetch,
@@ -65,11 +64,11 @@ import {
   safeMessageEdit,
   safeUserFetch,
   safeCreateDM,
-  safeGuildMemberFetch,
-  safeGuildFetch,
 } from '#shared/discord/discordErrorHandler.js';
 import { createScopedLogger } from '#shared/logging/logger.js';
 import { upsertCampaign } from '#app/modules/campaign/repository/campaign.repository.js';
+import { getNextSessionName } from '#modules/session/domain/sessionNameUtils.js';
+import { getPartyInfoForImg } from '#modules/session/services/partyImageService.js';
 
 const logger = createScopedLogger('SessionController');
 
@@ -253,11 +252,6 @@ export const continueSessionInChannel = async (
   userId: string,
   timezone: string
 ): Promise<{ session: Session; party: PartyMember[] }> => {
-  const { getLastCompletedSessionInChannel } = await import(
-    '../repository/session.repository.js'
-  );
-  const { getNextSessionName } = await import('../domain/sessionNameUtils.js');
-
   // Find the last completed/canceled session in this channel
   const lastSession = await getLastCompletedSessionInChannel(sessionChannel.id);
 
@@ -382,10 +376,6 @@ const continueSession = async (
         sessionId: session.id,
       });
 
-      const {
-        createScheduledEvent,
-      } = await import('../services/scheduledEventService.js');
-
       const eventId = await createScheduledEvent(
         guild.id,
         sessionChannel.name,
@@ -459,43 +449,15 @@ export const cancelSession = async (sessionId: string, reason: string) => {
     throw error; // Re-throw since this is critical
   }
 
-  // Try to regenerate the session message with canceled status
+  // Regenerate the session message with canceled status and reason
   try {
-    // Generate the updated image
-    const partyForImg = await getPartyInfoForImg(sessionId);
-    const imageBuffer = await createSessionImage(
-      { ...session, status: 'CANCELED' },
-      partyForImg
+    await regenerateSessionMessage(
+      sessionId,
+      `❌ **CANCELED** - ${session.name}\n${reason}`
     );
-
-    // Update the embed description to include the cancellation reason
-    const channel = await safeChannelFetch(client, session.campaignId);
-    if (channel && channel.type === ChannelType.GuildText) {
-      const message = await safeMessageFetch(channel, session.id);
-
-      const attachment = getImgAttachmentBuilderFromBuffer(
-        imageBuffer,
-        BotAttachmentFileNames.CurrentSession
-      );
-
-      const party = await getParty(sessionId);
-      const embed = createPartyMemberEmbed(
-        party,
-        session.name,
-        'CANCELED'
-      );
-      embed.setDescription(`❌ **CANCELED** - ${session.name}\n${reason}`);
-
-      await safeMessageEdit(message, {
-        embeds: [embed],
-        files: [attachment],
-        components: getRoleButtonsForSession('CANCELED'),
-      });
-
-      logger.info('Updated Discord message for canceled session', {
-        sessionId,
-      });
-    }
+    logger.info('Updated Discord message for canceled session', {
+      sessionId,
+    });
   } catch (error) {
     logger.error('Failed to update Discord message for canceled session', {
       sessionId,
@@ -505,16 +467,6 @@ export const cancelSession = async (sessionId: string, reason: string) => {
   }
 
   try {
-    const { getUserTimezone } = await import(
-      '../../user/repository/user.repository.js'
-    );
-    const { formatSessionDateLong } = await import(
-      '../../../shared/datetime/dateUtils.js'
-    );
-    const { getCampaignWithGuildId } = await import(
-      '../repository/session.repository.js'
-    );
-
     // Get guildId for Discord URL
     const campaign = await getCampaignWithGuildId(session.campaignId);
     const guildId = campaign?.guildId ?? '';
@@ -864,75 +816,6 @@ export const processRoleSelection = async (
   return RoleSelectionStatus.ADDED_TO_PARTY;
 };
 
-export const convertPartyToImgInfo = async (
-  party: PartyMember[],
-  guildId: string
-): Promise<PartyMemberImgInfo[]> => {
-  const avatarOptions: AvatarOptions = {
-    extension: 'png',
-    forceStatic: true,
-  };
-
-  let guild: Guild | null = null;
-  try {
-    guild = await safeGuildFetch(client, guildId);
-  } catch (error) {
-    logger.warn('Could not fetch guild for party image conversion', { guildId, error });
-  }
-
-  return Promise.all(
-    party.map(async (member) => {
-      try {
-        const user = await safeUserFetch(client, member.userId);
-        let displayName = member.username;
-        let avatarURL = user.displayAvatarURL(avatarOptions);
-
-        if (guild) {
-          try {
-            const guildMember = await safeGuildMemberFetch(guild, member.userId);
-            displayName = guildMember.displayName;
-            avatarURL = guildMember.displayAvatarURL(avatarOptions);
-          } catch (guildMemberError) {
-            logger.debug('Could not fetch guild member, using user-level data', {
-              userId: member.userId,
-              guildId: guild.id,
-              error: guildMemberError,
-            });
-          }
-        }
-
-        return {
-          userId: member.userId,
-          username: member.username,
-          displayName,
-          userAvatarURL: avatarURL,
-          role: member.role,
-        };
-      } catch (error) {
-        logger.warn('Could not fetch avatar for user avatar rendering', {
-          userId: member.userId,
-          error,
-        });
-        return {
-          userId: member.userId,
-          username: member.username,
-          displayName: member.username,
-          userAvatarURL: `https://cdn.discordapp.com/embed/avatars/${member.userId.slice(-1)}.png`,
-          role: member.role,
-        };
-      }
-    })
-  );
-};
-
-export const getPartyInfoForImg = async (
-  sessionId: string
-): Promise<PartyMemberImgInfo[]> => {
-  const session = await getSession(sessionId);
-  const party = await getParty(sessionId);
-  return convertPartyToImgInfo(party, session.campaignId);
-};
-
 export const listSessions = async (
   options: ListSessionsOptions
 ): Promise<ListSessionsResult[]> => {
@@ -1027,7 +910,8 @@ const isSessionValid = async (
 };
 
 export const regenerateSessionMessage = async (
-  sessionId: string
+  sessionId: string,
+  descriptionOverride?: string
 ): Promise<void> => {
   logger.debug('Regenerating session message', { sessionId });
 
@@ -1053,6 +937,7 @@ export const regenerateSessionMessage = async (
     session.status
   );
   embed.setDescription(
+    descriptionOverride ??
     BotDialogs.sessions.scheduled(
       session.date,
       session.timezone ?? 'America/Los_Angeles'

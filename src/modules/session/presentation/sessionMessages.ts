@@ -13,6 +13,7 @@ import { createSessionImage } from '#shared/messages/sessionImage.js';
 import { safeChannelSend } from '#shared/discord/discordErrorHandler.js';
 import { roleButtons } from '#app/index.js';
 import { createScopedLogger } from '#shared/logging/logger.js';
+import { getPartyInfoForImg, convertPartyToImgInfo } from '#modules/session/services/partyImageService.js';
 
 const logger = createScopedLogger('SessionMessages');
 
@@ -80,14 +81,11 @@ export const sendNewSessionMessage = async (
   try {
     logger.debug('Creating session image for session message', { sessionId: session.id });
 
-    // Dynamic import to avoid circular dependencies
-    const sessionController = await import('#modules/session/controller/session.controller.js');
-
     // If session.id is empty (new session), convert partyMembers directly
     // Otherwise fetch from database for existing sessions
     const party = session.id
-      ? await sessionController.getPartyInfoForImg(session.id)
-      : await sessionController.convertPartyToImgInfo(partyMembers, channel.guildId);
+      ? await getPartyInfoForImg(session.id)
+      : await convertPartyToImgInfo(partyMembers, channel.guildId);
 
     const imageBuffer = await createSessionImage(session, party);
 

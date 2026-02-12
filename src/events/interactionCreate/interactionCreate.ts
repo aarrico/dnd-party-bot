@@ -20,7 +20,8 @@ import {
   BotDialogs,
   getAddPartyMemberMsg,
 } from '#shared/messages/botDialogStrings.js';
-import { processRoleSelection } from '#modules/session/controller/session.controller.js';
+import { processRoleSelection, regenerateSessionMessage } from '#modules/session/controller/session.controller.js';
+import { partyFull } from '#modules/party/controller/party.controller.js';
 import { PartyMember, RoleSelectionStatus } from '#modules/party/domain/party.types.js';
 import { getRoleByString } from '#modules/role/domain/roleManager.js';
 import { getSessionById } from '#modules/session/repository/session.repository.js';
@@ -73,7 +74,6 @@ const partyMemberJoined = async (
 
         try {
           const guild = channel.guild;
-          const { partyFull } = await import('#modules/party/controller/party.controller.js');
           await partyFull(guild, sessionWithParty);
         } catch (error) {
           logger.error('Failed to handle party full event', {
@@ -234,7 +234,6 @@ const processButton = async (
 
   if (partyChangedStatuses.includes(result.status)) {
     try {
-      const { regenerateSessionMessage } = await import('#modules/session/controller/session.controller.js');
       await regenerateSessionMessage(session.id);
     } catch (error) {
       logger.error('Failed to update session message after party change', {

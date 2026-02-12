@@ -1,5 +1,10 @@
 import { CronJob } from 'cron';
-import { getSessionById } from '../modules/session/repository/session.repository.js';
+import {
+  getCampaignWithGuildId,
+  getSessionById,
+  getSessions,
+  updateSession,
+} from '../modules/session/repository/session.repository.js';
 import { SessionWithParty } from '../modules/session/domain/session.types.js';
 import {
   getHoursBefore,
@@ -216,9 +221,6 @@ class SessionScheduler {
         });
 
         try {
-          const { updateSession } = await import(
-            '../modules/session/repository/session.repository.js'
-          );
           await updateSession(session.id, { status: 'ACTIVE' });
           logger.info('Updated session status to ACTIVE after full party', {
             sessionId: session.id,
@@ -332,9 +334,6 @@ class SessionScheduler {
 
       // Try direct database update as fallback
       try {
-        const { updateSession } = await import(
-          '../modules/session/repository/session.repository.js'
-        );
         await updateSession(session.id, { status: 'CANCELED' });
         logger.warn('Fallback: updated session status to CANCELED directly', {
           sessionId: session.id,
@@ -355,9 +354,6 @@ class SessionScheduler {
     const sessionTime = formatSessionDateLong(session.date, timezone);
 
     // Get guildId from campaign for Discord URL
-    const { getCampaignWithGuildId } = await import(
-      '../modules/session/repository/session.repository.js'
-    );
     const campaign = await getCampaignWithGuildId(session.campaignId);
     const guildId = campaign?.guildId ?? '';
 
@@ -374,10 +370,6 @@ class SessionScheduler {
   public async initializeExistingSessions(): Promise<void> {
     try {
       logger.info('🔄 Initializing session scheduler...');
-
-      const { getSessions, getSessionById: getSessionByIdWithParty } = await import(
-        '../modules/session/repository/session.repository.js'
-      );
 
       const allSessions = await getSessions({
         includeId: true,
@@ -397,7 +389,7 @@ class SessionScheduler {
       });
 
       // Handle sessions that may have been missed during downtime
-      await this.handleMissedSessions(pendingSessions, getSessionByIdWithParty);
+      await this.handleMissedSessions(pendingSessions);
 
       // Schedule future tasks for remaining valid sessions
       const futureSessions = pendingSessions.filter((session) =>
@@ -432,11 +424,8 @@ class SessionScheduler {
    * - SCHEDULED/FULL sessions past start time without full party → cancel
    */
   private async handleMissedSessions(
-    sessions: { id: string; date: Date; status: string }[],
-    getSessionByIdWithParty: typeof getSessionById
+    sessions: { id: string; date: Date; status: string }[]
   ): Promise<void> {
-    const now = new Date();
-
     for (const session of sessions) {
       const sessionStart = session.date;
       const completionTime = getHoursAfter(sessionStart, 5);
@@ -467,7 +456,7 @@ class SessionScheduler {
           }
 
           if (session.status === 'SCHEDULED' || session.status === 'FULL') {
-            const fullSession = await getSessionByIdWithParty(session.id, true);
+            const fullSession = await getSessionById(session.id, true);
             const isPartyFull = fullSession.partyMembers.length >= 6;
 
             if (isPartyFull) {
@@ -476,9 +465,6 @@ class SessionScheduler {
                 partySize: fullSession.partyMembers.length,
               });
 
-              const { updateSession } = await import(
-                '../modules/session/repository/session.repository.js'
-              );
               await updateSession(session.id, { status: 'ACTIVE' });
 
               if (isFutureDate(completionTime)) {
