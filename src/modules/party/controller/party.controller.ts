@@ -1,4 +1,7 @@
-import { getSessionById, updateSession } from '#modules/session/repository/session.repository.js';
+import {
+  getSessionById,
+  updateSession,
+} from '#modules/session/repository/session.repository.js';
 import { ListPartyForSessionOptions } from '#modules/party/domain/party.types.js';
 import { SessionWithParty } from '#modules/session/domain/session.types.js';
 import { notifyParty } from '#app/shared/discord/messages.js';

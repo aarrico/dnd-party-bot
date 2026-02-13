@@ -1,4 +1,10 @@
-import { ActionRowBuilder, AutocompleteInteraction, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, User } from 'discord.js';
+import {
+  ActionRowBuilder,
+  AutocompleteInteraction,
+  StringSelectMenuBuilder,
+  StringSelectMenuOptionBuilder,
+  User,
+} from 'discord.js';
 import { BotDialogs } from '#shared/messages/botDialogStrings.js';
 import { createScopedLogger } from '#shared/logging/logger.js';
 
@@ -135,7 +141,9 @@ export const getTimezonesByRegion = (regionValue: string): TimezoneOption[] => {
 /**
  * Build a region select menu for timezone selection (step 1)
  */
-export const buildRegionSelectMenu = (customId: string): StringSelectMenuBuilder => {
+export const buildRegionSelectMenu = (
+  customId: string
+): StringSelectMenuBuilder => {
   return new StringSelectMenuBuilder()
     .setCustomId(customId)
     .setPlaceholder('Select your region')
@@ -153,7 +161,10 @@ export const buildRegionSelectMenu = (customId: string): StringSelectMenuBuilder
 /**
  * Build a timezone select menu for a specific region (step 2)
  */
-export const buildTimezoneSelectMenu = (customId: string, regionValue: string): StringSelectMenuBuilder => {
+export const buildTimezoneSelectMenu = (
+  customId: string,
+  regionValue: string
+): StringSelectMenuBuilder => {
   const timezones = getTimezonesByRegion(regionValue);
   return new StringSelectMenuBuilder()
     .setCustomId(customId)
@@ -175,14 +186,19 @@ const ONBOARDING_REGION_SELECT_ID = 'onboarding-region-select';
  */
 export const sendTimezoneOnboardingDM = async (user: User): Promise<void> => {
   const regionSelect = buildRegionSelectMenu(ONBOARDING_REGION_SELECT_ID);
-  const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(regionSelect);
+  const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+    regionSelect
+  );
 
   await user.send({
     content: BotDialogs.onboarding.welcome(user.username),
     components: [row],
   });
 
-  logger.info('Sent onboarding DM', { userId: user.id, username: user.username });
+  logger.info('Sent onboarding DM', {
+    userId: user.id,
+    username: user.username,
+  });
 };
 
 /**

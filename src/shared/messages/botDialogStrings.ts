@@ -1,18 +1,20 @@
 import { Session } from '#generated/prisma/client.js';
-import { PartyMember, RoleSelectionStatus } from '#modules/party/domain/party.types.js';
+import {
+  PartyMember,
+  RoleSelectionStatus,
+} from '#modules/party/domain/party.types.js';
 import path from 'path';
 import os from 'os';
 import { Guild } from 'discord.js';
 import { formatSessionDateLong } from '../datetime/dateUtils.js';
 import { format } from 'date-fns';
 
-
 export const BotDialogs = {
   createSessionInvalidSessionName: 'Your session name is invalid.',
   createSessionDMSessionTime: (
     campaign: Guild,
     session: Pick<Session, 'name' | 'id' | 'campaignId' | 'date'>,
-    timezone: string,
+    timezone: string
   ) =>
     `🥳 New session for [${campaign.name}](https://discord.com/channels/${campaign.id}) available to join!\n🎲 [${session.name}](https://discord.com/channels/${campaign.id}/${session.campaignId}/${session.id})\n📅 ${formatSessionDateLong(session.date, timezone)}`,
   createSessionOneMoment:
@@ -21,11 +23,18 @@ export const BotDialogs = {
     "🤖 The date you entered is invalid. This could be due to the following reasons:\n- You entered a date that doesn't exist.\n- You entered a day that has already passed.",
   createSessionSuccess: (sessionName: string, date: Date, channelId: string) =>
     `✅ **${sessionName}** session has been created!\n📅 Scheduled for: ${format(date, 'PPP')}\n🎲 Join the session: <#${channelId}>`,
-  createSessionSuccessFallback: (sessionName: string, date: Date, channelName: string) =>
+  createSessionSuccessFallback: (
+    sessionName: string,
+    date: Date,
+    channelName: string
+  ) =>
     `✅ **${sessionName}** session has been created!\n📅 Scheduled for: ${format(date, 'PPP')}\n🎲 Join the session: #${channelName}`,
-  createSessionError: '❌ There was an error creating the session. Please try again.',
-  createSessionHostingMultipleSessions: '❌ You cannot host multiple sessions on the same day.',
-  createSessionAlreadyMemberSameDay: '❌ You cannot host a session on a day when you are already a member of another session.',
+  createSessionError:
+    '❌ There was an error creating the session. Please try again.',
+  createSessionHostingMultipleSessions:
+    '❌ You cannot host multiple sessions on the same day.',
+  createSessionAlreadyMemberSameDay:
+    '❌ You cannot host a session on a day when you are already a member of another session.',
   createSessionInvalidGuild: '❌ Invalid campaign/guild provided.',
   createSessionInvalidDate: '❌ Invalid date provided for session creation.',
   createSessionDateMustBeFuture: '❌ Session date must be in the future.',
@@ -34,25 +43,38 @@ export const BotDialogs = {
   continueSessionDMSessionTime: (
     campaign: Guild,
     session: Pick<Session, 'name' | 'id' | 'campaignId' | 'date'>,
-    timezone: string,
+    timezone: string
   ) =>
     `🥳 Get ready to continue your session for [${campaign.name}](https://discord.com/channels/${campaign.id})!\n🎲 [${session.name}](https://discord.com/channels/${campaign.id}/${session.campaignId}/${session.id})\n📅 ${formatSessionDateLong(session.date, timezone)}`,
-  continueSessionInvalidChannel: '❌ Invalid channel selected. Please select a text channel.',
-  continueSessionChannelNotSession: '❌ The selected channel is not a session channel. Session channels must not be in a category.',
+  continueSessionInvalidChannel:
+    '❌ Invalid channel selected. Please select a text channel.',
+  continueSessionChannelNotSession:
+    '❌ The selected channel is not a session channel. Session channels must not be in a category.',
   continueSessionNotFound: '❌ The selected channel is not a valid session.',
-  continueSessionSuccess: (originalName: string, newName: string, date: Date, channelId: string) =>
+  continueSessionSuccess: (
+    originalName: string,
+    newName: string,
+    date: Date,
+    channelId: string
+  ) =>
     `✅ Session continued from **${originalName}** to **${newName}**!\n📅 Scheduled for: ${format(date, 'PPP')}\n🎲 Join the session: <#${channelId}>`,
-  continueSessionSuccessFallback: (originalName: string, newName: string, date: Date, channelName: string) =>
+  continueSessionSuccessFallback: (
+    originalName: string,
+    newName: string,
+    date: Date,
+    channelName: string
+  ) =>
     `✅ Session continued from **${originalName}** to **${newName}**!\n📅 Scheduled for: ${format(date, 'PPP')}\n🎲 Join the session: #${channelName}`,
-  continueSessionError: '❌ There was an error continuing the session. Please try again.',
+  continueSessionError:
+    '❌ There was an error continuing the session. Please try again.',
   fullSessionDMSessionTime: (
     campaign: Guild,
     session: Pick<Session, 'name' | 'id' | 'campaignId' | 'date'>,
-    timezone: string,
+    timezone: string
   ) =>
     `🎉 Gather your gear and supplies! The [${campaign.name}](https://discord.com/channels/${campaign.id}) session is full!\n🎲 [${session.name}](https://discord.com/channels/${campaign.id}/${session.campaignId}/${session.id})\n📅 ${formatSessionDateLong(session.date, timezone)}`,
-  fullSessionInvalidChannel: '❌ Invalid channel selected. Please select a text channel.',
-
+  fullSessionInvalidChannel:
+    '❌ Invalid channel selected. Please select a text channel.',
 
   sessions: {
     listAllResult: '🤖🎉 Report for all scheduled sessions is ready!',
@@ -60,13 +82,10 @@ export const BotDialogs = {
       `🤖🎉 Report for all sessions ${username} has signed up for is ready!`,
     allUsersResult: (session: string) =>
       `🤖🎉 Report for all users in session ${session} is ready!`,
-    updated: (
-      name: string
-    ) => `🎉 Session ${name} has been updated successfully.\n🖌️ Generating new image...give me a few seconds!`,
-    scheduled: (
-      date: Date,
-      timezone: string
-    ) => `🗓️ ${formatSessionDateLong(date, timezone)}`,
+    updated: (name: string) =>
+      `🎉 Session ${name} has been updated successfully.\n🖌️ Generating new image...give me a few seconds!`,
+    scheduled: (date: Date, timezone: string) =>
+      `🗓️ ${formatSessionDateLong(date, timezone)}`,
   },
 
   users: {
@@ -98,11 +117,15 @@ export const BotDialogs = {
     partyFull:
       '🙅 Unfortunately, this party is full and no new members can be added.',
     dmCantSwap: '🙅 Game Master cannot change roles!',
-    sessionLocked: '🔒 This session is locked and no longer accepting role changes.',
+    sessionLocked:
+      '🔒 This session is locked and no longer accepting role changes.',
     noActionTaken: '🤖 No Action was taken. Something went wrong',
-    expired: '⏰ The session has expired and can no longer accept role changes.',
-    alreadyInSession: '🙅 You are already in another active or scheduled session and cannot join this one.',
-    hostingSameDay: '🙅 You cannot join this session because you are hosting another session on the same day.',
+    expired:
+      '⏰ The session has expired and can no longer accept role changes.',
+    alreadyInSession:
+      '🙅 You are already in another active or scheduled session and cannot join this one.',
+    hostingSameDay:
+      '🙅 You cannot join this session because you are hosting another session on the same day.',
   },
 } as const;
 
@@ -209,14 +232,14 @@ export enum BotCommandOptionInfo {
   CancelSession_ReasonName = 'reason',
   CancelSession_ReasonDescription = 'Message to party members about the cancellation of the session.',
   Campaign_Description = 'Include campaign name in the output.',
-  CreateSession_TimezoneName = "timezone",
-  CreateSession_TimezoneDescription = "Timezone for the session (defaults to your saved timezone)",
-  ContinueSession_ChannelName = "continue-session-select",
-  ContinueSession_ChannelDescription = "Select a completed session to continue (defaults to most recent in this channel)",
-  CancelSession_ChannelName = "cancel-session-select",
-  CancelSession_ChannelDescription = "Select the session to cancel",
-  ModifySession_ChannelName = "modify-session-select",
-  ModifySession_ChannelDescription = "Select the session to modify",
-  EndSession_Name = "end-session",
-  EndSession_Description = "Mark the active session in this channel as completed",
+  CreateSession_TimezoneName = 'timezone',
+  CreateSession_TimezoneDescription = 'Timezone for the session (defaults to your saved timezone)',
+  ContinueSession_ChannelName = 'continue-session-select',
+  ContinueSession_ChannelDescription = 'Select a completed session to continue (defaults to most recent in this channel)',
+  CancelSession_ChannelName = 'cancel-session-select',
+  CancelSession_ChannelDescription = 'Select the session to cancel',
+  ModifySession_ChannelName = 'modify-session-select',
+  ModifySession_ChannelDescription = 'Select the session to modify',
+  EndSession_Name = 'end-session',
+  EndSession_Description = 'Mark the active session in this channel as completed',
 }

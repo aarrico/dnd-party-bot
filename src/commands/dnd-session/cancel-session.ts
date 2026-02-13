@@ -1,9 +1,15 @@
 import { SlashCommandBuilder, AutocompleteInteraction } from 'discord.js';
-import { BotCommandOptionInfo, BotDialogs } from '#shared/messages/botDialogStrings.js';
+import {
+  BotCommandOptionInfo,
+  BotDialogs,
+} from '#shared/messages/botDialogStrings.js';
 import { ExtendedInteraction } from '#shared/types/discord.js';
 import { cancelSession } from '#modules/session/controller/session.controller.js';
 import { sanitizeUserInput } from '#shared/validation/sanitizeUserInput.js';
-import { getSessionById, getActiveSessionsForGuild } from '#modules/session/repository/session.repository.js';
+import {
+  getSessionById,
+  getActiveSessionsForGuild,
+} from '#modules/session/repository/session.repository.js';
 import { canManageSession } from '#shared/discord/permissions.js';
 import { formatSessionDateLong } from '#shared/datetime/dateUtils.js';
 import { createScopedLogger } from '#shared/logging/logger.js';
@@ -31,12 +37,15 @@ export default {
     if (!interaction.guild) return;
 
     const focusedOption = interaction.options.getFocused(true);
-    if (focusedOption.name === String(BotCommandOptionInfo.CancelSession_ChannelName)) {
+    if (
+      focusedOption.name ===
+      String(BotCommandOptionInfo.CancelSession_ChannelName)
+    ) {
       const sessions = await getActiveSessionsForGuild(interaction.guild.id);
 
-      const choices = sessions.map(session => ({
+      const choices = sessions.map((session) => ({
         name: `${session.name} (${session.campaignName}) - ${formatSessionDateLong(session.date, session.timezone)}`,
-        value: session.id
+        value: session.id,
       }));
 
       await interaction.respond(choices);
@@ -75,8 +84,12 @@ export default {
       return;
     }
 
-    const rawReason = interaction.options.getString(BotCommandOptionInfo.CancelSession_ReasonName, true);
-    const reason = sanitizeUserInput(rawReason, { maxLength: 512 }) || 'No reason provided.';
+    const rawReason = interaction.options.getString(
+      BotCommandOptionInfo.CancelSession_ReasonName,
+      true
+    );
+    const reason =
+      sanitizeUserInput(rawReason, { maxLength: 512 }) || 'No reason provided.';
 
     try {
       await cancelSession(sessionId, reason);
@@ -88,10 +101,14 @@ export default {
         isGameMaster,
         reason,
       });
-      await interaction.editReply(`✅ Session **${session.name}** has been canceled.`);
+      await interaction.editReply(
+        `✅ Session **${session.name}** has been canceled.`
+      );
     } catch (error) {
       logger.error('Error canceling session', { sessionId, error });
-      await interaction.editReply('❌ An error occurred while canceling the session.');
+      await interaction.editReply(
+        '❌ An error occurred while canceling the session.'
+      );
     }
   },
 };

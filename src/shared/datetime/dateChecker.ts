@@ -5,12 +5,26 @@ import { isFutureDate } from './dateUtils.js';
 
 const monthMaxDayCounts = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
-
-export default function DateChecker(interaction: ExtendedInteraction, timezone?: string) {
-  const month = interaction.options.getInteger(BotCommandOptionInfo.Session_Month_Name, true);
-  const day = interaction.options.getInteger(BotCommandOptionInfo.Session_Day_Name, true);
-  const year = interaction.options.getInteger(BotCommandOptionInfo.Session_Year_Name, true);
-  const time = interaction.options.getString(BotCommandOptionInfo.Session_Time_Name, true);
+export default function DateChecker(
+  interaction: ExtendedInteraction,
+  timezone?: string
+) {
+  const month = interaction.options.getInteger(
+    BotCommandOptionInfo.Session_Month_Name,
+    true
+  );
+  const day = interaction.options.getInteger(
+    BotCommandOptionInfo.Session_Day_Name,
+    true
+  );
+  const year = interaction.options.getInteger(
+    BotCommandOptionInfo.Session_Year_Name,
+    true
+  );
+  const time = interaction.options.getString(
+    BotCommandOptionInfo.Session_Time_Name,
+    true
+  );
 
   const parsedTime = parseTime(time);
   if (!parsedTime) {
@@ -44,11 +58,15 @@ export default function DateChecker(interaction: ExtendedInteraction, timezone?:
  * Parse time in either 12-hour (7:00 PM, 7:00PM, 7pm) or 24-hour (19:00, 7:00) format
  * Returns { hour, mins } in 24-hour format, or undefined if invalid
  */
-function parseTime(timeStr: string): { hour: number; mins: number } | undefined {
+function parseTime(
+  timeStr: string
+): { hour: number; mins: number } | undefined {
   const normalizedTime = timeStr.trim().toUpperCase();
 
   // Check for 12-hour format (AM/PM)
-  const twelveHourMatch = normalizedTime.match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)$/);
+  const twelveHourMatch = normalizedTime.match(
+    /^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)$/
+  );
 
   if (twelveHourMatch) {
     let hour = parseInt(twelveHourMatch[1]);

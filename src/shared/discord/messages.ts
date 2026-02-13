@@ -4,7 +4,7 @@ import {
   ChannelType,
   MessageFlags,
   MessagePayload,
-  TextChannel
+  TextChannel,
 } from 'discord.js';
 import { client } from '#app/index.js';
 import { ExtendedInteraction } from '#shared/types/discord.js';
@@ -58,14 +58,14 @@ export const sendEphemeralReply = async (
       return await interaction.followUp({
         content: messageContent,
         files: files ? [...files] : undefined,
-        flags: MessageFlags.Ephemeral
+        flags: MessageFlags.Ephemeral,
       });
     } else {
       // If not replied yet, use reply
       return await interaction.reply({
         content: messageContent,
         files: files ? [...files] : undefined,
-        flags: MessageFlags.Ephemeral
+        flags: MessageFlags.Ephemeral,
       });
     }
   } catch (error) {
@@ -74,7 +74,7 @@ export const sendEphemeralReply = async (
     try {
       return await interaction.editReply({
         content: messageContent,
-        files: files ? [...files] : undefined
+        files: files ? [...files] : undefined,
       });
     } catch (editError) {
       logger.error('Error in editReply fallback', { error: editError });
@@ -96,7 +96,7 @@ export const sendMessageReplyDisappearingMessage = async (
 ) => {
   const msg = await interaction.reply({
     content,
-    flags: MessageFlags.Ephemeral
+    flags: MessageFlags.Ephemeral,
   });
 
   if (duration === -1) {
@@ -123,42 +123,48 @@ export const notifyGuild = async (
   }
   const members = await safeGuildMembersFetch(guild);
   const users = Array.from(members.values())
-    .map(member => { if (!member.user.bot) return member.user; })
-    .filter(user => user !== undefined);
+    .map((member) => {
+      if (!member.user.bot) return member.user;
+    })
+    .filter((user) => user !== undefined);
 
-  await Promise.allSettled(users.map(async user => {
-    try {
-      const formattedMessage = await messageFormatter(user.id);
-      return await safeUserSend(user, {
-        content: formattedMessage,
-      });
-    } catch (error) {
-      logger.warn('Failed to send DM to user', { userId: user.id, error });
-      return null;
-    }
-  }));
+  await Promise.allSettled(
+    users.map(async (user) => {
+      try {
+        const formattedMessage = await messageFormatter(user.id);
+        return await safeUserSend(user, {
+          content: formattedMessage,
+        });
+      } catch (error) {
+        logger.warn('Failed to send DM to user', { userId: user.id, error });
+        return null;
+      }
+    })
+  );
 };
 
 export const notifyParty = async (
   partyMemberIds: string[],
   messageFormatter: (userId: string) => Promise<string>
 ) => {
-  await Promise.allSettled(partyMemberIds.map(async userId => {
-    try {
-      const formattedMessage = await messageFormatter(userId);
-      const user = await client.users.fetch(userId);
-      return await safeUserSend(user, {
-        content: formattedMessage,
-      });
-    } catch (error) {
-      logger.warn('Failed to send DM to party member', { userId, error });
-      return null;
-    }
-  }));
+  await Promise.allSettled(
+    partyMemberIds.map(async (userId) => {
+      try {
+        const formattedMessage = await messageFormatter(userId);
+        const user = await client.users.fetch(userId);
+        return await safeUserSend(user, {
+          content: formattedMessage,
+        });
+      } catch (error) {
+        logger.warn('Failed to send DM to party member', { userId, error });
+        return null;
+      }
+    })
+  );
 };
 
 export const notifyGameMaster = async (
- gameMasterId: string,
+  gameMasterId: string,
   messageFormatter: (userId: string) => Promise<string>
 ) => {
   try {
@@ -168,7 +174,10 @@ export const notifyGameMaster = async (
       content: formattedMessage,
     });
   } catch (error) {
-    logger.warn('Failed to send DM to game master', { userId: gameMasterId, error });
+    logger.warn('Failed to send DM to game master', {
+      userId: gameMasterId,
+      error,
+    });
     return null;
   }
 };

@@ -1,10 +1,18 @@
-import { SlashCommandBuilder, AutocompleteInteraction, ChannelType } from 'discord.js';
+import {
+  SlashCommandBuilder,
+  AutocompleteInteraction,
+  ChannelType,
+} from 'discord.js';
 import {
   BotCommandInfo,
   BotCommandOptionInfo,
   BotDialogs,
 } from '#shared/messages/botDialogStrings.js';
-import { monthOptionChoicesArray, dayChoices, yearOptionChoicesArray } from '#shared/constants/dateConstants.js';
+import {
+  monthOptionChoicesArray,
+  dayChoices,
+  yearOptionChoicesArray,
+} from '#shared/constants/dateConstants.js';
 import { ExtendedInteraction } from '#shared/types/discord.js';
 import { createSession } from '#modules/session/controller/session.controller.js';
 import DateChecker from '#shared/datetime/dateChecker.js';
@@ -69,11 +77,14 @@ export default {
     const focusedOption = interaction.options.getFocused(true);
 
     if (focusedOption.name === String(BotCommandOptionInfo.Session_Day_Name)) {
-      const filtered = dayChoices.filter(day =>
-        day.name.startsWith(focusedOption.value.toString())
-      ).slice(0, 25);
+      const filtered = dayChoices
+        .filter((day) => day.name.startsWith(focusedOption.value.toString()))
+        .slice(0, 25);
       await interaction.respond(filtered);
-    } else if (focusedOption.name === String(BotCommandOptionInfo.CreateSession_TimezoneName)) {
+    } else if (
+      focusedOption.name ===
+      String(BotCommandOptionInfo.CreateSession_TimezoneName)
+    ) {
       const userTimezone = await getUserTimezone(interaction.user.id);
       await handleTimezoneAutocomplete(interaction, userTimezone);
     }

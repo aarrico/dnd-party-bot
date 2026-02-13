@@ -51,11 +51,22 @@ export default {
         void interaction.reply('Only Admins can run this command!');
         return;
       }
-      const sessionId = interaction.options.getString(BotCommandOptionInfo.Session_Id_Name, true);
+      const sessionId = interaction.options.getString(
+        BotCommandOptionInfo.Session_Id_Name,
+        true
+      );
 
-      const addUserId = interaction.options.getBoolean(BotCommandOptionInfo.UserId_Name) ?? false;
-      const addUserRoleInThisSession = interaction.options.getBoolean(BotCommandOptionInfo.GetAllUsersInASession_UserRoleName) ?? false;
-      const addUserDMMessageId = interaction.options.getBoolean(BotCommandOptionInfo.GetAllUsersInASession_UserChannelIDName) ?? false;
+      const addUserId =
+        interaction.options.getBoolean(BotCommandOptionInfo.UserId_Name) ??
+        false;
+      const addUserRoleInThisSession =
+        interaction.options.getBoolean(
+          BotCommandOptionInfo.GetAllUsersInASession_UserRoleName
+        ) ?? false;
+      const addUserDMMessageId =
+        interaction.options.getBoolean(
+          BotCommandOptionInfo.GetAllUsersInASession_UserChannelIDName
+        ) ?? false;
 
       const session = await listPartyForSession(sessionId);
 
@@ -75,7 +86,10 @@ export default {
         [attachment]
       );
     } catch (error) {
-      void sendEphemeralReply(`There was an error: ${error instanceof Error ? error.message : String(error)}`, interaction);
+      void sendEphemeralReply(
+        `There was an error: ${error instanceof Error ? error.message : String(error)}`,
+        interaction
+      );
     }
   },
 };

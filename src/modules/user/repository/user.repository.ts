@@ -10,7 +10,11 @@ import { createScopedLogger } from '#shared/logging/logger.js';
 
 const logger = createScopedLogger('UserRepository');
 
-export const upsertUser = async (userId: string, username: string, channelId: string) => {
+export const upsertUser = async (
+  userId: string,
+  username: string,
+  channelId: string
+) => {
   return await prisma.user.upsert({
     where: { id: userId },
     create: {
@@ -22,7 +26,7 @@ export const upsertUser = async (userId: string, username: string, channelId: st
       username: username,
     },
   });
-}
+};
 
 export const updateUserTimezone = async (userId: string, timezone: string) => {
   logger.debug('Updating user timezone', { userId, timezone });
@@ -234,7 +238,7 @@ export const getSessionsForUser = async (
 export const getUserTimezone = async (userId: string): Promise<string> => {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { timezone: true }
+    select: { timezone: true },
   });
   return user?.timezone ?? 'America/Los_Angeles';
 };

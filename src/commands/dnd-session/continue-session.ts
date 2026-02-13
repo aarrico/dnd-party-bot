@@ -1,10 +1,18 @@
-import { SlashCommandBuilder, AutocompleteInteraction, ChannelType } from 'discord.js';
+import {
+  SlashCommandBuilder,
+  AutocompleteInteraction,
+  ChannelType,
+} from 'discord.js';
 import {
   BotCommandInfo,
   BotCommandOptionInfo,
   BotDialogs,
 } from '#shared/messages/botDialogStrings.js';
-import { monthOptionChoicesArray, dayChoices, yearOptionChoicesArray } from '#shared/constants/dateConstants.js';
+import {
+  monthOptionChoicesArray,
+  dayChoices,
+  yearOptionChoicesArray,
+} from '#shared/constants/dateConstants.js';
 import { ExtendedInteraction } from '#shared/types/discord.js';
 import { continueSessionInChannel } from '#modules/session/controller/session.controller.js';
 import DateChecker from '#shared/datetime/dateChecker.js';
@@ -60,11 +68,14 @@ export default {
     const focusedOption = interaction.options.getFocused(true);
 
     if (focusedOption.name === String(BotCommandOptionInfo.Session_Day_Name)) {
-      const filtered = dayChoices.filter(day =>
-        day.name.startsWith(focusedOption.value.toString())
-      ).slice(0, 25);
+      const filtered = dayChoices
+        .filter((day) => day.name.startsWith(focusedOption.value.toString()))
+        .slice(0, 25);
       await interaction.respond(filtered);
-    } else if (focusedOption.name === String(BotCommandOptionInfo.CreateSession_TimezoneName)) {
+    } else if (
+      focusedOption.name ===
+      String(BotCommandOptionInfo.CreateSession_TimezoneName)
+    ) {
       const userTimezone = await getUserTimezone(interaction.user.id);
       await handleTimezoneAutocomplete(interaction, userTimezone);
     }
@@ -84,11 +95,14 @@ export default {
       await interaction.deferReply();
 
       const creatorDisplayName =
-        sanitizeUserInput(interaction.user.displayName) || interaction.user.username;
+        sanitizeUserInput(interaction.user.displayName) ||
+        interaction.user.username;
 
       const userId = interaction.user.id;
 
-      let timezone = interaction.options.getString(BotCommandOptionInfo.CreateSession_TimezoneName);
+      let timezone = interaction.options.getString(
+        BotCommandOptionInfo.CreateSession_TimezoneName
+      );
       if (!timezone) {
         timezone = await getUserTimezone(userId);
       }
@@ -123,12 +137,12 @@ export default {
       await interaction.deleteReply();
 
       await notifyParty(
-        party.map(member => member.userId),
+        party.map((member) => member.userId),
         (userId: string) => formatSessionContinueDM(campaign, session, userId)
       );
     } catch (error) {
       const payload = {
-        content: (error as Error).message || BotDialogs.continueSessionError
+        content: (error as Error).message || BotDialogs.continueSessionError,
       };
 
       if (interaction.deferred) {
@@ -137,7 +151,7 @@ export default {
         await interaction.reply(payload);
       }
       logger.error('Error continuing session', {
-        error: inspect(error, { depth: null, colors: true })
+        error: inspect(error, { depth: null, colors: true }),
       });
     }
   },

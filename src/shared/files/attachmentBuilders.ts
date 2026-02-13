@@ -46,7 +46,9 @@ export function getImgAttachmentBuilderFromBuffer(
 function getAttachmentBuilder(pathStr: string, attachmentName: string) {
   // If the path is already absolute, use it directly
   // Otherwise, resolve it using getAbsolutePath
-  const finalPath = path.isAbsolute(pathStr) ? pathStr : getAbsolutePath(pathStr);
+  const finalPath = path.isAbsolute(pathStr)
+    ? pathStr
+    : getAbsolutePath(pathStr);
 
   logger.debug('Creating attachment builder', { finalPath, attachmentName });
 

@@ -55,7 +55,9 @@ export const createScheduledEvent = async (
         privacyLevel: GuildScheduledEventPrivacyLevel.GuildOnly,
         entityType: GuildScheduledEventEntityType.External,
         entityMetadata: {
-          location: channelId ? `Session Channel: #${channelId}` : 'Game Session',
+          location: channelId
+            ? `Session Channel: #${channelId}`
+            : 'Game Session',
         },
         description: `🎲 Click "Interested" to get notifications about this session!\n`,
       });
@@ -68,7 +70,11 @@ export const createScheduledEvent = async (
     });
     return event.id;
   } catch (error) {
-    logger.error('Failed to create scheduled event', { guildId, sessionName, error });
+    logger.error('Failed to create scheduled event', {
+      guildId,
+      sessionName,
+      error,
+    });
     return null;
   }
 };
@@ -92,7 +98,10 @@ export const updateScheduledEvent = async (
   try {
     const guild = await safeGuildFetch(client, guildId);
     if (!guild) {
-      logger.warn('Guild not found for scheduled event update', { guildId, eventId });
+      logger.warn('Guild not found for scheduled event update', {
+        guildId,
+        eventId,
+      });
       return false;
     }
 
@@ -120,7 +129,7 @@ export const updateScheduledEvent = async (
       updateData.scheduledStartTime = updates.scheduledStartTime;
       updateData.scheduledEndTime = new Date(
         updates.scheduledStartTime.getTime() +
-        DEFAULT_SESSION_DURATION_HOURS * 60 * 60 * 1000
+          DEFAULT_SESSION_DURATION_HOURS * 60 * 60 * 1000
       );
     }
 
@@ -135,7 +144,11 @@ export const updateScheduledEvent = async (
     logger.info('Updated scheduled event', { guildId, eventId });
     return true;
   } catch (error) {
-    logger.error('Failed to update scheduled event', { guildId, eventId, error });
+    logger.error('Failed to update scheduled event', {
+      guildId,
+      eventId,
+      error,
+    });
     return false;
   }
 };
@@ -153,7 +166,10 @@ export const deleteScheduledEvent = async (
   try {
     const guild = await safeGuildFetch(client, guildId);
     if (!guild) {
-      logger.warn('Guild not found for scheduled event deletion', { guildId, eventId });
+      logger.warn('Guild not found for scheduled event deletion', {
+        guildId,
+        eventId,
+      });
       return false;
     }
 
@@ -162,7 +178,10 @@ export const deleteScheduledEvent = async (
     });
 
     if (!event) {
-      logger.warn('Scheduled event not found or already deleted', { guildId, eventId });
+      logger.warn('Scheduled event not found or already deleted', {
+        guildId,
+        eventId,
+      });
       return false;
     }
 
@@ -173,7 +192,11 @@ export const deleteScheduledEvent = async (
     logger.info('Deleted scheduled event', { guildId, eventId });
     return true;
   } catch (error) {
-    logger.error('Failed to delete scheduled event', { guildId, eventId, error });
+    logger.error('Failed to delete scheduled event', {
+      guildId,
+      eventId,
+      error,
+    });
     return false;
   }
 };
@@ -194,7 +217,10 @@ export const cancelScheduledEvent = async (
   try {
     const guild = await safeGuildFetch(client, guildId);
     if (!guild) {
-      logger.warn('Guild not found for scheduled event cancellation', { guildId, eventId });
+      logger.warn('Guild not found for scheduled event cancellation', {
+        guildId,
+        eventId,
+      });
       return false;
     }
 
@@ -203,7 +229,10 @@ export const cancelScheduledEvent = async (
     });
 
     if (!event) {
-      logger.warn('Scheduled event not found for cancellation', { guildId, eventId });
+      logger.warn('Scheduled event not found for cancellation', {
+        guildId,
+        eventId,
+      });
       return false;
     }
 
@@ -224,7 +253,11 @@ export const cancelScheduledEvent = async (
     logger.info('Canceled scheduled event', { guildId, eventId, reason });
     return true;
   } catch (error) {
-    logger.error('Failed to cancel scheduled event', { guildId, eventId, error });
+    logger.error('Failed to cancel scheduled event', {
+      guildId,
+      eventId,
+      error,
+    });
     return false;
   }
 };

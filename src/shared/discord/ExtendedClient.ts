@@ -116,7 +116,9 @@ export class ExtendedClient extends Client {
 
       // Check if it's a socket error
       if (error.message && error.message.includes('other side closed')) {
-        this.logger.warn('Socket closed error detected - Discord.js will automatically retry');
+        this.logger.warn(
+          'Socket closed error detected - Discord.js will automatically retry'
+        );
       }
     });
 
@@ -126,9 +128,13 @@ export class ExtendedClient extends Client {
       // For critical errors, we might want to restart
       // but for socket errors, just log and continue
       if (error.message && error.message.includes('other side closed')) {
-        this.logger.warn('Socket closed exception detected - continuing operation');
+        this.logger.warn(
+          'Socket closed exception detected - continuing operation'
+        );
       } else {
-        this.logger.error('Critical error - consider restarting the application');
+        this.logger.error(
+          'Critical error - consider restarting the application'
+        );
         // Optionally exit and let process manager restart
         // process.exit(1);
       }
@@ -141,7 +147,9 @@ export class ExtendedClient extends Client {
     // Register commands globally or to specific guild
     if (process.env.GUILD_ID) {
       // Development mode: register to specific guild for instant updates
-      this.logger.info('GUILD_ID found - registering commands to specific guild for development');
+      this.logger.info(
+        'GUILD_ID found - registering commands to specific guild for development'
+      );
       await this.registerCommandsToGuild(process.env.GUILD_ID);
     } else {
       // Production mode: register globally (takes up to 1 hour to propagate)
@@ -157,7 +165,7 @@ export class ExtendedClient extends Client {
   };
 
   importFile = async <T = unknown>(filePath: string): Promise<T> => {
-    const module = await import(filePath) as { default?: T };
+    const module = (await import(filePath)) as { default?: T };
     return module?.default as T;
   };
 

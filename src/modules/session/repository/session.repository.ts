@@ -142,7 +142,9 @@ export const getSessions = async (
           },
         },
       }),
-      ...(userId && { partyMembers: { select: { userId: true, roleId: true } } }),
+      ...(userId && {
+        partyMembers: { select: { userId: true, roleId: true } },
+      }),
     },
   });
 
@@ -323,34 +325,36 @@ export const getCampaignWithGuildId = async (
 export const getActiveSessionsForGuild = async (
   guildId: string,
   campaignId?: string
-): Promise<{
-  id: string;
-  name: string;
-  date: Date;
-  timezone: string;
-  campaignId: string;
-  campaignName: string;
-}[]> => {
+): Promise<
+  {
+    id: string;
+    name: string;
+    date: Date;
+    timezone: string;
+    campaignId: string;
+    campaignName: string;
+  }[]
+> => {
   const sessions = await prisma.session.findMany({
     where: {
       campaign: { guildId },
       ...(campaignId && { campaignId }),
-      status: { notIn: ['COMPLETED', 'CANCELED'] }
+      status: { notIn: ['COMPLETED', 'CANCELED'] },
     },
     orderBy: { date: 'asc' },
     take: 25,
     include: {
-      campaign: { select: { name: true } }
-    }
+      campaign: { select: { name: true } },
+    },
   });
 
-  return sessions.map(session => ({
+  return sessions.map((session) => ({
     id: session.id,
     name: session.name,
     date: session.date,
     timezone: session.timezone,
     campaignId: session.campaignId,
-    campaignName: session.campaign.name
+    campaignName: session.campaign.name,
   }));
 };
 
@@ -360,32 +364,34 @@ export const getActiveSessionsForGuild = async (
 export const getCompletedSessionsForGuild = async (
   guildId: string,
   campaignId?: string
-): Promise<{
-  id: string;
-  name: string;
-  date: Date;
-  timezone: string;
-  campaignId: string;
-  campaignName: string;
-}[]> => {
+): Promise<
+  {
+    id: string;
+    name: string;
+    date: Date;
+    timezone: string;
+    campaignId: string;
+    campaignName: string;
+  }[]
+> => {
   const sessions = await prisma.session.findMany({
     where: {
       campaign: { guildId },
       ...(campaignId && { campaignId }),
-      status: { in: ['COMPLETED', 'CANCELED'] }
+      status: { in: ['COMPLETED', 'CANCELED'] },
     },
     orderBy: { date: 'desc' },
     take: 25,
-    include: { campaign: { select: { name: true } } }
+    include: { campaign: { select: { name: true } } },
   });
 
-  return sessions.map(session => ({
+  return sessions.map((session) => ({
     id: session.id,
     name: session.name,
     date: session.date,
     timezone: session.timezone,
     campaignId: session.campaignId,
-    campaignName: session.campaign.name
+    campaignName: session.campaign.name,
   }));
 };
 
@@ -398,9 +404,9 @@ export const getLastCompletedSessionInChannel = async (
   return await prisma.session.findFirst({
     where: {
       campaignId: channelId,
-      status: { in: ['COMPLETED', 'CANCELED'] }
+      status: { in: ['COMPLETED', 'CANCELED'] },
     },
-    orderBy: { date: 'desc' }
+    orderBy: { date: 'desc' },
   });
 };
 
@@ -413,8 +419,8 @@ export const getActiveSessionsByCampaignId = async (
   return await prisma.session.findMany({
     where: {
       campaignId,
-      status: { notIn: ['COMPLETED', 'CANCELED'] }
-    }
+      status: { notIn: ['COMPLETED', 'CANCELED'] },
+    },
   });
 };
 
@@ -429,7 +435,7 @@ export const getActiveSessionInChannel = async (
   const session = await prisma.session.findFirst({
     where: {
       campaignId: channelId,
-      status: { notIn: ['COMPLETED', 'CANCELED'] }
+      status: { notIn: ['COMPLETED', 'CANCELED'] },
     },
   });
 
@@ -451,4 +457,4 @@ export const isUserGameMaster = async (
       roleId: RoleType.GAME_MASTER,
     },
   }));
-};  
+};

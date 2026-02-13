@@ -16,10 +16,7 @@ import {
   getRoleButtonsForSession,
   createPartyMemberEmbed,
 } from '#modules/session/presentation/sessionMessages.js';
-import {
-  sendEphemeralReply,
-  notifyParty,
-} from '#shared/discord/messages.js';
+import { sendEphemeralReply, notifyParty } from '#shared/discord/messages.js';
 import { client } from '#app/index.js';
 import { ExtendedInteraction } from '#shared/types/discord.js';
 import {
@@ -56,7 +53,11 @@ import {
 import { RoleType } from '#generated/prisma/client.js';
 import { sessionScheduler } from '#services/sessionScheduler.js';
 import { createSessionImage } from '#shared/messages/sessionImage.js';
-import { areDatesEqual, formatSessionDateLong, isFutureDate } from '#shared/datetime/dateUtils.js';
+import {
+  areDatesEqual,
+  formatSessionDateLong,
+  isFutureDate,
+} from '#shared/datetime/dateUtils.js';
 import { sanitizeUserInput } from '#shared/validation/sanitizeUserInput.js';
 import {
   safeChannelFetch,
@@ -97,7 +98,7 @@ export const initSession = async (
   const campaign = await upsertCampaign({
     id: sessionChannel.id,
     guildId: guild.id,
-    name: sessionChannel.name
+    name: sessionChannel.name,
   });
   logger.info('Campaign upserted', {
     campaignId: campaign.id,
@@ -118,11 +119,7 @@ export const initSession = async (
   // Step 3: Send the session message first to get the message ID
   let messageId: string = '';
   try {
-    messageId = await sendNewSessionMessage(
-      tempSession,
-      sessionChannel,
-      party
-    );
+    messageId = await sendNewSessionMessage(tempSession, sessionChannel, party);
     logger.info('Session message created', {
       messageId,
       channelId: sessionChannel.id,
@@ -271,7 +268,8 @@ export const continueSessionInChannel = async (
   const existingSession = await getSessionById(lastSession.id, true);
 
   // Use existing session's timezone if not provided
-  const effectiveTimezone = timezone || existingSession.timezone || 'America/Los_Angeles';
+  const effectiveTimezone =
+    timezone || existingSession.timezone || 'America/Los_Angeles';
 
   // Generate the next session name
   const newSessionName = getNextSessionName(existingSession.name);
@@ -931,23 +929,16 @@ export const regenerateSessionMessage = async (
   );
 
   const party = await getParty(sessionId);
-  const embed = createPartyMemberEmbed(
-    party,
-    session.name,
-    session.status
-  );
+  const embed = createPartyMemberEmbed(party, session.name, session.status);
   embed.setDescription(
     descriptionOverride ??
-    BotDialogs.sessions.scheduled(
-      session.date,
-      session.timezone ?? 'America/Los_Angeles'
-    )
+      BotDialogs.sessions.scheduled(
+        session.date,
+        session.timezone ?? 'America/Los_Angeles'
+      )
   );
 
-  const message = await safeMessageFetch(
-    sessionChannel,
-    session.id
-  );
+  const message = await safeMessageFetch(sessionChannel, session.id);
   await safeMessageEdit(message, {
     embeds: [embed],
     files: [attachment],

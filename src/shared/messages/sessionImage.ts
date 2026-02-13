@@ -2,7 +2,7 @@ import fs from 'fs';
 import sharp, { OverlayOptions } from 'sharp';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
-import { BotAttachmentFileNames, BotPaths } from './botDialogStrings.js';
+import { BotPaths } from './botDialogStrings.js';
 import { getRoleByString, RoleType } from '#modules/role/domain/roleManager.js';
 import { getRoleImage } from '#modules/role/domain/role.types.js';
 import { Session } from '#modules/session/domain/session.types.js';

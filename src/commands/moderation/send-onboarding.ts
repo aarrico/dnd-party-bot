@@ -1,4 +1,8 @@
-import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
+import {
+  SlashCommandBuilder,
+  PermissionFlagsBits,
+  MessageFlags,
+} from 'discord.js';
 import { ExtendedInteraction } from '#shared/types/discord.js';
 import { sendEphemeralReply } from '#shared/discord/messages.js';
 import { sendTimezoneOnboardingDM } from '#shared/datetime/timezoneUtils.js';
@@ -14,7 +18,10 @@ export default {
   async execute(interaction: ExtendedInteraction) {
     const guild = interaction.guild;
     if (!guild) {
-      await sendEphemeralReply('This command must be run in a server!', interaction);
+      await sendEphemeralReply(
+        'This command must be run in a server!',
+        interaction
+      );
       return;
     }
 
@@ -50,11 +57,17 @@ export default {
       }
 
       const message = `✅ Onboarding complete!\n• Sent: ${sent} DMs\n• Failed: ${failed}`;
-      logger.info('Onboarding command summary', { guildId: guild.id, sent, failed });
+      logger.info('Onboarding command summary', {
+        guildId: guild.id,
+        sent,
+        failed,
+      });
       await interaction.editReply(message);
     } catch (error) {
       logger.error('Onboarding command failed', { error });
-      await interaction.editReply('❌ Failed to send onboarding. Check logs for details.');
+      await interaction.editReply(
+        '❌ Failed to send onboarding. Check logs for details.'
+      );
     }
   },
 };

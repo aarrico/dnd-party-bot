@@ -1,6 +1,11 @@
 import { PartyMember } from '#modules/party/domain/party.types.js';
 
-export type SessionStatus = 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED' | 'FULL';
+export type SessionStatus =
+  | 'SCHEDULED'
+  | 'ACTIVE'
+  | 'COMPLETED'
+  | 'CANCELED'
+  | 'FULL';
 
 export type Session = {
   id: string; // Discord message ID

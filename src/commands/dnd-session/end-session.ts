@@ -24,7 +24,9 @@ export default {
 
     const session = await getActiveSessionInChannel(channelId);
     if (!session) {
-      await interaction.editReply('❌ No active session found in this channel.');
+      await interaction.editReply(
+        '❌ No active session found in this channel.'
+      );
       return;
     }
 
@@ -48,10 +50,14 @@ export default {
         isAdmin,
         isGameMaster,
       });
-      await interaction.editReply(`✅ Session **${session.name}** has been marked as completed!`);
+      await interaction.editReply(
+        `✅ Session **${session.name}** has been marked as completed!`
+      );
     } catch (error) {
       logger.error('Error ending session', { sessionId: session.id, error });
-      await interaction.editReply('❌ An error occurred while ending the session.');
+      await interaction.editReply(
+        '❌ An error occurred while ending the session.'
+      );
     }
   },
 };

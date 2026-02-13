@@ -30,7 +30,7 @@ class SessionScheduler {
   private static instance: SessionScheduler;
   private scheduledTasks: Map<string, ScheduledTask> = new Map();
 
-  private constructor() { }
+  private constructor() {}
 
   public static getInstance(): SessionScheduler {
     if (!SessionScheduler.instance) {
@@ -237,9 +237,12 @@ class SessionScheduler {
             '../modules/session/controller/session.controller.js'
           );
           await regenerateSessionMessage(session.id);
-          logger.info('Regenerated and updated session message with ACTIVE status', {
-            sessionId: session.id,
-          });
+          logger.info(
+            'Regenerated and updated session message with ACTIVE status',
+            {
+              sessionId: session.id,
+            }
+          );
         } catch (error) {
           logger.error(
             'Failed to regenerate session message during cancellation handling',
@@ -433,11 +436,14 @@ class SessionScheduler {
       if (!isFutureDate(sessionStart)) {
         try {
           if (session.status === 'ACTIVE' && !isFutureDate(completionTime)) {
-            logger.info('🔧 Found ACTIVE session past completion window, auto-completing', {
-              sessionId: session.id,
-              sessionDate: sessionStart.toISOString(),
-              completionTime: completionTime.toISOString(),
-            });
+            logger.info(
+              '🔧 Found ACTIVE session past completion window, auto-completing',
+              {
+                sessionId: session.id,
+                sessionDate: sessionStart.toISOString(),
+                completionTime: completionTime.toISOString(),
+              }
+            );
 
             const { endSession } = await import(
               '../modules/session/controller/session.controller.js'
@@ -447,10 +453,13 @@ class SessionScheduler {
           }
 
           if (session.status === 'ACTIVE' && isFutureDate(completionTime)) {
-            logger.info('🔧 Found ACTIVE session within completion window, scheduling completion', {
-              sessionId: session.id,
-              completionTime: completionTime.toISOString(),
-            });
+            logger.info(
+              '🔧 Found ACTIVE session within completion window, scheduling completion',
+              {
+                sessionId: session.id,
+                completionTime: completionTime.toISOString(),
+              }
+            );
             this.scheduleSessionTasks(session.id, sessionStart);
             continue;
           }
@@ -460,10 +469,13 @@ class SessionScheduler {
             const isPartyFull = fullSession.partyMembers.length >= 6;
 
             if (isPartyFull) {
-              logger.info('🔧 Found past SCHEDULED/FULL session with full party, marking ACTIVE', {
-                sessionId: session.id,
-                partySize: fullSession.partyMembers.length,
-              });
+              logger.info(
+                '🔧 Found past SCHEDULED/FULL session with full party, marking ACTIVE',
+                {
+                  sessionId: session.id,
+                  partySize: fullSession.partyMembers.length,
+                }
+              );
 
               await updateSession(session.id, { status: 'ACTIVE' });
 
@@ -476,15 +488,21 @@ class SessionScheduler {
                 await endSession(session.id);
               }
             } else {
-              logger.info('🔧 Found past SCHEDULED/FULL session without full party, canceling', {
-                sessionId: session.id,
-                partySize: fullSession.partyMembers.length,
-              });
+              logger.info(
+                '🔧 Found past SCHEDULED/FULL session without full party, canceling',
+                {
+                  sessionId: session.id,
+                  partySize: fullSession.partyMembers.length,
+                }
+              );
 
               const { cancelSession } = await import(
                 '../modules/session/controller/session.controller.js'
               );
-              await cancelSession(session.id, 'Session was not filled before start time (recovered after bot restart)');
+              await cancelSession(
+                session.id,
+                'Session was not filled before start time (recovered after bot restart)'
+              );
             }
           }
         } catch (error) {

@@ -3,7 +3,7 @@ import {
   Message,
   ActionRowBuilder,
   ButtonBuilder,
-  ButtonStyle
+  ButtonStyle,
 } from 'discord.js';
 import { Event } from '#shared/discord/Event.js';
 import { createScopedLogger } from '#shared/logging/logger.js';
@@ -21,14 +21,20 @@ const handleDMMessage = async (message: Message) => {
     const content = message.content.toLowerCase().trim();
 
     // Respond to timezone-related keywords
-    if (content.includes('timezone') || content === 'tz' || content === 'help') {
+    if (
+      content.includes('timezone') ||
+      content === 'tz' ||
+      content === 'help'
+    ) {
       try {
         const changeTimezoneButton = new ButtonBuilder()
           .setCustomId('change-timezone-button')
           .setLabel('Change Timezone')
           .setStyle(ButtonStyle.Primary);
 
-        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(changeTimezoneButton);
+        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+          changeTimezoneButton
+        );
 
         await message.reply({
           content: '🕐 Click the button below to change your timezone:',

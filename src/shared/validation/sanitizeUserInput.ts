@@ -45,7 +45,7 @@ export const sanitizeUserInput = (
   sanitized = sanitized
     .replace(/@everyone/gi, '@\u200Beveryone')
     .replace(/@here/gi, '@\u200Bhere')
-    .replace(/<@!?\d+>/g, mention => `@${mention.match(/\d+/)?.[0] ?? ''}`)
+    .replace(/<@!?\d+>/g, (mention) => `@${mention.match(/\d+/)?.[0] ?? ''}`)
     .replace(/<@&\d+>/g, '@role')
     .replace(/<#\d+>/g, '#channel');
 

@@ -15,6 +15,7 @@ npm run list-sessions
 ### Output
 
 Displays a formatted list of all sessions including:
+
 - Session ID
 - Session name
 - Status (with colored emoji indicator)
@@ -51,6 +52,7 @@ npm run generate-image 1234567890
 ### Output
 
 The script generates a session image at:
+
 ```
 resources/temp/current-session.png
 ```
