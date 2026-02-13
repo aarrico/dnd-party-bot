@@ -1,6 +1,7 @@
 import { config } from 'dotenv';
 config();
 import 'source-map-support/register.js';
+import http from 'http';
 import { ExtendedClient } from './shared/discord/ExtendedClient.js';
 import { PrismaClient, Prisma } from './generated/prisma/client.js';
 import { PrismaPg } from '@prisma/adapter-pg';
@@ -94,6 +95,21 @@ await (async () => {
   }
 })();
 
+// Health check server for Railway/Docker
+const healthPort = parseInt(process.env.PORT || '3000', 10);
+const healthServer = http.createServer((req, res) => {
+  if (req.url === '/health') {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('OK');
+  } else {
+    res.writeHead(404);
+    res.end();
+  }
+});
+healthServer.listen(healthPort, () => {
+  appLogger.info(`Health check listening on port ${healthPort}`);
+});
+
 // Graceful shutdown handling
 async function gracefulShutdown(signal: string): Promise<void> {
   shutdownLogger.info(`${signal} received. Starting graceful shutdown...`);
@@ -104,6 +120,10 @@ async function gracefulShutdown(signal: string): Promise<void> {
     if (sessionScheduler && typeof sessionScheduler.shutdown === 'function') {
       sessionScheduler.shutdown();
     }
+
+    // Close health check server
+    shutdownLogger.info('Closing health check server...');
+    healthServer.close();
 
     // Destroy Discord client connection
     shutdownLogger.info('Closing Discord connection...');
