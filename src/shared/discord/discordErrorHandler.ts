@@ -28,8 +28,17 @@ const DEFAULT_DISCORD_RETRY_OPTIONS: RetryOptions = {
   maxDelayMs: 10000,
   backoffMultiplier: 2,
   onRetry: (attempt, error: unknown, delayMs) => {
-    const errorMsg = error instanceof Error ? error.message : (typeof error === 'object' && error !== null && 'code' in error ? String((error as { code: string }).code) : 'Unknown');
-    logger.warn('Discord API retry attempt', { attempt, delayMs, error: errorMsg });
+    const errorMsg =
+      error instanceof Error
+        ? error.message
+        : typeof error === 'object' && error !== null && 'code' in error
+          ? String((error as { code: string }).code)
+          : 'Unknown';
+    logger.warn('Discord API retry attempt', {
+      attempt,
+      delayMs,
+      error: errorMsg,
+    });
   },
 };
 
@@ -120,7 +129,9 @@ export async function safeGuildMemberFetch(
     async () => {
       const member = await guild.members.fetch(userId);
       if (!member) {
-        throw new Error(`Guild member ${userId} not found in guild ${guild.id}`);
+        throw new Error(
+          `Guild member ${userId} not found in guild ${guild.id}`
+        );
       }
       return member;
     },

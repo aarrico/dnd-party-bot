@@ -1,12 +1,22 @@
 import { SlashCommandBuilder, AutocompleteInteraction } from 'discord.js';
-import { monthOptionChoicesArray, dayChoices, yearOptionChoicesArray } from '#shared/constants/dateConstants.js';
-import { BotCommandOptionInfo, BotDialogs } from '#shared/messages/botDialogStrings.js';
+import {
+  monthOptionChoicesArray,
+  dayChoices,
+  yearOptionChoicesArray,
+} from '#shared/constants/dateConstants.js';
+import {
+  BotCommandOptionInfo,
+  BotDialogs,
+} from '#shared/messages/botDialogStrings.js';
 import { ExtendedInteraction } from '#shared/types/discord.js';
 import { modifySession } from '#modules/session/controller/session.controller.js';
 import { handleTimezoneAutocomplete } from '#shared/datetime/timezoneUtils.js';
 import { getUserTimezone } from '#modules/user/repository/user.repository.js';
 import { sendEphemeralReply } from '#shared/discord/messages.js';
-import { getSessionById, getActiveSessionsForGuild } from '#modules/session/repository/session.repository.js';
+import {
+  getSessionById,
+  getActiveSessionsForGuild,
+} from '#modules/session/repository/session.repository.js';
 import { formatSessionDateLong } from '#shared/datetime/dateUtils.js';
 
 export default {
@@ -25,9 +35,7 @@ export default {
     .addStringOption((name) =>
       name
         .setName(BotCommandOptionInfo.Session_Name)
-        .setDescription(
-          BotCommandOptionInfo.Session_Name_Description
-        )
+        .setDescription(BotCommandOptionInfo.Session_Name_Description)
         .setRequired(true)
     )
     .addIntegerOption((month) =>
@@ -67,23 +75,31 @@ export default {
   async autocomplete(interaction: AutocompleteInteraction) {
     const focusedOption = interaction.options.getFocused(true);
 
-    if (focusedOption.name === String(BotCommandOptionInfo.ModifySession_ChannelName)) {
+    if (
+      focusedOption.name ===
+      String(BotCommandOptionInfo.ModifySession_ChannelName)
+    ) {
       if (!interaction.guild) return;
 
       const sessions = await getActiveSessionsForGuild(interaction.guild.id);
 
-      const choices = sessions.map(session => ({
+      const choices = sessions.map((session) => ({
         name: `${session.name} (${session.campaignName}) - ${formatSessionDateLong(session.date, session.timezone)}`,
-        value: session.id
+        value: session.id,
       }));
 
       await interaction.respond(choices);
-    } else if (focusedOption.name === String(BotCommandOptionInfo.Session_Day_Name)) {
-      const filtered = dayChoices.filter(day =>
-        day.name.startsWith(focusedOption.value.toString())
-      ).slice(0, 25);
+    } else if (
+      focusedOption.name === String(BotCommandOptionInfo.Session_Day_Name)
+    ) {
+      const filtered = dayChoices
+        .filter((day) => day.name.startsWith(focusedOption.value.toString()))
+        .slice(0, 25);
       await interaction.respond(filtered);
-    } else if (focusedOption.name === String(BotCommandOptionInfo.CreateSession_TimezoneName)) {
+    } else if (
+      focusedOption.name ===
+      String(BotCommandOptionInfo.CreateSession_TimezoneName)
+    ) {
       const userTimezone = await getUserTimezone(interaction.user.id);
       await handleTimezoneAutocomplete(interaction, userTimezone);
     }
@@ -102,10 +118,7 @@ export default {
     try {
       await getSessionById(sessionId, true);
     } catch {
-      await sendEphemeralReply(
-        BotDialogs.continueSessionNotFound,
-        interaction
-      );
+      await sendEphemeralReply(BotDialogs.continueSessionNotFound, interaction);
       return;
     }
 

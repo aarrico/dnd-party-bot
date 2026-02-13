@@ -43,7 +43,11 @@ const DEFAULT_OPTIONS: Required<RetryOptions> = {
  * Determines if an error is retryable (network/connection errors)
  */
 function isRetryableError(error: unknown): boolean {
-  const err = error as { code?: string | number; status?: number; message?: string };
+  const err = error as {
+    code?: string | number;
+    status?: number;
+    message?: string;
+  };
   // Check for socket/connection errors
   if (err.code === 'UND_ERR_SOCKET' || err.code === 'ECONNRESET') {
     return true;
@@ -60,14 +64,15 @@ function isRetryableError(error: unknown): boolean {
   }
 
   // Check for gateway/connection issues
-  if (err.message && (
-    err.message.includes('other side closed') ||
-    err.message.includes('socket hang up') ||
-    err.message.includes('ECONNRESET') ||
-    err.message.includes('ETIMEDOUT') ||
-    err.message.includes('ENOTFOUND') ||
-    err.message.includes('getaddrinfo')
-  )) {
+  if (
+    err.message &&
+    (err.message.includes('other side closed') ||
+      err.message.includes('socket hang up') ||
+      err.message.includes('ECONNRESET') ||
+      err.message.includes('ETIMEDOUT') ||
+      err.message.includes('ENOTFOUND') ||
+      err.message.includes('getaddrinfo'))
+  ) {
     return true;
   }
 
@@ -83,7 +88,8 @@ function calculateDelay(
   maxDelayMs: number,
   backoffMultiplier: number
 ): number {
-  const exponentialDelay = initialDelayMs * Math.pow(backoffMultiplier, attempt - 1);
+  const exponentialDelay =
+    initialDelayMs * Math.pow(backoffMultiplier, attempt - 1);
   const cappedDelay = Math.min(exponentialDelay, maxDelayMs);
 
   // Add jitter (randomness) to prevent thundering herd
@@ -96,17 +102,17 @@ function calculateDelay(
  * Sleep for a specified duration
  */
 function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
  * Retry an async operation with exponential backoff
- * 
+ *
  * @param fn - The async function to retry
  * @param options - Retry configuration options
  * @returns The result of the successful function execution
  * @throws The last error if all retries are exhausted
- * 
+ *
  * @example
  * ```typescript
  * const result = await retryWithBackoff(
@@ -155,18 +161,18 @@ export async function retryWithBackoff<T>(
 
 /**
  * Create a wrapped version of an async function with automatic retry
- * 
+ *
  * @param fn - The async function to wrap
  * @param options - Retry configuration options
  * @returns A wrapped function with automatic retry
- * 
+ *
  * @example
  * ```typescript
  * const fetchUserWithRetry = withRetry(
  *   async (userId: string) => await client.users.fetch(userId),
  *   { maxRetries: 3 }
  * );
- * 
+ *
  * const user = await fetchUserWithRetry('123456789');
  * ```
  */

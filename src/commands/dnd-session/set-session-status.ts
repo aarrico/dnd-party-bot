@@ -2,7 +2,7 @@ import { SlashCommandBuilder } from 'discord.js';
 import { BotCommandOptionInfo } from '#shared/messages/botDialogStrings.js';
 import { SessionStatus } from '#modules/session/domain/session.types.js';
 import { ExtendedInteraction } from '#shared/types/discord.js';
-import { updateSession, getSessionById } from '#modules/session/repository/session.repository.js';
+import { updateSession } from '#modules/session/repository/session.repository.js';
 import { regenerateSessionMessage } from '#modules/session/controller/session.controller.js';
 import { sendEphemeralReply } from '#shared/discord/messages.js';
 import { createScopedLogger } from '#shared/logging/logger.js';
@@ -35,30 +35,36 @@ export default {
   async execute(interaction: ExtendedInteraction) {
     try {
       if (!interaction.member.permissions.has('Administrator')) {
-        await sendEphemeralReply('Only Admins can run this command!', interaction);
+        await sendEphemeralReply(
+          'Only Admins can run this command!',
+          interaction
+        );
         return;
       }
 
-      const sessionId = interaction.options.getString(BotCommandOptionInfo.Session_Id_Name, true);
-      const newStatus = interaction.options.getString('status', true) as SessionStatus;
+      const sessionId = interaction.options.getString(
+        BotCommandOptionInfo.Session_Id_Name,
+        true
+      );
+      const newStatus = interaction.options.getString(
+        'status',
+        true
+      ) as SessionStatus;
 
       await interaction.deferReply();
 
       // Update the session status
       await updateSession(sessionId, { status: newStatus });
 
-      // Fetch session to get campaignId for regeneration
-      const session = await getSessionById(sessionId);
-
       // Regenerate the session message (image + embed) with the new status
-      await regenerateSessionMessage(sessionId, session.campaignId);
+      await regenerateSessionMessage(sessionId);
 
       const statusEmojis = {
         SCHEDULED: '🟢',
         FULL: '🟡',
         ACTIVE: '🔵',
         COMPLETED: '🔴',
-        CANCELED: '🔴'
+        CANCELED: '🔴',
       };
 
       await sendEphemeralReply(

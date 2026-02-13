@@ -29,8 +29,13 @@ export default {
     ),
   async execute(interaction: ExtendedInteraction) {
     try {
-      const includeUserId = interaction.options.getBoolean(BotCommandOptionInfo.UserId_Name) ?? false;
-      const includeUserDMMessageId = interaction.options.getBoolean(BotCommandOptionInfo.GetAllUsers_UserChannelIDName) ?? false;
+      const includeUserId =
+        interaction.options.getBoolean(BotCommandOptionInfo.UserId_Name) ??
+        false;
+      const includeUserDMMessageId =
+        interaction.options.getBoolean(
+          BotCommandOptionInfo.GetAllUsers_UserChannelIDName
+        ) ?? false;
 
       const options = {
         includeUserId,
@@ -48,7 +53,10 @@ export default {
         attachment,
       ]);
     } catch (error) {
-      void sendEphemeralReply(`There was an error: ${error instanceof Error ? error.message : String(error)}`, interaction);
+      void sendEphemeralReply(
+        `There was an error: ${error instanceof Error ? error.message : String(error)}`,
+        interaction
+      );
     }
   },
 };

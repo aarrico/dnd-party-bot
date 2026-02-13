@@ -29,7 +29,7 @@ const logPrismaQueries = process.env.LOG_PRISMA_QUERIES === 'true';
 if (logPrismaQueries) {
   prismaLogConfig.push(
     { level: 'query', emit: 'event' },
-    { level: 'info', emit: 'event' },
+    { level: 'info', emit: 'event' }
   );
 }
 
@@ -74,17 +74,21 @@ await (async () => {
         try {
           schedulerLogger.info('Starting session scheduler initialization...');
           await sessionScheduler.initializeExistingSessions();
-          schedulerLogger.info('✅ Session scheduler initialized successfully', {
-            scheduledTasks: sessionScheduler.getScheduledTaskCount(),
-          });
+          schedulerLogger.info(
+            '✅ Session scheduler initialized successfully',
+            {
+              scheduledTasks: sessionScheduler.getScheduledTaskCount(),
+            }
+          );
         } catch (error) {
-          schedulerLogger.error('❌ Failed to initialize session scheduler', { error });
+          schedulerLogger.error('❌ Failed to initialize session scheduler', {
+            error,
+          });
         }
       })();
     });
 
     await client.login(process.env.DISCORD_TOKEN);
-
   } catch (error) {
     appLogger.error('Failed during bootstrap', { error });
   }

@@ -1,9 +1,15 @@
 import { CronJob } from 'cron';
-import { getSessionById } from '../modules/session/repository/session.repository.js';
+import {
+  getCampaignWithGuildId,
+  getSessionById,
+  getSessions,
+  updateSession,
+} from '../modules/session/repository/session.repository.js';
 import { SessionWithParty } from '../modules/session/domain/session.types.js';
 import {
   getHoursBefore,
   getMinutesBefore,
+  getHoursAfter,
   formatSessionDateLong,
   isFutureDate,
 } from '../shared/datetime/dateUtils.js';
@@ -17,13 +23,14 @@ interface ScheduledTask {
   sessionId: string;
   reminderJob?: CronJob;
   cancellationJob?: CronJob;
+  completionJob?: CronJob;
 }
 
 class SessionScheduler {
   private static instance: SessionScheduler;
   private scheduledTasks: Map<string, ScheduledTask> = new Map();
 
-  private constructor() { }
+  private constructor() {}
 
   public static getInstance(): SessionScheduler {
     if (!SessionScheduler.instance) {
@@ -37,6 +44,7 @@ class SessionScheduler {
 
     const reminderTime = getHoursBefore(sessionDate, 1); // 1 hour before
     const cancelTime = getMinutesBefore(sessionDate, 5); // 5 minutes before start
+    const completionTime = getHoursAfter(sessionDate, 5); // 5 hours after start
 
     const task: ScheduledTask = { sessionId };
 
@@ -45,6 +53,7 @@ class SessionScheduler {
       sessionDate: sessionDate.toISOString(),
       reminderTime: reminderTime.toISOString(),
       cancelTime: cancelTime.toISOString(),
+      completionTime: completionTime.toISOString(),
     });
 
     if (isFutureDate(reminderTime)) {
@@ -87,12 +96,33 @@ class SessionScheduler {
       });
     }
 
-    if (task.reminderJob || task.cancellationJob) {
+    if (isFutureDate(completionTime)) {
+      const completionJob = new CronJob(
+        completionTime,
+        () => this.handleCompletion(sessionId),
+        null,
+        true,
+        'UTC'
+      );
+      task.completionJob = completionJob;
+      logger.info('✅ Scheduled completion job', {
+        sessionId,
+        completionTime: completionTime.toISOString(),
+      });
+    } else {
+      logger.info('⏭️ Completion time already passed, skipping', {
+        sessionId,
+        completionTime: completionTime.toISOString(),
+      });
+    }
+
+    if (task.reminderJob || task.cancellationJob || task.completionJob) {
       this.scheduledTasks.set(sessionId, task);
       logger.info('Session tasks registered', {
         sessionId,
         hasReminder: !!task.reminderJob,
         hasCancellation: !!task.cancellationJob,
+        hasCompletion: !!task.completionJob,
       });
     } else {
       logger.info('No tasks scheduled, all times passed', { sessionId });
@@ -107,6 +137,9 @@ class SessionScheduler {
       }
       if (task.cancellationJob) {
         task.cancellationJob.stop();
+      }
+      if (task.completionJob) {
+        task.completionJob.stop();
       }
       this.scheduledTasks.delete(sessionId);
       logger.info('Canceled scheduled tasks', { sessionId });
@@ -127,15 +160,17 @@ class SessionScheduler {
 
     task.reminderJob = undefined;
 
-    if (!task.cancellationJob) {
+    if (!task.cancellationJob && !task.completionJob) {
       this.scheduledTasks.delete(sessionId);
-      logger.info('Cleared reminder task; no cancellation job remained', {
+      logger.info('Cleared reminder task; no other jobs remained', {
         sessionId,
       });
     } else {
       this.scheduledTasks.set(sessionId, task);
-      logger.info('Cleared reminder task; cancellation job still scheduled', {
+      logger.info('Cleared reminder task; other jobs still scheduled', {
         sessionId,
+        hasCancellation: !!task.cancellationJob,
+        hasCompletion: !!task.completionJob,
       });
     }
   }
@@ -186,9 +221,6 @@ class SessionScheduler {
         });
 
         try {
-          const { updateSession } = await import(
-            '../modules/session/repository/session.repository.js'
-          );
           await updateSession(session.id, { status: 'ACTIVE' });
           logger.info('Updated session status to ACTIVE after full party', {
             sessionId: session.id,
@@ -204,10 +236,13 @@ class SessionScheduler {
           const { regenerateSessionMessage } = await import(
             '../modules/session/controller/session.controller.js'
           );
-          await regenerateSessionMessage(session.id, session.campaignId);
-          logger.info('Regenerated and updated session message with ACTIVE status', {
-            sessionId: session.id,
-          });
+          await regenerateSessionMessage(session.id);
+          logger.info(
+            'Regenerated and updated session message with ACTIVE status',
+            {
+              sessionId: session.id,
+            }
+          );
         } catch (error) {
           logger.error(
             'Failed to regenerate session message during cancellation handling',
@@ -226,6 +261,36 @@ class SessionScheduler {
         sessionId,
         error,
       });
+    }
+  }
+
+  private async handleCompletion(sessionId: string): Promise<void> {
+    logger.info('Handling session auto-completion', { sessionId });
+
+    try {
+      const session = await getSessionById(sessionId, true);
+
+      // Only auto-complete if session is still ACTIVE
+      if (session.status !== 'ACTIVE') {
+        logger.info('Session is not ACTIVE, skipping auto-completion', {
+          sessionId,
+          currentStatus: session.status,
+        });
+        return;
+      }
+
+      const { endSession } = await import(
+        '../modules/session/controller/session.controller.js'
+      );
+      await endSession(sessionId);
+      logger.info('Session auto-completed after 5 hours', { sessionId });
+    } catch (error) {
+      logger.error('Error handling auto-completion for session', {
+        sessionId,
+        error,
+      });
+    } finally {
+      this.cancelSessionTasks(sessionId);
     }
   }
 
@@ -272,9 +337,6 @@ class SessionScheduler {
 
       // Try direct database update as fallback
       try {
-        const { updateSession } = await import(
-          '../modules/session/repository/session.repository.js'
-        );
         await updateSession(session.id, { status: 'CANCELED' });
         logger.warn('Fallback: updated session status to CANCELED directly', {
           sessionId: session.id,
@@ -295,9 +357,6 @@ class SessionScheduler {
     const sessionTime = formatSessionDateLong(session.date, timezone);
 
     // Get guildId from campaign for Discord URL
-    const { getCampaignWithGuildId } = await import(
-      '../modules/session/repository/session.repository.js'
-    );
     const campaign = await getCampaignWithGuildId(session.campaignId);
     const guildId = campaign?.guildId ?? '';
 
@@ -315,10 +374,6 @@ class SessionScheduler {
     try {
       logger.info('🔄 Initializing session scheduler...');
 
-      const { getSessions } = await import(
-        '../modules/session/repository/session.repository.js'
-      );
-
       const allSessions = await getSessions({
         includeId: true,
         includeTime: true,
@@ -326,14 +381,23 @@ class SessionScheduler {
         includeUserRole: false,
       });
 
-      const futureSessions = allSessions.filter((session) =>
-        isFutureDate(session.date)
+      // Filter to only active/scheduled/full sessions
+      const pendingSessions = allSessions.filter((session) =>
+        ['SCHEDULED', 'FULL', 'ACTIVE'].includes(session.status)
       );
 
-      logger.info('📅 Future sessions found for scheduling', {
+      logger.info('📅 Pending sessions found', {
         totalSessions: allSessions.length,
-        futureSessions: futureSessions.length,
+        pendingSessions: pendingSessions.length,
       });
+
+      // Handle sessions that may have been missed during downtime
+      await this.handleMissedSessions(pendingSessions);
+
+      // Schedule future tasks for remaining valid sessions
+      const futureSessions = pendingSessions.filter((session) =>
+        isFutureDate(session.date)
+      );
 
       if (futureSessions.length === 0) {
         logger.info('ℹ️  No future sessions to schedule');
@@ -356,6 +420,102 @@ class SessionScheduler {
     }
   }
 
+  /**
+   * Handle sessions that may have been missed during bot downtime.
+   * - ACTIVE sessions past completion window → auto-complete
+   * - SCHEDULED/FULL sessions past start time with full party → mark ACTIVE and schedule completion
+   * - SCHEDULED/FULL sessions past start time without full party → cancel
+   */
+  private async handleMissedSessions(
+    sessions: { id: string; date: Date; status: string }[]
+  ): Promise<void> {
+    for (const session of sessions) {
+      const sessionStart = session.date;
+      const completionTime = getHoursAfter(sessionStart, 5);
+
+      if (!isFutureDate(sessionStart)) {
+        try {
+          if (session.status === 'ACTIVE' && !isFutureDate(completionTime)) {
+            logger.info(
+              '🔧 Found ACTIVE session past completion window, auto-completing',
+              {
+                sessionId: session.id,
+                sessionDate: sessionStart.toISOString(),
+                completionTime: completionTime.toISOString(),
+              }
+            );
+
+            const { endSession } = await import(
+              '../modules/session/controller/session.controller.js'
+            );
+            await endSession(session.id);
+            continue;
+          }
+
+          if (session.status === 'ACTIVE' && isFutureDate(completionTime)) {
+            logger.info(
+              '🔧 Found ACTIVE session within completion window, scheduling completion',
+              {
+                sessionId: session.id,
+                completionTime: completionTime.toISOString(),
+              }
+            );
+            this.scheduleSessionTasks(session.id, sessionStart);
+            continue;
+          }
+
+          if (session.status === 'SCHEDULED' || session.status === 'FULL') {
+            const fullSession = await getSessionById(session.id, true);
+            const isPartyFull = fullSession.partyMembers.length >= 6;
+
+            if (isPartyFull) {
+              logger.info(
+                '🔧 Found past SCHEDULED/FULL session with full party, marking ACTIVE',
+                {
+                  sessionId: session.id,
+                  partySize: fullSession.partyMembers.length,
+                }
+              );
+
+              await updateSession(session.id, { status: 'ACTIVE' });
+
+              if (isFutureDate(completionTime)) {
+                this.scheduleSessionTasks(session.id, sessionStart);
+              } else {
+                const { endSession } = await import(
+                  '../modules/session/controller/session.controller.js'
+                );
+                await endSession(session.id);
+              }
+            } else {
+              logger.info(
+                '🔧 Found past SCHEDULED/FULL session without full party, canceling',
+                {
+                  sessionId: session.id,
+                  partySize: fullSession.partyMembers.length,
+                }
+              );
+
+              const { cancelSession } = await import(
+                '../modules/session/controller/session.controller.js'
+              );
+              await cancelSession(
+                session.id,
+                'Session was not filled before start time (recovered after bot restart)'
+              );
+            }
+          }
+        } catch (error) {
+          logger.error('❌ Error handling missed session', {
+            sessionId: session.id,
+            status: session.status,
+            error,
+          });
+        }
+      }
+    }
+  }
+
   public getScheduledTaskCount(): number {
     return this.scheduledTasks.size;
   }
@@ -372,6 +532,9 @@ class SessionScheduler {
         }
         if (task.cancellationJob) {
           task.cancellationJob.stop();
+        }
+        if (task.completionJob) {
+          task.completionJob.stop();
         }
         logger.info('Stopped scheduled tasks for session', { sessionId });
       } catch (error) {

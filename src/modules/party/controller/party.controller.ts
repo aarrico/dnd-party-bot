@@ -1,4 +1,7 @@
-import { getSessionById, updateSession } from '#modules/session/repository/session.repository.js';
+import {
+  getSessionById,
+  updateSession,
+} from '#modules/session/repository/session.repository.js';
 import { ListPartyForSessionOptions } from '#modules/party/domain/party.types.js';
 import { SessionWithParty } from '#modules/session/domain/session.types.js';
 import { notifyParty } from '#app/shared/discord/messages.js';
@@ -29,7 +32,7 @@ export const partyFull = async (
   // Create Discord scheduled event now that the party is set
   let eventId: string | null = null;
   try {
-    const channel = await campaign.channels.fetch(session.id);
+    const channel = await campaign.channels.fetch(session.campaignId);
     const channelName = channel?.name || session.name;
 
     eventId = await createScheduledEvent(

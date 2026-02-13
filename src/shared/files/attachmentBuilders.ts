@@ -25,10 +25,30 @@ export function getImgAttachmentBuilder(
   return getAttachmentBuilder(pathStr, attachmentName);
 }
 
+/**
+ * Create an attachment from an in-memory buffer.
+ * This avoids file I/O and race conditions from concurrent image generation.
+ */
+export function getImgAttachmentBuilderFromBuffer(
+  buffer: Buffer,
+  attachmentName: string
+) {
+  logger.debug('Creating attachment from buffer', {
+    attachmentName,
+    sizeBytes: buffer.length,
+  });
+
+  return new AttachmentBuilder(buffer, {
+    name: attachmentName,
+  });
+}
+
 function getAttachmentBuilder(pathStr: string, attachmentName: string) {
   // If the path is already absolute, use it directly
   // Otherwise, resolve it using getAbsolutePath
-  const finalPath = path.isAbsolute(pathStr) ? pathStr : getAbsolutePath(pathStr);
+  const finalPath = path.isAbsolute(pathStr)
+    ? pathStr
+    : getAbsolutePath(pathStr);
 
   logger.debug('Creating attachment builder', { finalPath, attachmentName });
 

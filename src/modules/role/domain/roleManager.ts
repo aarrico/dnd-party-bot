@@ -9,7 +9,7 @@ class RoleManager {
   private roleCache: Role[] = [];
   private isInitialized = false;
 
-  private constructor() { }
+  private constructor() {}
 
   public static getInstance(): RoleManager {
     if (!RoleManager.instance) {

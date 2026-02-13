@@ -2,7 +2,7 @@ import fs from 'fs';
 import sharp, { OverlayOptions } from 'sharp';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
-import { BotAttachmentFileNames, BotPaths } from './botDialogStrings.js';
+import { BotPaths } from './botDialogStrings.js';
 import { getRoleByString, RoleType } from '#modules/role/domain/roleManager.js';
 import { getRoleImage } from '#modules/role/domain/role.types.js';
 import { Session } from '#modules/session/domain/session.types.js';
@@ -224,7 +224,7 @@ const coords = {
 export const createSessionImage = async (
   session: Session,
   partyMembers: PartyMemberImgInfo[]
-): Promise<void> => {
+): Promise<Buffer> => {
   // Create a snapshot of the data for logging to avoid race conditions
   const memberSnapshot = partyMembers.map((u) => ({
     userId: u.userId,
@@ -237,15 +237,6 @@ export const createSessionImage = async (
     sessionName: session.name,
     members: memberSnapshot,
   });
-
-  // Ensure temp directory exists
-  const tempDir = BotPaths.TempDir;
-  if (!fs.existsSync(tempDir)) {
-    logger.debug('Creating temp directory for session image assets', {
-      tempDir,
-    });
-    fs.mkdirSync(tempDir, { recursive: true });
-  }
 
   // Check if backdrop image exists
   if (!fs.existsSync(BotPaths.SessionBackdrop)) {
@@ -310,26 +301,18 @@ export const createSessionImage = async (
   });
   const borderOverlay = await createStatusBorder(status);
 
-  const outputPath = path.join(
-    BotPaths.TempDir,
-    BotAttachmentFileNames.CurrentSession
-  );
-
-  await sharp(BotPaths.SessionBackdrop)
+  // Generate image as buffer (in-memory, no file I/O)
+  const imageBuffer = await sharp(BotPaths.SessionBackdrop)
     .composite([borderOverlay, ...sessionOverlays, dmOverlay, ...partyOverlays])
-    .toFile(outputPath);
+    .png()
+    .toBuffer();
 
-  // Verify the file was created
-  if (fs.existsSync(outputPath)) {
-    const stats = fs.statSync(outputPath);
-    logger.info('Session image created', {
-      sessionId: session.id,
-      outputPath,
-      sizeBytes: stats.size,
-    });
-  } else {
-    throw new Error(`Failed to create session image at: ${outputPath}`);
-  }
+  logger.info('Session image created in memory', {
+    sessionId: session.id,
+    sizeBytes: imageBuffer.length,
+  });
+
+  return imageBuffer;
 };
 
 const placeSessionInfo = async (

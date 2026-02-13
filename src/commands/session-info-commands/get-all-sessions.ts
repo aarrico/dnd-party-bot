@@ -36,9 +36,17 @@ export default {
     ),
   async execute(interaction: ExtendedInteraction) {
     try {
-      const includeId = interaction.options.getBoolean(BotCommandOptionInfo.Session_Id_Name) ?? false;
-      const includeTime = interaction.options.getBoolean(BotCommandOptionInfo.Session_IncludeTime_Name) ?? false;
-      const includeCampaign = interaction.options.getBoolean(BotCommandOptionInfo.CampaignName_Name) ?? false;
+      const includeId =
+        interaction.options.getBoolean(BotCommandOptionInfo.Session_Id_Name) ??
+        false;
+      const includeTime =
+        interaction.options.getBoolean(
+          BotCommandOptionInfo.Session_IncludeTime_Name
+        ) ?? false;
+      const includeCampaign =
+        interaction.options.getBoolean(
+          BotCommandOptionInfo.CampaignName_Name
+        ) ?? false;
 
       const options: ListSessionsOptions = {
         includeId,
@@ -63,8 +71,12 @@ export default {
         attachment,
       ]);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      await sendEphemeralReply(`There was an error: ${errorMessage}`, interaction);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      await sendEphemeralReply(
+        `There was an error: ${errorMessage}`,
+        interaction
+      );
     }
   },
 };

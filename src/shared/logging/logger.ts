@@ -15,16 +15,30 @@ export const logger = createLogger({
         timestamp(),
         errors({ stack: true }),
         splat(),
-        printf(({ timestamp: ts, level, message, stack, context, _service, ...meta }) => {
-          void _service; // Intentionally unused in console output
-          const ctx = typeof context === 'string' && context ? `[${context}] ` : '';
-          const metaString = Object.keys(meta).length > 0 ? ` ${JSON.stringify(meta)}` : '';
-          return `${ts as string} [${level}] ${ctx}${String(stack ?? message)}${metaString}`;
-        }),
+        printf(
+          ({
+            timestamp: ts,
+            level,
+            message,
+            stack,
+            context,
+            _service,
+            ...meta
+          }) => {
+            void _service; // Intentionally unused in console output
+            const ctx =
+              typeof context === 'string' && context ? `[${context}] ` : '';
+            const metaString =
+              Object.keys(meta).length > 0 ? ` ${JSON.stringify(meta)}` : '';
+            return `${ts as string} [${level}] ${ctx}${String(stack ?? message)}${metaString}`;
+          }
+        )
       ),
     }),
   ],
 });
 
-export const createScopedLogger = (context: string, meta: Record<string, unknown> = {}) =>
-  logger.child({ context, ...meta });
+export const createScopedLogger = (
+  context: string,
+  meta: Record<string, unknown> = {}
+) => logger.child({ context, ...meta });

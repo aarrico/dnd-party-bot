@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
  * Standalone script to generate a session image without starting the bot
- * 
+ *
  * Usage:
  *   npm run generate-image <sessionId>
  *   or
  *   ts-node src/scripts/generate-session-image.ts <sessionId>
- * 
+ *
  * Example:
  *   npm run generate-image 1234567890
  */
@@ -14,18 +14,21 @@
 import { PrismaClient } from '../generated/prisma/client.js';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { createSessionImage } from '../shared/messages/sessionImage.js';
-import { Session, SessionStatus } from '#modules/session/domain/session.types.js';
+import {
+  Session,
+  SessionStatus,
+} from '#modules/session/domain/session.types.js';
 import { PartyMemberImgInfo } from '../modules/session/domain/session.types.js';
 import { setRoleCache } from '../modules/role/domain/roleManager.js';
 import { getRoles } from '../modules/role/repository/role.repository.js';
 import { createLogger, format, transports } from 'winston';
+import fs from 'fs';
+import path from 'path';
 
 // Script-specific logger with console-only transport (no file logging for CLI output)
 const logger = createLogger({
   level: 'info',
-  format: format.combine(
-    format.printf(({ message }) => String(message)),
-  ),
+  format: format.combine(format.printf(({ message }) => String(message))),
   transports: [new transports.Console()],
 });
 
@@ -49,7 +52,9 @@ const getMockAvatarURL = (userId: string): string => {
 /**
  * Get party info for image generation
  */
-const getPartyInfoForImg = async (sessionId: string): Promise<PartyMemberImgInfo[]> => {
+const getPartyInfoForImg = async (
+  sessionId: string
+): Promise<PartyMemberImgInfo[]> => {
   const session = await prisma.session.findUniqueOrThrow({
     where: { id: sessionId },
     include: {
@@ -96,17 +101,20 @@ async function generateSessionImage(sessionId: string): Promise<void> {
     }
 
     // Check for Game Master
-    const hasGM = partyMembers.some(member => member.role === 'GAME_MASTER');
+    const hasGM = partyMembers.some((member) => member.role === 'GAME_MASTER');
     if (!hasGM) {
       logger.error('❌ Error: No Game Master found in party members');
-      logger.info('Party members:', partyMembers.map(p => ({ username: p.username, role: p.role })));
+      logger.info(
+        'Party members:',
+        partyMembers.map((p) => ({ username: p.username, role: p.role }))
+      );
       return;
     }
 
     // Prepare session object for image generation
     const session: Session = {
       id: sessionData.id,
-      name: 'Night of the Bell\'s Toll',
+      name: "Night of the Bell's Toll",
       date: sessionData.date,
       campaignId: sessionData.campaignId,
       eventId: sessionData.eventId,
@@ -115,25 +123,39 @@ async function generateSessionImage(sessionId: string): Promise<void> {
     };
 
     logger.info(`📝 Session: ${session.name}`);
-    logger.info(`📅 Date: ${session.date.toLocaleDateString()} at ${session.date.toLocaleTimeString()}`);
+    logger.info(
+      `📅 Date: ${session.date.toLocaleDateString()} at ${session.date.toLocaleTimeString()}`
+    );
     logger.info(`🌍 Timezone: ${session.timezone}`);
     logger.info(`📊 Status: ${session.status}`);
     logger.info(`👥 Party size: ${partyMembers.length}`);
     logger.info('Party members:');
-    partyMembers.forEach(member => {
-      logger.info(`  - ${member.displayName} (@${member.username}) (${member.role})`);
+    partyMembers.forEach((member) => {
+      logger.info(
+        `  - ${member.displayName} (@${member.username}) (${member.role})`
+      );
     });
 
     // Generate the image
     logger.info('\n🖼️  Generating session image...');
-    await createSessionImage(session, partyMembers);
+    const imageBuffer = await createSessionImage(session, partyMembers);
+
+    // Save to file for inspection
+    const outputDir = path.join(process.cwd(), 'resources', 'temp');
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
+    const outputPath = path.join(outputDir, 'current-session.png');
+    fs.writeFileSync(outputPath, imageBuffer);
 
     logger.info('\n✅ Session image generated successfully!');
-    logger.info('📂 Output location: resources/temp/current-session.png\n');
+    logger.info(`📂 Output location: ${outputPath}\n`);
   } catch (error) {
     if (error instanceof Error) {
       if (error.message.includes('No') && error.message.includes('found')) {
-        logger.error(`\n❌ Error: Session with ID "${sessionId}" not found in database\n`);
+        logger.error(
+          `\n❌ Error: Session with ID "${sessionId}" not found in database\n`
+        );
       } else {
         logger.error(`\n❌ Error generating session image: ${error.message}`);
         logger.error(error);

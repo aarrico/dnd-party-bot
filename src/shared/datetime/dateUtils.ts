@@ -1,4 +1,4 @@
-import { format, sub, isAfter } from 'date-fns';
+import { format, sub, add, isAfter } from 'date-fns';
 import { TZDate } from '@date-fns/tz';
 
 /**
@@ -8,11 +8,11 @@ import { TZDate } from '@date-fns/tz';
 function getTimezoneAbbreviation(date: Date, timezone: string): string {
   const formatter = new Intl.DateTimeFormat('en-US', {
     timeZone: timezone,
-    timeZoneName: 'short'
+    timeZoneName: 'short',
   });
 
   const parts = formatter.formatToParts(date);
-  const timeZonePart = parts.find(part => part.type === 'timeZoneName');
+  const timeZonePart = parts.find((part) => part.type === 'timeZoneName');
   return timeZonePart?.value || timezone;
 }
 
@@ -33,9 +33,12 @@ export function formatDateInTimezone(
  * Format a date for display with timezone abbreviation
  * Example: "Mon, Oct 5, 2025, 7:00 PM PDT"
  */
-export function formatSessionDate(date: Date, timezone: string = 'America/Los_Angeles'): string {
+export function formatSessionDate(
+  date: Date,
+  timezone: string = 'America/Los_Angeles'
+): string {
   const tzDate = TZDate.tz(timezone, date);
-  const formattedDate = format(tzDate, "EEE, MMM d, yyyy, h:mm a");
+  const formattedDate = format(tzDate, 'EEE, MMM d, yyyy, h:mm a');
   const tzAbbr = getTimezoneAbbreviation(date, timezone);
   return `${formattedDate} ${tzAbbr}`;
 }
@@ -44,9 +47,12 @@ export function formatSessionDate(date: Date, timezone: string = 'America/Los_An
  * Format a date for display with long format
  * Example: "Monday, October 5, 2025, 07:00 PM PDT"
  */
-export function formatSessionDateLong(date: Date, timezone: string = 'America/Los_Angeles'): string {
+export function formatSessionDateLong(
+  date: Date,
+  timezone: string = 'America/Los_Angeles'
+): string {
   const tzDate = TZDate.tz(timezone, date);
-  const formattedDate = format(tzDate, "EEEE, MMMM d, yyyy, hh:mm a");
+  const formattedDate = format(tzDate, 'EEEE, MMMM d, yyyy, hh:mm a');
   const tzAbbr = getTimezoneAbbreviation(date, timezone);
   return `${formattedDate} ${tzAbbr}`;
 }
@@ -63,6 +69,13 @@ export function getHoursBefore(date: Date, hours: number): Date {
  */
 export function getMinutesBefore(date: Date, minutes: number): Date {
   return sub(date, { minutes });
+}
+
+/**
+ * Get a date that is X hours after the given date
+ */
+export function getHoursAfter(date: Date, hours: number): Date {
+  return add(date, { hours });
 }
 
 /**
