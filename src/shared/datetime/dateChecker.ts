@@ -58,7 +58,7 @@ export default function DateChecker(
  * Parse time in either 12-hour (7:00 PM, 7:00PM, 7pm) or 24-hour (19:00, 7:00) format
  * Returns { hour, mins } in 24-hour format, or undefined if invalid
  */
-function parseTime(
+export function parseTime(
   timeStr: string
 ): { hour: number; mins: number } | undefined {
   const normalizedTime = timeStr.trim().toUpperCase();
@@ -106,19 +106,19 @@ function parseTime(
   return undefined;
 }
 
-function isValidMonth(month: number) {
+export function isValidMonth(month: number) {
   return month >= 0 && month <= 11;
 }
 
-function isValidDay(month: number, day: number) {
+export function isValidDay(month: number, day: number) {
   return day > 0 && day <= monthMaxDayCounts[month];
 }
 
-function isLeapYear(year: number) {
+export function isLeapYear(year: number) {
   return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
 }
 
-function isLeapYearDay(month: number, year: number, day: number) {
+export function isLeapYearDay(month: number, year: number, day: number) {
   return month === 1 && isLeapYear(year) && day > 0 && day <= 29;
 }
 
