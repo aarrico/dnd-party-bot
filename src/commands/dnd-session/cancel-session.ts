@@ -6,12 +6,9 @@ import {
 import { ExtendedInteraction } from '#shared/types/discord.js';
 import { cancelSession } from '#modules/session/controller/session.controller.js';
 import { sanitizeUserInput } from '#shared/validation/sanitizeUserInput.js';
-import {
-  getSessionById,
-  getActiveSessionsForGuild,
-} from '#modules/session/repository/session.repository.js';
+import { getSessionById } from '#modules/session/repository/session.repository.js';
 import { canManageSession } from '#shared/discord/permissions.js';
-import { formatSessionDateLong } from '#shared/datetime/dateUtils.js';
+import { handleActiveSessionAutocomplete } from '#modules/session/presentation/sessionMessages.js';
 import { createScopedLogger } from '#shared/logging/logger.js';
 
 const logger = createScopedLogger('CancelSessionCommand');
@@ -34,21 +31,12 @@ export default {
         .setRequired(true)
     ),
   async autocomplete(interaction: AutocompleteInteraction) {
-    if (!interaction.guild) return;
-
     const focusedOption = interaction.options.getFocused(true);
     if (
       focusedOption.name ===
       String(BotCommandOptionInfo.CancelSession_ChannelName)
     ) {
-      const sessions = await getActiveSessionsForGuild(interaction.guild.id);
-
-      const choices = sessions.map((session) => ({
-        name: `${session.name} (${session.campaignName}) - ${formatSessionDateLong(session.date, session.timezone)}`,
-        value: session.id,
-      }));
-
-      await interaction.respond(choices);
+      await handleActiveSessionAutocomplete(interaction);
     }
   },
   async execute(interaction: ExtendedInteraction) {

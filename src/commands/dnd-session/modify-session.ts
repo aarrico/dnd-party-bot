@@ -13,11 +13,8 @@ import { modifySession } from '#modules/session/controller/session.controller.js
 import { handleTimezoneAutocomplete } from '#shared/datetime/timezoneUtils.js';
 import { getUserTimezone } from '#modules/user/repository/user.repository.js';
 import { sendEphemeralReply } from '#shared/discord/messages.js';
-import {
-  getSessionById,
-  getActiveSessionsForGuild,
-} from '#modules/session/repository/session.repository.js';
-import { formatSessionDateLong } from '#shared/datetime/dateUtils.js';
+import { getSessionById } from '#modules/session/repository/session.repository.js';
+import { handleActiveSessionAutocomplete } from '#modules/session/presentation/sessionMessages.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -79,16 +76,7 @@ export default {
       focusedOption.name ===
       String(BotCommandOptionInfo.ModifySession_ChannelName)
     ) {
-      if (!interaction.guild) return;
-
-      const sessions = await getActiveSessionsForGuild(interaction.guild.id);
-
-      const choices = sessions.map((session) => ({
-        name: `${session.name} (${session.campaignName}) - ${formatSessionDateLong(session.date, session.timezone)}`,
-        value: session.id,
-      }));
-
-      await interaction.respond(choices);
+      await handleActiveSessionAutocomplete(interaction);
     } else if (
       focusedOption.name === String(BotCommandOptionInfo.Session_Day_Name)
     ) {
