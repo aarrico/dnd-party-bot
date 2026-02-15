@@ -1,5 +1,6 @@
 import {
   ActionRowBuilder,
+  AutocompleteInteraction,
   ButtonBuilder,
   EmbedBuilder,
   TextChannel,
@@ -23,6 +24,8 @@ import {
   getPartyInfoForImg,
   convertPartyToImgInfo,
 } from '#modules/session/services/partyImageService.js';
+import { getActiveSessionsForGuild } from '#modules/session/repository/session.repository.js';
+import { formatSessionDateShort } from '#shared/datetime/dateUtils.js';
 
 const logger = createScopedLogger('SessionMessages');
 
@@ -44,9 +47,10 @@ export const createPartyMemberEmbed = (
   sessionName: string,
   sessionStatus?: SessionStatus
 ): EmbedBuilder => {
+  const title = `🎲 ${sessionName}`;
   const embed = new EmbedBuilder()
     .setColor(getStatusColor(sessionStatus))
-    .setTitle(`🎲 ${sessionName}`)
+    .setTitle(title.length > 256 ? title.slice(0, 253) + '...' : title)
     .setTimestamp();
 
   if (partyMembers.length === 0) {
@@ -189,6 +193,27 @@ export const sendNewSessionMessage = async (
     }
   }
 };
+
+/**
+ * Respond to an autocomplete interaction with active sessions for the guild
+ */
+export async function handleActiveSessionAutocomplete(
+  interaction: AutocompleteInteraction
+): Promise<void> {
+  if (!interaction.guild) return;
+
+  const sessions = await getActiveSessionsForGuild(interaction.guild.id);
+
+  const choices = sessions.map((session) => {
+    const label = `${session.name} - ${formatSessionDateShort(session.date, session.timezone)}`;
+    return {
+      name: label.length > 100 ? label.slice(0, 97) + '...' : label,
+      value: session.id,
+    };
+  });
+
+  await interaction.respond(choices.slice(0, 25));
+}
 
 /**
  * Get color based on session status

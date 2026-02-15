@@ -58,6 +58,18 @@ export function formatSessionDateLong(
 }
 
 /**
+ * Format a date for short display (date only, no time)
+ * Example: "Oct 5, 2025"
+ */
+export function formatSessionDateShort(
+  date: Date,
+  timezone: string = 'America/Los_Angeles'
+): string {
+  const tzDate = TZDate.tz(timezone, date);
+  return format(tzDate, 'MMM d, yyyy');
+}
+
+/**
  * Get a date that is X hours before the given date
  */
 export function getHoursBefore(date: Date, hours: number): Date {
