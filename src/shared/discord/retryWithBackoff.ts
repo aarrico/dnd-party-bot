@@ -42,7 +42,7 @@ const DEFAULT_OPTIONS: Required<RetryOptions> = {
 /**
  * Determines if an error is retryable (network/connection errors)
  */
-function isRetryableError(error: unknown): boolean {
+export function isRetryableError(error: unknown): boolean {
   const err = error as {
     code?: string | number;
     status?: number;
@@ -82,7 +82,7 @@ function isRetryableError(error: unknown): boolean {
 /**
  * Calculate delay for the next retry attempt using exponential backoff with jitter
  */
-function calculateDelay(
+export function calculateDelay(
   attempt: number,
   initialDelayMs: number,
   maxDelayMs: number,
